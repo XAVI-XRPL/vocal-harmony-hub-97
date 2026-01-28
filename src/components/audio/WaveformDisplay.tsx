@@ -73,66 +73,69 @@ export function WaveformDisplay({
       />
 
       {/* Waveform bars container */}
-      <div className="absolute inset-0 flex items-center gap-[1px] px-1">
+      <div className="absolute inset-0 flex items-center px-1" style={{ gap: "2px" }}>
         {normalizedData.map((value, index) => {
           const barProgress = index / normalizedData.length;
           const isPlayed = barProgress < progress;
-          const barHeight = Math.max(0.15, value);
+          const barHeight = Math.max(0.2, value);
 
           return (
             <div
               key={index}
-              className="flex-1 flex flex-col items-center justify-center gap-[1px]"
-              style={{ height: "100%" }}
+              className="flex flex-col items-center justify-center"
+              style={{ flex: 1, height: "100%", gap: "1px" }}
             >
               {mirrored ? (
                 // Mirrored waveform - bars extend from center
                 <>
                   {/* Top bar */}
                   <motion.div
-                    className="w-full rounded-full transition-all duration-75"
+                    className="w-full rounded-sm"
                     style={{
-                      height: `${barHeight * 50}%`,
+                      flex: `0 0 ${barHeight * 45}%`,
                       background: isPlayed
-                        ? `linear-gradient(to top, ${color}, ${color}cc)`
-                        : `linear-gradient(to top, ${color}40, ${color}20)`,
-                      minHeight: 2,
+                        ? `linear-gradient(to top, ${color}, ${color})`
+                        : `${color}40`,
+                      minHeight: 3,
+                      minWidth: 3,
                     }}
                     initial={{ scaleY: 0 }}
                     animate={{ 
                       scaleY: 1,
-                      opacity: isPlaying && isPlayed ? [0.85, 1, 0.85] : 1,
+                      opacity: isPlaying && isPlayed ? [0.8, 1, 0.8] : 1,
                     }}
                     transition={{
-                      scaleY: { delay: index * 0.003, duration: 0.2 },
+                      scaleY: { delay: index * 0.005, duration: 0.3 },
                       opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
                     }}
                   />
                   {/* Center line */}
                   <div 
-                    className="w-full transition-colors duration-75"
+                    className="w-full"
                     style={{
-                      height: 1,
-                      background: isPlayed ? `${color}60` : `${color}20`,
+                      height: 2,
+                      background: isPlayed ? `${color}80` : `${color}30`,
+                      borderRadius: 1,
                     }}
                   />
                   {/* Bottom bar (mirrored) */}
                   <motion.div
-                    className="w-full rounded-full transition-all duration-75"
+                    className="w-full rounded-sm"
                     style={{
-                      height: `${barHeight * 50}%`,
+                      flex: `0 0 ${barHeight * 45}%`,
                       background: isPlayed
-                        ? `linear-gradient(to bottom, ${color}, ${color}cc)`
-                        : `linear-gradient(to bottom, ${color}40, ${color}20)`,
-                      minHeight: 2,
+                        ? `linear-gradient(to bottom, ${color}, ${color})`
+                        : `${color}40`,
+                      minHeight: 3,
+                      minWidth: 3,
                     }}
                     initial={{ scaleY: 0 }}
                     animate={{ 
                       scaleY: 1,
-                      opacity: isPlaying && isPlayed ? [0.85, 1, 0.85] : 1,
+                      opacity: isPlaying && isPlayed ? [0.8, 1, 0.8] : 1,
                     }}
                     transition={{
-                      scaleY: { delay: index * 0.003, duration: 0.2 },
+                      scaleY: { delay: index * 0.005, duration: 0.3 },
                       opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.75 },
                     }}
                   />
@@ -140,21 +143,22 @@ export function WaveformDisplay({
               ) : (
                 // Single bar - grows from bottom
                 <motion.div
-                  className="w-full rounded-full transition-all duration-75"
+                  className="w-full rounded-sm self-end"
                   style={{
                     height: `${barHeight * 100}%`,
                     background: isPlayed
                       ? `linear-gradient(to top, ${color}cc, ${color})`
-                      : `linear-gradient(to top, ${color}30, ${color}20)`,
-                    minHeight: 2,
+                      : `${color}40`,
+                    minHeight: 3,
+                    minWidth: 3,
                   }}
                   initial={{ scaleY: 0 }}
                   animate={{ 
                     scaleY: 1,
-                    opacity: isPlaying && isPlayed ? [0.85, 1, 0.85] : 1,
+                    opacity: isPlaying && isPlayed ? [0.8, 1, 0.8] : 1,
                   }}
                   transition={{
-                    scaleY: { delay: index * 0.003, duration: 0.2 },
+                    scaleY: { delay: index * 0.005, duration: 0.3 },
                     opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
                   }}
                 />

@@ -180,7 +180,7 @@ export default function SongDetail() {
               waveformData={waveformData}
               currentTime={isCurrentSong ? currentTime : 0}
               duration={song.duration}
-              color="hsl(var(--primary))"
+              color="#818cf8"
               height={80}
               onSeek={(time) => {
                 if (isCurrentSong) seek(time);

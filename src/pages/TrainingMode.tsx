@@ -180,7 +180,7 @@ export default function TrainingMode() {
               waveformData={masterWaveform}
               currentTime={currentTime}
               duration={duration}
-              color="hsl(var(--primary))"
+              color="#818cf8"
               height={44}
               onSeek={seek}
               isPlaying={isPlaying}

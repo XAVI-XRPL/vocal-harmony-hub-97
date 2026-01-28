@@ -33,7 +33,7 @@ const covers = {
   classical: 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=400&h=400&fit=crop',
 };
 
-// Create stem templates
+// Create stem templates with hex colors for proper CSS usage
 const createStems = (types: StemType[]): Stem[] => {
   const stemNames: Record<StemType, string> = {
     vocal: 'Lead Vocal',
@@ -45,12 +45,23 @@ const createStems = (types: StemType[]): Stem[] => {
     other: 'Other',
   };
 
+  // Use hex colors for proper inline style usage
+  const stemColors: Record<StemType, string> = {
+    vocal: '#14b8a6',      // teal/cyan
+    harmony: '#a855f7',    // purple
+    instrumental: '#f59e0b', // amber
+    drums: '#ef4444',      // red
+    bass: '#8b5cf6',       // violet
+    keys: '#10b981',       // green
+    other: '#6b7280',      // gray
+  };
+
   return types.map((type, index) => ({
     id: `stem-${type}-${index}`,
     name: stemNames[type],
     type,
     url: '', // We'll use mock audio or leave empty for visual demo
-    color: `hsl(var(--stem-${type}))`,
+    color: stemColors[type],
     waveformData: generateMockWaveform(200),
   }));
 };
