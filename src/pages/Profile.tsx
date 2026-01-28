@@ -1,10 +1,13 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { User, Settings, LogOut, Crown, ChevronRight, Music2, Clock } from "lucide-react";
+import { User, Settings, LogOut, Crown, ChevronRight, Music2, Clock, Loader2 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
 import { useUserStore } from "@/stores/userStore";
+import { useAuth } from "@/hooks/useAuth";
+import { usePracticeStats } from "@/hooks/usePracticeSession";
 import { cn } from "@/lib/utils";
 
 const containerVariants = {
@@ -24,11 +27,33 @@ const itemVariants = {
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { user, isAuthenticated, logout } = useUserStore();
+  const { isAuthenticated, signOut, isLoading: authLoading } = useAuth();
+  const { user } = useUserStore();
+  const { fetchStats } = usePracticeStats();
+  
+  const [stats, setStats] = useState<{ totalSongs: number; totalTime: number } | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  // Fetch practice stats
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setLoadingStats(true);
+      fetchStats().then((data) => {
+        setStats(data);
+        setLoadingStats(false);
+      });
+    }
+  }, [isAuthenticated, user, fetchStats]);
+
+  const handleLogout = async () => {
+    await signOut();
     navigate("/");
+  };
+
+  const formatTime = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+    return `${(seconds / 3600).toFixed(1)}h`;
   };
 
   if (!isAuthenticated) {
@@ -161,13 +186,17 @@ export default function Profile() {
           <GlassCard padding="md" hover={false}>
             <div className="flex items-center gap-3">
               <motion.div 
-                className="w-10 h-10 rounded-xl bg-stem-vocal/20 flex items-center justify-center"
+                className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center"
                 whileHover={{ scale: 1.1, rotate: 5 }}
               >
-                <Music2 className="w-5 h-5 text-stem-vocal" />
+                <Music2 className="w-5 h-5 text-primary" />
               </motion.div>
               <div>
-                <p className="text-xl font-bold">12</p>
+                {loadingStats ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <p className="text-xl font-bold">{stats?.totalSongs || 0}</p>
+                )}
                 <p className="text-2xs text-muted-foreground">Songs Practiced</p>
               </div>
             </div>
@@ -175,13 +204,17 @@ export default function Profile() {
           <GlassCard padding="md" hover={false}>
             <div className="flex items-center gap-3">
               <motion.div 
-                className="w-10 h-10 rounded-xl bg-stem-harmony/20 flex items-center justify-center"
+                className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center"
                 whileHover={{ scale: 1.1, rotate: -5 }}
               >
-                <Clock className="w-5 h-5 text-stem-harmony" />
+                <Clock className="w-5 h-5 text-accent" />
               </motion.div>
               <div>
-                <p className="text-xl font-bold">3.5h</p>
+                {loadingStats ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <p className="text-xl font-bold">{formatTime(stats?.totalTime || 0)}</p>
+                )}
                 <p className="text-2xs text-muted-foreground">Total Time</p>
               </div>
             </div>
