@@ -47,43 +47,29 @@ export function MobileNav({ className }: MobileNavProps) {
           const Icon = item.icon;
           const isHome = item.path === "/";
 
-          // Home button - special elevated design
+          // Home button - special rounded square design
           if (isHome) {
             return (
               <motion.button
                 key={item.path}
                 onClick={() => navigate(item.path)}
                 className={cn(
-                  "relative -mt-8 z-10",
-                  "w-14 h-14 rounded-full",
+                  "relative",
+                  "w-12 h-12 rounded-2xl",
                   "gradient-bg",
                   "flex items-center justify-center",
                   "home-button-glow"
                 )}
-                whileHover={{ scale: 1.08 }}
+                whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 animate={{
-                  scale: active ? 1.1 : 1,
+                  scale: active ? 1.08 : 1,
                 }}
                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
               >
-                {/* Pulsing ring */}
-                <motion.div
-                  className="absolute inset-0 rounded-full gradient-bg"
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.5, 0, 0.5],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                />
-                
                 {/* Inner glow */}
                 <motion.div
-                  className="absolute inset-1 rounded-full bg-white/10"
+                  className="absolute inset-1 rounded-xl bg-white/10"
                   animate={{
                     opacity: [0.1, 0.2, 0.1],
                   }}
