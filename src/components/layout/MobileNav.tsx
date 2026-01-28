@@ -50,31 +50,42 @@ export function MobileNav({ className }: MobileNavProps) {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={cn(
-                "flex flex-col items-center justify-center gap-1",
+                "relative flex flex-col items-center justify-center gap-1",
                 "w-16 h-14 rounded-xl",
-                "transition-colors duration-200",
-                active ? "text-primary" : "text-muted-foreground"
+                "transition-all duration-300",
+                active ? "text-primary" : "text-muted-foreground hover:text-foreground"
               )}
               whileTap={{ scale: 0.9 }}
             >
+              {/* Active background glow */}
+              {active && (
+                <motion.div
+                  layoutId="nav-bg"
+                  className="absolute inset-0 rounded-xl bg-primary/10"
+                  initial={false}
+                  transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                />
+              )}
+
               <motion.div
                 animate={{
                   scale: active ? 1.1 : 1,
                 }}
                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                className="relative z-10"
               >
                 <Icon
                   className={cn(
-                    "w-6 h-6",
+                    "w-6 h-6 transition-all duration-300",
                     active && "drop-shadow-[0_0_8px_hsl(var(--primary))]"
                   )}
-                  strokeWidth={active ? 2 : 1.5}
+                  strokeWidth={active ? 2.5 : 1.5}
                 />
               </motion.div>
               <span
                 className={cn(
-                  "text-2xs font-medium",
-                  active && "text-primary"
+                  "relative z-10 text-2xs font-medium transition-all duration-300",
+                  active && "text-primary font-semibold"
                 )}
               >
                 {item.label}
@@ -84,7 +95,7 @@ export function MobileNav({ className }: MobileNavProps) {
               {active && (
                 <motion.div
                   layoutId="nav-indicator"
-                  className="absolute bottom-1 w-1 h-1 rounded-full bg-primary"
+                  className="absolute bottom-0.5 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_hsl(var(--primary))]"
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               )}

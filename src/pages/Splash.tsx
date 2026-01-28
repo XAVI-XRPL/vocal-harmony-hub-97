@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { useTheme } from "next-themes";
 import { Music4 } from "lucide-react";
 
 interface SplashProps {
@@ -8,6 +9,8 @@ interface SplashProps {
 
 export default function Splash({ onComplete }: SplashProps) {
   const [progress, setProgress] = useState(0);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -26,12 +29,12 @@ export default function Splash({ onComplete }: SplashProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background overflow-hidden">
-      {/* Animated background blobs */}
+      {/* Animated background blobs - Theme aware */}
       <div className="absolute inset-0">
         <motion.div
           className="absolute w-96 h-96 rounded-full"
           style={{
-            background: "radial-gradient(circle, hsl(var(--gradient-start) / 0.4) 0%, transparent 70%)",
+            background: `radial-gradient(circle, hsl(var(--gradient-start) / ${isDark ? 0.4 : 0.2}) 0%, transparent 70%)`,
             top: "10%",
             left: "20%",
           }}
@@ -49,7 +52,7 @@ export default function Splash({ onComplete }: SplashProps) {
         <motion.div
           className="absolute w-80 h-80 rounded-full"
           style={{
-            background: "radial-gradient(circle, hsl(var(--gradient-mid) / 0.3) 0%, transparent 70%)",
+            background: `radial-gradient(circle, hsl(var(--gradient-mid) / ${isDark ? 0.3 : 0.15}) 0%, transparent 70%)`,
             top: "40%",
             right: "10%",
           }}
@@ -68,7 +71,7 @@ export default function Splash({ onComplete }: SplashProps) {
         <motion.div
           className="absolute w-72 h-72 rounded-full"
           style={{
-            background: "radial-gradient(circle, hsl(var(--gradient-end) / 0.3) 0%, transparent 70%)",
+            background: `radial-gradient(circle, hsl(var(--gradient-end) / ${isDark ? 0.3 : 0.15}) 0%, transparent 70%)`,
             bottom: "20%",
             left: "30%",
           }}
@@ -99,9 +102,9 @@ export default function Splash({ onComplete }: SplashProps) {
             className="w-28 h-28 rounded-3xl gradient-bg flex items-center justify-center shadow-2xl"
             animate={{
               boxShadow: [
-                "0 0 40px hsl(var(--gradient-start) / 0.4)",
-                "0 0 60px hsl(var(--gradient-mid) / 0.5)",
-                "0 0 40px hsl(var(--gradient-start) / 0.4)",
+                `0 0 40px hsl(var(--gradient-start) / ${isDark ? 0.4 : 0.25})`,
+                `0 0 60px hsl(var(--gradient-mid) / ${isDark ? 0.5 : 0.3})`,
+                `0 0 40px hsl(var(--gradient-start) / ${isDark ? 0.4 : 0.25})`,
               ],
             }}
             transition={{

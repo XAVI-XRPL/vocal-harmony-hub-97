@@ -40,9 +40,21 @@ export default function Profile() {
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-24 h-24 rounded-full bg-glass border border-glass-border flex items-center justify-center mb-6"
+            className="relative"
           >
-            <User className="w-12 h-12 text-muted-foreground" />
+            <motion.div
+              className="w-24 h-24 rounded-full bg-glass border border-glass-border flex items-center justify-center mb-6"
+              animate={{
+                boxShadow: [
+                  "0 0 0 0 hsl(var(--primary) / 0)",
+                  "0 0 0 8px hsl(var(--primary) / 0.1)",
+                  "0 0 0 0 hsl(var(--primary) / 0)",
+                ],
+              }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <User className="w-12 h-12 text-muted-foreground" />
+            </motion.div>
           </motion.div>
 
           <h2 className="text-xl font-semibold mb-2">Sign in to continue</h2>
@@ -79,51 +91,81 @@ export default function Profile() {
           className="py-6 flex flex-col items-center"
         >
           <div className="relative">
-            <div className="w-24 h-24 rounded-full gradient-bg flex items-center justify-center mb-4">
-              {user?.avatarUrl ? (
-                <img
-                  src={user.avatarUrl}
-                  alt={user.displayName || "Profile"}
-                  className="w-full h-full rounded-full object-cover"
-                />
-              ) : (
-                <User className="w-12 h-12 text-white" />
-              )}
-            </div>
+            {/* Avatar with gradient ring animation */}
+            <motion.div
+              className="relative"
+              animate={{
+                scale: [1, 1.02, 1],
+              }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            >
+              {/* Animated gradient ring */}
+              <motion.div
+                className="absolute -inset-1 rounded-full gradient-bg opacity-70"
+                animate={{
+                  rotate: 360,
+                }}
+                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                style={{
+                  background: "conic-gradient(from 0deg, hsl(var(--primary)), hsl(var(--accent)), hsl(var(--gradient-end)), hsl(var(--primary)))",
+                }}
+              />
+              
+              <div className="relative w-24 h-24 rounded-full gradient-bg flex items-center justify-center">
+                {user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.displayName || "Profile"}
+                    className="w-[90px] h-[90px] rounded-full object-cover border-2 border-background"
+                  />
+                ) : (
+                  <User className="w-12 h-12 text-white" />
+                )}
+              </div>
+            </motion.div>
             
             {/* Subscription badge */}
             {user?.subscriptionTier !== "free" && (
-              <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center border-2 border-background">
+              <motion.div 
+                className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center border-2 border-background shadow-lg"
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
+              >
                 <Crown className="w-4 h-4 text-white" />
-              </div>
+              </motion.div>
             )}
           </div>
 
-          <h2 className="text-xl font-semibold">
+          <h2 className="text-xl font-semibold mt-4">
             {user?.displayName || user?.email?.split("@")[0] || "User"}
           </h2>
           <p className="text-sm text-muted-foreground">{user?.email}</p>
 
           {/* Subscription status */}
-          <div
+          <motion.div
+            whileHover={{ scale: 1.05 }}
             className={cn(
-              "mt-3 px-4 py-1.5 rounded-full text-xs font-medium",
+              "mt-3 px-4 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all",
               user?.subscriptionTier === "pro"
                 ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 border border-amber-500/30"
-                : "bg-muted text-muted-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
             )}
+            onClick={() => navigate("/subscription")}
           >
             {user?.subscriptionTier === "pro" ? "Pro Member" : "Free Plan"}
-          </div>
+          </motion.div>
         </motion.div>
 
         {/* Stats */}
         <motion.div variants={itemVariants} className="grid grid-cols-2 gap-3 mb-6">
           <GlassCard padding="md" hover={false}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-stem-vocal/20 flex items-center justify-center">
+              <motion.div 
+                className="w-10 h-10 rounded-xl bg-stem-vocal/20 flex items-center justify-center"
+                whileHover={{ scale: 1.1, rotate: 5 }}
+              >
                 <Music2 className="w-5 h-5 text-stem-vocal" />
-              </div>
+              </motion.div>
               <div>
                 <p className="text-xl font-bold">12</p>
                 <p className="text-2xs text-muted-foreground">Songs Practiced</p>
@@ -132,9 +174,12 @@ export default function Profile() {
           </GlassCard>
           <GlassCard padding="md" hover={false}>
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-stem-harmony/20 flex items-center justify-center">
+              <motion.div 
+                className="w-10 h-10 rounded-xl bg-stem-harmony/20 flex items-center justify-center"
+                whileHover={{ scale: 1.1, rotate: -5 }}
+              >
                 <Clock className="w-5 h-5 text-stem-harmony" />
-              </div>
+              </motion.div>
               <div>
                 <p className="text-xl font-bold">3.5h</p>
                 <p className="text-2xs text-muted-foreground">Total Time</p>
@@ -149,14 +194,18 @@ export default function Profile() {
             <GlassCard
               onClick={() => navigate("/subscription")}
               padding="md"
-              className="flex items-center justify-between"
+              className="flex items-center justify-between animate-border-glow"
               glow
               glowColor="accent"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 flex items-center justify-center">
+                <motion.div 
+                  className="w-10 h-10 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 flex items-center justify-center"
+                  animate={{ rotate: [0, 5, -5, 0] }}
+                  transition={{ duration: 3, repeat: Infinity }}
+                >
                   <Crown className="w-5 h-5 text-amber-400" />
-                </div>
+                </motion.div>
                 <div>
                   <p className="font-medium">Upgrade to Pro</p>
                   <p className="text-xs text-muted-foreground">Unlock all songs & features</p>
@@ -182,10 +231,10 @@ export default function Profile() {
           <GlassCard
             onClick={handleLogout}
             padding="md"
-            className="flex items-center justify-between"
+            className="flex items-center justify-between group"
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-destructive/20 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-destructive/20 flex items-center justify-center group-hover:bg-destructive/30 transition-colors">
                 <LogOut className="w-5 h-5 text-destructive" />
               </div>
               <span className="font-medium text-destructive">Sign Out</span>

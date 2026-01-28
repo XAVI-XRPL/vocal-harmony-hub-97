@@ -42,11 +42,27 @@ export default function Home() {
         {/* Hero Section */}
         <motion.section variants={itemVariants} className="py-8 text-center">
           <motion.div
-            animate={{ y: [0, -5, 0] }}
-            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            className="w-20 h-20 mx-auto mb-6 rounded-3xl gradient-bg flex items-center justify-center shadow-2xl"
+            animate={{ y: [0, -8, 0] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            className="relative w-20 h-20 mx-auto mb-6"
           >
-            <Music2 className="w-10 h-10 text-white" />
+            <motion.div
+              className="w-full h-full rounded-3xl gradient-bg flex items-center justify-center shadow-2xl"
+              animate={{
+                boxShadow: [
+                  "0 20px 50px -12px hsl(var(--primary) / 0.4)",
+                  "0 25px 60px -12px hsl(var(--accent) / 0.5)",
+                  "0 20px 50px -12px hsl(var(--primary) / 0.4)",
+                ],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            >
+              <Music2 className="w-10 h-10 text-white" />
+            </motion.div>
           </motion.div>
 
           <h1 className="text-3xl sm:text-4xl font-bold mb-3">
@@ -80,21 +96,34 @@ export default function Home() {
         <motion.section variants={itemVariants} className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-primary" />
+              <motion.div
+                animate={{ rotate: [0, 15, -15, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Sparkles className="w-5 h-5 text-primary" />
+              </motion.div>
               <h2 className="text-lg font-semibold">Featured</h2>
             </div>
-            <button
+            <motion.button
               onClick={() => navigate("/library")}
-              className="flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
+              className="flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors group"
+              whileHover={{ x: 2 }}
             >
               View all
-              <ChevronRight className="w-4 h-4" />
-            </button>
+              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+            </motion.button>
           </div>
 
           <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-2 -mx-4 px-4">
-            {featuredSongs.map((song) => (
-              <SongCard key={song.id} song={song} variant="featured" />
+            {featuredSongs.map((song, index) => (
+              <motion.div
+                key={song.id}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <SongCard song={song} variant="featured" />
+              </motion.div>
             ))}
           </div>
         </motion.section>
@@ -105,9 +134,13 @@ export default function Home() {
             <div className="grid grid-cols-2 gap-3">
               <GlassCard padding="md" hover={false}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-stem-vocal/20 flex items-center justify-center">
+                  <motion.div 
+                    className="w-10 h-10 rounded-xl bg-stem-vocal/20 flex items-center justify-center"
+                    whileHover={{ scale: 1.1 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  >
                     <TrendingUp className="w-5 h-5 text-stem-vocal" />
-                  </div>
+                  </motion.div>
                   <div>
                     <p className="text-2xl font-bold">12</p>
                     <p className="text-xs text-muted-foreground">Songs Practiced</p>
@@ -116,9 +149,13 @@ export default function Home() {
               </GlassCard>
               <GlassCard padding="md" hover={false}>
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-stem-harmony/20 flex items-center justify-center">
+                  <motion.div 
+                    className="w-10 h-10 rounded-xl bg-stem-harmony/20 flex items-center justify-center"
+                    whileHover={{ scale: 1.1 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  >
                     <Music2 className="w-5 h-5 text-stem-harmony" />
-                  </div>
+                  </motion.div>
                   <div>
                     <p className="text-2xl font-bold">3.5h</p>
                     <p className="text-xs text-muted-foreground">Training Time</p>
@@ -133,18 +170,26 @@ export default function Home() {
         <motion.section variants={itemVariants}>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">All Songs</h2>
-            <button
+            <motion.button
               onClick={() => navigate("/library")}
-              className="flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors"
+              className="flex items-center gap-1 text-sm text-primary hover:text-primary/80 transition-colors group"
+              whileHover={{ x: 2 }}
             >
               Browse library
-              <ChevronRight className="w-4 h-4" />
-            </button>
+              <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+            </motion.button>
           </div>
 
           <div className="space-y-3">
-            {mockSongs.slice(0, 4).map((song) => (
-              <SongCard key={song.id} song={song} variant="compact" />
+            {mockSongs.slice(0, 4).map((song, index) => (
+              <motion.div
+                key={song.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <SongCard song={song} variant="compact" />
+              </motion.div>
             ))}
           </div>
         </motion.section>
@@ -154,12 +199,17 @@ export default function Home() {
           <motion.section variants={itemVariants} className="mt-8">
             <GlassCard
               padding="lg"
-              className="text-center border-primary/30"
+              className="text-center border-primary/30 animate-border-glow"
               glow
               glowColor="primary"
               hover={false}
             >
-              <Sparkles className="w-8 h-8 text-primary mx-auto mb-3" />
+              <motion.div
+                animate={{ y: [0, -5, 0] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <Sparkles className="w-8 h-8 text-primary mx-auto mb-3" />
+              </motion.div>
               <h3 className="text-lg font-semibold mb-2">Unlock All Songs</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Get access to 100+ premium tracks and advanced training features.
