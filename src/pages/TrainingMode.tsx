@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -7,22 +7,26 @@ import {
   Pause,
   SkipBack,
   SkipForward,
-  Repeat,
   RotateCcw,
   Volume2,
   VolumeX,
   Loader2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassCard } from "@/components/ui/glass-card";
-import { GlassSlider } from "@/components/ui/glass-slider";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { WaveformDisplay } from "@/components/audio/WaveformDisplay";
 import { StemTrack } from "@/components/audio/StemTrack";
+import { TempoControl } from "@/components/audio/TempoControl";
+import { LoopControls } from "@/components/audio/LoopControls";
+import { LoopRegion } from "@/components/audio/LoopRegion";
 import { getSongById, generateMockWaveform } from "@/data/mockSongs";
 import { useAudioStore } from "@/stores/audioStore";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { usePracticeSession } from "@/hooks/usePracticeSession";
 import { cn } from "@/lib/utils";
 
 const containerVariants = {
@@ -54,9 +58,13 @@ export default function TrainingMode() {
   const navigate = useNavigate();
   const song = getSongById(id || "");
   const intervalRef = useRef<number | null>(null);
+  const [showControls, setShowControls] = React.useState(false);
 
   // Audio player hook for real audio
   const { isLoaded, loadingProgress, seekTo, hasRealAudio } = useAudioPlayer();
+
+  // Practice session tracking
+  usePracticeSession(song?.id);
 
   const {
     currentSong,
@@ -64,11 +72,17 @@ export default function TrainingMode() {
     currentTime,
     duration,
     isLooping,
+    loopStart,
+    loopEnd,
+    playbackRate,
     stemStates,
     setCurrentSong,
     togglePlayPause,
     seek,
+    setLoop,
     toggleLoop,
+    clearLoop,
+    setPlaybackRate,
     resetMixer,
     updateCurrentTime,
   } = useAudioStore();
@@ -152,6 +166,16 @@ export default function TrainingMode() {
       seekTo(time);
     } else {
       seek(time);
+    }
+  };
+
+  const handleSetLoopStart = () => {
+    setLoop(currentTime, loopEnd > currentTime ? loopEnd : duration);
+  };
+
+  const handleSetLoopEnd = () => {
+    if (currentTime > loopStart) {
+      setLoop(loopStart, currentTime);
     }
   };
 
@@ -251,18 +275,97 @@ export default function TrainingMode() {
               </span>
             </div>
 
-            {/* Waveform */}
-            <WaveformDisplay
-              waveformData={masterWaveform}
-              currentTime={currentTime}
-              duration={duration}
-              color="#818cf8"
-              height={40}
-              onSeek={handleSeek}
-              isPlaying={isPlaying}
-              mirrored={true}
-              showProgress={!allMuted}
-            />
+            {/* Waveform with Loop Region */}
+            <div className="relative">
+              <WaveformDisplay
+                waveformData={masterWaveform}
+                currentTime={currentTime}
+                duration={duration}
+                color="#818cf8"
+                height={40}
+                onSeek={handleSeek}
+                isPlaying={isPlaying}
+                mirrored={true}
+                showProgress={!allMuted}
+              />
+              {/* Loop region overlay */}
+              {loopEnd > loopStart && (
+                <LoopRegion
+                  loopStart={loopStart}
+                  loopEnd={loopEnd}
+                  duration={duration}
+                  isLooping={isLooping}
+                  height={40}
+                />
+              )}
+            </div>
+          </GlassCard>
+        </motion.div>
+
+        {/* Tempo & Loop Controls - Expandable */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="flex-shrink-0 mb-2"
+        >
+          <GlassCard padding="sm" hover={false}>
+            {/* Toggle header */}
+            <button
+              onClick={() => setShowControls(!showControls)}
+              className="w-full flex items-center justify-between py-1"
+            >
+              <span className="text-xs font-medium text-muted-foreground">
+                Training Controls
+              </span>
+              <div className="flex items-center gap-2">
+                {/* Active indicators */}
+                {playbackRate !== 1 && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-primary/20 text-primary">
+                    {Math.round(playbackRate * 100)}%
+                  </span>
+                )}
+                {loopEnd > loopStart && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-primary/20 text-primary">
+                    Loop
+                  </span>
+                )}
+                {showControls ? (
+                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                )}
+              </div>
+            </button>
+
+            {/* Expandable content */}
+            {showControls && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="pt-3 space-y-4"
+              >
+                {/* Tempo Control */}
+                <TempoControl
+                  playbackRate={playbackRate}
+                  onPlaybackRateChange={setPlaybackRate}
+                />
+
+                {/* Loop Controls */}
+                <LoopControls
+                  currentTime={currentTime}
+                  duration={duration}
+                  loopStart={loopStart}
+                  loopEnd={loopEnd}
+                  isLooping={isLooping}
+                  onSetLoopStart={handleSetLoopStart}
+                  onSetLoopEnd={handleSetLoopEnd}
+                  onToggleLoop={toggleLoop}
+                  onClearLoop={clearLoop}
+                />
+              </motion.div>
+            )}
           </GlassCard>
         </motion.div>
 
@@ -314,16 +417,6 @@ export default function TrainingMode() {
 
           {/* Controls */}
           <div className="flex items-center justify-center gap-3">
-            {/* Loop toggle */}
-            <IconButton
-              icon={Repeat}
-              variant="accent"
-              size="sm"
-              active={isLooping}
-              onClick={toggleLoop}
-              label="Toggle loop"
-            />
-
             {/* Skip back */}
             <IconButton
               icon={SkipBack}
@@ -347,7 +440,7 @@ export default function TrainingMode() {
               {/* Pulsing ring when playing */}
               {isPlaying && (
                 <motion.div
-                  className="absolute inset-0 rounded-full border-2 border-white/30"
+                  className="absolute inset-0 rounded-full border-2 border-foreground/30"
                   animate={{
                     scale: [1, 1.15, 1],
                     opacity: [0.4, 0, 0.4],
@@ -361,11 +454,11 @@ export default function TrainingMode() {
               )}
 
               {songHasRealAudio && !isLoaded ? (
-                <Loader2 className="w-6 h-6 text-white animate-spin" />
+                <Loader2 className="w-6 h-6 text-primary-foreground animate-spin" />
               ) : isPlaying ? (
-                <Pause className="w-6 h-6 text-white fill-white" />
+                <Pause className="w-6 h-6 text-primary-foreground fill-primary-foreground" />
               ) : (
-                <Play className="w-6 h-6 text-white fill-white ml-0.5" />
+                <Play className="w-6 h-6 text-primary-foreground fill-primary-foreground ml-0.5" />
               )}
             </motion.button>
 
@@ -376,9 +469,6 @@ export default function TrainingMode() {
               onClick={handleSkipForward}
               label="Skip forward 10 seconds"
             />
-
-            {/* Placeholder for symmetry */}
-            <div className="w-10 h-10" />
           </div>
         </div>
       </motion.div>

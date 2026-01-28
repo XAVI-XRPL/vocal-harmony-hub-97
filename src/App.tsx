@@ -15,6 +15,7 @@ import SongDetail from "./pages/SongDetail";
 import TrainingMode from "./pages/TrainingMode";
 import Profile from "./pages/Profile";
 import Subscription from "./pages/Subscription";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,19 +58,27 @@ function AppContent() {
 
       {!showSplash && !showOnboarding && (
         <BrowserRouter>
-          <AppShell>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/library" element={<Library />} />
-              <Route path="/song/:id" element={<SongDetail />} />
-              <Route path="/training/:id" element={<TrainingMode />} />
-              <Route path="/training" element={<Library />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/subscription" element={<Subscription />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AppShell>
+          <Routes>
+            {/* Auth page without AppShell */}
+            <Route path="/auth" element={<Auth />} />
+            
+            {/* Main app routes with AppShell */}
+            <Route path="*" element={
+              <AppShell>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/library" element={<Library />} />
+                  <Route path="/song/:id" element={<SongDetail />} />
+                  <Route path="/training/:id" element={<TrainingMode />} />
+                  <Route path="/training" element={<Library />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/subscription" element={<Subscription />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </AppShell>
+            } />
+          </Routes>
         </BrowserRouter>
       )}
     </>
