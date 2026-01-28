@@ -1,168 +1,319 @@
 
 
-# RVMT - Vocal Coaching App MVP Plan
+# Enhanced Training Mode, Splash Screen & Mobile Optimization
 
-## 🎯 Vision
-A premium vocal coaching web app with a stunning liquid glass morphism UI where users can browse songs, play them in full, then enter a stem training mode with individual track controls (mute/solo/volume) and synchronized waveform visualizations.
+## Overview
 
----
-
-## Phase 1: Foundation & Design System
-
-### 1.1 Core Design System Setup
-- Implement liquid glass morphism CSS variables (dark theme, glass surfaces, accent gradients)
-- Create stem-specific color palette (cyan for vocals, purple for harmony, amber for instrumental, etc.)
-- Add liquid animation keyframes (flow, shimmer, pulse, float)
-- Configure typography scale and touch-friendly sizing
-
-### 1.2 Glass UI Component Library
-- **GlassCard** - Frosted glass cards with hover glow effects
-- **GlassButton** - Gradient buttons with liquid press animations
-- **GlassSlider** - Volume sliders with glowing thumbs
-- **IconButton** - Touch-friendly icon buttons (44px minimum)
-- **LoadingShimmer** - Skeleton loading states
+This plan addresses four key improvements to the RVMT vocal coaching app:
+1. **Fix and enhance waveform displays** - Show actual wave patterns in stem tracks
+2. **Optimize mobile layout** - Compact design with less scrolling
+3. **Add splash screen with onboarding** - First-run experience for new users
+4. **Add more visual polish** - Micro-interactions, better animations, and glass effects
 
 ---
 
-## Phase 2: Layout & Navigation
+## 1. Fix Waveform Display
 
-### 2.1 Mobile-First App Shell
-- Responsive container with safe area handling for notched devices
-- Sticky header (56px) with logo, search, and menu
-- Fixed bottom navigation bar (Home, Library, Train, Profile)
-- Bottom player bar (appears when song is playing)
+### Current Issue
+The waveform bars are nearly invisible because:
+- The bars have minimal visual presence (too thin, too small)
+- Missing proper contrast between played and unplayed sections
+- No background fill to make the waveform stand out
 
-### 2.2 Page Structure
-- **Home** - Hero with animated gradients, featured songs carousel
-- **Library** - Song grid with search and filter chips
-- **Song Detail** - Full preview with waveform and "Enter Training" CTA
-- **Training Mode** - Multi-stem mixer view (the core feature)
-- **Profile** - User info and subscription status
-- **Subscription** - Pricing cards and plan comparison
+### Solution
 
----
+**Enhanced WaveformDisplay Component:**
+- Add a filled waveform with gradient that fades from bottom
+- Show mirrored waveform (bars above and below centerline) for a more professional audio look
+- Increase bar width and add slight gaps between bars
+- Add subtle glow effect behind the waveform
+- Add animated "breathing" effect when playing
 
-## Phase 3: Backend Infrastructure (Supabase + Stripe)
-
-### 3.1 Database Schema
-- **profiles** table - User display names, avatars, subscription tier
-- **songs** table - Title, artist, cover art, duration, difficulty, genre
-- **stems** table - Linked to songs, with type, name, URL, color
-- **user_progress** table - Practice tracking, favorites, last played
-
-### 3.2 Authentication
-- Email/password signup and login with styled auth page
-- Session management and protected routes
-- User profile creation on signup
-
-### 3.3 Stripe Integration
-- Subscription products: Free, Pro ($9.99/mo)
-- Checkout session creation edge function
-- Webhook handler for subscription status updates
-- Premium content gating based on subscription tier
+```text
+Before:                    After:
+|                         ▓▓▓   ▓▓▓▓▓▓   ▓▓▓
+|                        ▓▓▓▓▓ ▓▓▓▓▓▓▓▓ ▓▓▓▓▓
+(barely visible)        ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+                       ━━━━━━━━━━━━━━━━━━━━━━━
+                        ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+                         ▓▓▓▓▓ ▓▓▓▓▓▓▓▓ ▓▓▓▓▓
+                          ▓▓▓   ▓▓▓▓▓▓   ▓▓▓
+```
 
 ---
 
-## Phase 4: Audio Engine & Visualization
+## 2. Optimize Mobile Layout - Less Scrolling
 
-### 4.1 Audio Playback System (Howler.js)
-- Multi-track stem loader with synchronized playback
-- Global audio state (Zustand store)
-- Play/pause, seek, skip forward/back controls
-- Individual stem volume, mute, and solo controls
-- A-B loop selection
+### Current Issue
+Training mode has 5+ stems stacked vertically, each with waveform + controls, requiring significant scrolling.
 
-### 4.2 Waveform Visualization (WaveSurfer.js)
-- Master waveform for full song view
-- Individual stem waveforms with unique colors
-- Animated playhead with trailing glow
-- Click-to-seek functionality
-- Loop region highlighting
+### Solution - Compact Stem Cards
 
-### 4.3 Demo Audio Content
-- Mock song data with placeholder cover art (Unsplash)
-- Generated waveform data for visual demonstration
-- Sample stems using free audio sources
+**New Compact StemTrack Design:**
+```text
+┌────────────────────────────────────────────────┐
+│ 🎤 Lead Vocal        [S] [M]    ━━━━━○━━━━━━  │
+│ ▓▓▓▓▓▓▓▓▓▓▓▓|▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  │
+└────────────────────────────────────────────────┘
+```
 
----
+**Key Changes:**
+- **Single-line header**: Icon, name, S/M buttons, and volume slider all in one row
+- **Inline waveform**: More compact height (48px instead of 60px)
+- **Remove separate volume row**: Integrate slider into header
+- **Tighter padding**: Reduce from p-4 to p-3
+- **Smaller gaps**: Reduce spacing between stem cards
 
-## Phase 5: Core User Flows
+**Full-screen Layout Optimization:**
+```text
+┌─────────────────────────────────────┐
+│ ←  Song Title                    ⚙ │  <- 48px header
+├─────────────────────────────────────┤
+│ ┌─────────────────────────────────┐ │
+│ │ Master  ░░▓▓▓▓▓▓|▓▓▓▓▓░░  0:24 │ │  <- 64px master
+│ └─────────────────────────────────┘ │
+│                                     │
+│ ┌─ Stems (scrollable area) ───────┐ │
+│ │ 🎤 Vocal  [S][M] ━○   ▓▓▓|▓▓▓▓  │ │  <- 72px each
+│ │ 🎵 Harmony[S][M] ━━○  ▓▓▓|▓▓▓▓  │ │
+│ │ 🎸 Instr. [S][M] ━━━○ ▓▓▓|▓▓▓▓  │ │
+│ │ 🥁 Drums  [S][M] ━○   ▓▓▓|▓▓▓▓  │ │
+│ │ 🎸 Bass   [S][M] ━━○  ▓▓▓|▓▓▓▓  │ │
+│ └─────────────────────────────────┘ │
+│                                     │
+├─────────────────────────────────────┤  <- Fixed transport
+│     ◀◀    ▶ PLAY   ▶▶    🔁        │
+│         0:24 / 3:54                 │
+└─────────────────────────────────────┘
+```
 
-### 5.1 Song Discovery Flow
-1. Browse song library with search and filters
-2. Tap song card → View song detail with cover art and metadata
-3. Play full song preview with single waveform
-4. Tap "Enter Training Mode" to expand stems
-
-### 5.2 Stem Training Flow
-1. All stems load and display as separate tracks
-2. Each track shows: name, solo/mute buttons, volume slider, waveform
-3. Mute vocals to practice singing along
-4. Solo harmonies to learn parts
-5. Adjust individual volumes for custom mix
-6. Set loop regions for difficult sections
-
-### 5.3 Subscription Flow
-1. Free users see limited songs, paywall on premium content
-2. Tap locked song → Paywall modal with pricing
-3. Select plan → Stripe checkout
-4. Return to app with full access unlocked
-
----
-
-## Phase 6: Polish & Micro-Interactions
-
-### 6.1 Animations (Framer Motion)
-- Page transitions with fade and slide
-- Staggered stem track reveals
-- Solo/mute button toggle feedback
-- Volume slider thumb expansion on drag
-- Play button icon morphing
-
-### 6.2 Mobile UX Enhancements
-- Swipe gestures for navigation
-- Pull-to-refresh on library
-- Haptic-style visual feedback
-- Empty states with animated illustrations
-- Toast notifications for actions
+**Viewport Calculation:**
+- Header: 48px
+- Master waveform: 80px
+- Transport controls: 120px
+- Available for stems: ~400px on mobile (can show 5 stems at 72px each without scrolling)
 
 ---
 
-## 📱 Key MVP Screens
+## 3. Splash Screen with Onboarding Flow
 
-| Screen | Purpose |
-|--------|---------|
-| Home | Welcome, featured songs, quick stats |
-| Library | Browse all songs with search/filter |
-| Song Detail | Preview full song, see metadata |
-| Training Mode | Multi-stem mixer (CORE FEATURE) |
-| Auth | Login/signup flow |
-| Subscription | Pricing and checkout |
-| Profile | User settings, subscription status |
+### New Components
+
+**SplashScreen Component:**
+- Full-screen animated gradient background
+- RVMT logo with liquid animation
+- Loading progress indicator
+- Checks if user has completed onboarding
+
+**OnboardingFlow Component:**
+- 3-4 swipeable slides with key features
+- Each slide has:
+  - Large animated illustration
+  - Headline text
+  - Brief description
+- Skip button and progress dots
+- "Get Started" CTA on final slide
+- Saves completion to localStorage
+
+### Onboarding Slides
+
+```text
+Slide 1: Welcome
+┌─────────────────────────────────────┐
+│                                     │
+│         🎵 (animated logo)          │
+│                                     │
+│        Welcome to RVMT              │
+│                                     │
+│   Master your voice with isolated   │
+│   stem training technology          │
+│                                     │
+│              ○ ○ ○                  │
+│        [Get Started →]              │
+└─────────────────────────────────────┘
+
+Slide 2: Stems Explained
+┌─────────────────────────────────────┐
+│       ═══ Vocal ═══                 │
+│       ═══ Harmony ═══               │
+│       ═══ Instrumental ═══          │
+│                                     │
+│      Separate & Control             │
+│                                     │
+│   Isolate vocals, harmonies, and    │
+│   instrumentals independently       │
+│                                     │
+│              ○ ○ ○                  │
+│        [Next →]                     │
+└─────────────────────────────────────┘
+
+Slide 3: Practice Features
+┌─────────────────────────────────────┐
+│         [S] [M] ━━━○━━              │
+│                                     │
+│         Solo & Mute                 │
+│                                     │
+│   Solo any track to focus, or       │
+│   mute to practice your part        │
+│                                     │
+│              ○ ○ ○                  │
+│        [Start Training →]           │
+└─────────────────────────────────────┘
+```
+
+### App Flow
+
+```text
+App Launch
+    │
+    ▼
+┌─────────────┐     No     ┌─────────────┐
+│ Check local │ ─────────► │  Onboarding │
+│   storage   │            │    Flow     │
+└─────────────┘            └──────┬──────┘
+    │ Yes                         │
+    ▼                             ▼
+┌─────────────┐            ┌─────────────┐
+│    Home     │ ◄───────── │  Complete   │
+│    Page     │            │  & Save     │
+└─────────────┘            └─────────────┘
+```
 
 ---
 
-## 🚀 What You'll Get
+## 4. Polish & Micro-Interactions
 
-✅ Beautiful liquid glass UI optimized for mobile  
-✅ Working audio player with multi-track stem control  
-✅ Visual waveforms with playhead animation  
-✅ Solo, mute, and volume controls per stem  
-✅ User authentication and profiles  
-✅ Stripe subscription integration  
-✅ Demo songs with placeholder content  
-✅ Responsive design that scales to desktop  
+### Enhanced Animations
+
+**Stem Track Interactions:**
+- Solo button: Pulse glow effect when active
+- Mute button: Track dims with subtle blur
+- Volume slider: Thumb scales up on drag with glow trail
+- Waveform: Subtle "breathing" animation when playing
+
+**Transport Controls:**
+- Play button: Morphing icon with ripple effect
+- Progress bar: Smooth gradient animation
+- Time display: Fade transition on update
+
+**Page Transitions:**
+- Slide up with blur-in effect
+- Staggered element reveals
+- Shared element transitions for song cards
+
+### Visual Enhancements
+
+**Stem Cards:**
+- Gradient border that matches stem color
+- Subtle inner glow on active stems
+- Icon background pulse when solo'd
+
+**Master Waveform:**
+- Full-width gradient fill
+- Animated playhead with comet trail
+- Glow effect behind played portion
+
+**Transport Bar:**
+- Stronger glass blur
+- Gradient progress fill
+- Floating appearance with shadow
 
 ---
 
-## 🛠 Tech Stack
+## Files to Create/Modify
 
-- **React + TypeScript + Vite** (Lovable default)
-- **Tailwind CSS** for styling
-- **Framer Motion** for animations
-- **Zustand** for state management
-- **Howler.js** for audio playback
-- **WaveSurfer.js** for waveform visualization
-- **Supabase** for auth, database, storage
-- **Stripe** for payments
+### New Files
+| File | Purpose |
+|------|---------|
+| `src/pages/Splash.tsx` | Initial splash screen |
+| `src/pages/Onboarding.tsx` | Onboarding flow slides |
+| `src/hooks/useOnboarding.ts` | Onboarding state management |
+| `src/components/audio/CompactStemTrack.tsx` | Compact stem track layout |
+
+### Modified Files
+| File | Changes |
+|------|---------|
+| `src/App.tsx` | Add splash/onboarding routes |
+| `src/components/audio/WaveformDisplay.tsx` | Enhanced waveform with mirrored bars |
+| `src/components/audio/StemTrack.tsx` | Compact single-row layout |
+| `src/pages/TrainingMode.tsx` | Optimized spacing, compact layout |
+| `src/index.css` | New animations and polish classes |
+| `src/components/layout/AppShell.tsx` | Handle splash/onboarding state |
+
+---
+
+## Technical Details
+
+### Splash Screen Logic
+```typescript
+// useOnboarding.ts
+const ONBOARDING_KEY = 'rvmt_onboarding_complete';
+
+export function useOnboarding() {
+  const [isComplete, setIsComplete] = useState(() => {
+    return localStorage.getItem(ONBOARDING_KEY) === 'true';
+  });
+
+  const completeOnboarding = () => {
+    localStorage.setItem(ONBOARDING_KEY, 'true');
+    setIsComplete(true);
+  };
+
+  return { isComplete, completeOnboarding };
+}
+```
+
+### Enhanced Waveform Bars
+```typescript
+// Mirrored waveform with gradient
+{normalizedData.map((value, i) => (
+  <div 
+    key={i}
+    className="flex flex-col items-center gap-0.5"
+    style={{ flex: 1 }}
+  >
+    {/* Top bar */}
+    <div 
+      style={{ 
+        height: `${value * 50}%`,
+        background: isPlayed ? color : `${color}33`,
+      }} 
+    />
+    {/* Center line */}
+    <div className="w-full h-px bg-white/10" />
+    {/* Bottom bar (mirrored) */}
+    <div 
+      style={{ 
+        height: `${value * 50}%`,
+        background: isPlayed ? color : `${color}33`,
+      }} 
+    />
+  </div>
+))}
+```
+
+### Compact Stem Layout
+```typescript
+// Single row: [Icon] [Name] [S] [M] [Volume Slider]
+<div className="flex items-center gap-2 p-3">
+  <StemIcon />
+  <span className="flex-shrink-0 w-20 truncate">{stem.name}</span>
+  <SoloButton size="sm" />
+  <MuteButton size="sm" />
+  <VolumeSlider className="flex-1" size="sm" />
+</div>
+<WaveformDisplay height={40} />
+```
+
+---
+
+## Expected Outcome
+
+After implementation:
+- Waveforms display as vibrant, mirrored audio visualizations
+- All 5 stems visible on mobile without scrolling (compact layout)
+- New users see beautiful onboarding explaining the app
+- Transport controls are fixed and always accessible
+- Every interaction feels premium with smooth animations
+- Glass morphism effects are more pronounced and polished
 
