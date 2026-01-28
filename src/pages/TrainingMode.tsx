@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -9,11 +9,14 @@ import {
   SkipForward,
   Repeat,
   RotateCcw,
-  Settings,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassCard } from "@/components/ui/glass-card";
+import { GlassSlider } from "@/components/ui/glass-slider";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { WaveformDisplay } from "@/components/audio/WaveformDisplay";
 import { StemTrack } from "@/components/audio/StemTrack";
 import { getSongById, generateMockWaveform } from "@/data/mockSongs";
@@ -49,6 +52,11 @@ export default function TrainingMode() {
   const navigate = useNavigate();
   const song = getSongById(id || "");
   const intervalRef = useRef<number | null>(null);
+
+  // Master track controls
+  const [masterVolume, setMasterVolume] = useState(1);
+  const [masterMuted, setMasterMuted] = useState(false);
+  const [masterSolo, setMasterSolo] = useState(false);
 
   const {
     currentSong,
@@ -148,43 +156,108 @@ export default function TrainingMode() {
             >
               Reset
             </GlassButton>
-            <IconButton
-              icon={Settings}
-              variant="ghost"
-              size="sm"
-              label="Settings"
-            />
+            <ThemeToggle />
           </div>
         </div>
       </div>
 
       {/* Main content area - flex grow with hidden overflow */}
       <div className="flex-1 flex flex-col min-h-0 px-3 py-2">
-        {/* Master Waveform - Compact */}
+        {/* Master Waveform - With Solo/Mute controls */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex-shrink-0 mb-2"
         >
-          <GlassCard padding="sm" hover={false}>
-            <div className="flex items-center justify-between mb-1.5">
+          <GlassCard 
+            padding="sm" 
+            hover={false}
+            className={cn(
+              "transition-opacity duration-200",
+              masterMuted && "opacity-50"
+            )}
+          >
+            {/* Master header row with controls */}
+            <div className="flex items-center gap-2 mb-2">
+              {/* Icon and label */}
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full gradient-bg" />
                 <span className="text-xs font-medium">Master</span>
               </div>
-              <span className="text-[10px] text-muted-foreground">
+
+              {/* Solo button */}
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setMasterSolo(!masterSolo)}
+                className={cn(
+                  "w-7 h-7 rounded-lg border flex items-center justify-center",
+                  "transition-all duration-200",
+                  masterSolo
+                    ? "border-transparent"
+                    : "bg-glass border-glass-border hover:border-glass-border-hover"
+                )}
+                style={masterSolo ? {
+                  background: "linear-gradient(135deg, #818cf8 0%, #a855f7 100%)",
+                  boxShadow: "0 0 16px rgba(129, 140, 248, 0.5)",
+                } : undefined}
+              >
+                <span
+                  className={cn(
+                    "text-[10px] font-bold",
+                    masterSolo ? "text-white" : "text-muted-foreground"
+                  )}
+                >
+                  S
+                </span>
+              </motion.button>
+
+              {/* Mute button */}
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={() => setMasterMuted(!masterMuted)}
+                className={cn(
+                  "w-7 h-7 rounded-lg border flex items-center justify-center",
+                  "transition-all duration-200",
+                  masterMuted
+                    ? "bg-destructive/30 border-destructive/60"
+                    : "bg-glass border-glass-border hover:border-glass-border-hover"
+                )}
+              >
+                {masterMuted ? (
+                  <VolumeX className="w-3.5 h-3.5 text-destructive" />
+                ) : (
+                  <Volume2 className="w-3.5 h-3.5 text-muted-foreground" />
+                )}
+              </motion.button>
+
+              {/* Volume slider */}
+              <div className="flex-1 min-w-0">
+                <GlassSlider
+                  value={masterVolume}
+                  onChange={setMasterVolume}
+                  color="#818cf8"
+                  size="sm"
+                  disabled={masterMuted}
+                />
+              </div>
+
+              {/* Time display */}
+              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
                 {formatTime(currentTime)} / {formatTime(duration)}
               </span>
             </div>
+
+            {/* Waveform */}
             <WaveformDisplay
               waveformData={masterWaveform}
               currentTime={currentTime}
               duration={duration}
               color="#818cf8"
-              height={44}
+              height={40}
               onSeek={seek}
               isPlaying={isPlaying}
               mirrored={true}
+              showProgress={!masterMuted}
             />
           </GlassCard>
         </motion.div>
