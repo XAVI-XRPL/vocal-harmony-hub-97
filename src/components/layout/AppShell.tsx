@@ -102,8 +102,8 @@ export function AppShell({ children }: AppShellProps) {
       <main
         className={cn(
           "relative z-10 min-h-screen",
-          !hideNav && "pb-20", // Space for bottom nav
-          showMiniPlayer && !hideNav && "pb-36" // Extra space for mini player
+          !hideNav && "pb-24", // Space for bottom nav with elevated home button
+          showMiniPlayer && !hideNav && "pb-40" // Extra space for mini player
         )}
       >
         <AnimatePresence mode="wait">
