@@ -25,21 +25,21 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
     },
   },
 };
 
 const itemVariants = {
-  hidden: { opacity: 0, x: -30 },
+  hidden: { opacity: 0, y: 10 },
   visible: {
     opacity: 1,
-    x: 0,
+    y: 0,
     transition: {
       type: "spring" as const,
-      stiffness: 100,
-      damping: 15,
+      stiffness: 200,
+      damping: 20,
     },
   },
 };
@@ -118,14 +118,14 @@ export default function TrainingMode() {
   };
 
   // Generate master waveform from all stems combined
-  const masterWaveform = generateMockWaveform(400);
+  const masterWaveform = generateMockWaveform(200);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="sticky top-0 z-40 glass-card rounded-none border-x-0 border-t-0">
-        <div className="flex items-center justify-between h-14 px-4 safe-top">
-          <div className="flex items-center gap-3">
+    <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
+      {/* Header - Compact */}
+      <div className="z-40 glass-card rounded-none border-x-0 border-t-0 flex-shrink-0">
+        <div className="flex items-center justify-between h-12 px-3 safe-top">
+          <div className="flex items-center gap-2">
             <IconButton
               icon={ArrowLeft}
               variant="ghost"
@@ -134,53 +134,67 @@ export default function TrainingMode() {
               label="Go back"
             />
             <div className="min-w-0">
-              <p className="text-sm font-semibold truncate">{song.title}</p>
-              <p className="text-xs text-muted-foreground truncate">{song.artist}</p>
+              <p className="text-xs font-semibold truncate">{song.title}</p>
+              <p className="text-[10px] text-muted-foreground truncate">{song.artist}</p>
             </div>
           </div>
-          <IconButton
-            icon={Settings}
-            variant="ghost"
-            size="sm"
-            label="Settings"
-          />
+          <div className="flex items-center gap-1">
+            <GlassButton
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 text-xs"
+              icon={<RotateCcw className="w-3.5 h-3.5" />}
+              onClick={resetMixer}
+            >
+              Reset
+            </GlassButton>
+            <IconButton
+              icon={Settings}
+              variant="ghost"
+              size="sm"
+              label="Settings"
+            />
+          </div>
         </div>
       </div>
 
-      <div className="px-4 pb-40">
-        {/* Master Waveform */}
+      {/* Main content area - flex grow with hidden overflow */}
+      <div className="flex-1 flex flex-col min-h-0 px-3 py-2">
+        {/* Master Waveform - Compact */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-4 mb-6"
+          className="flex-shrink-0 mb-2"
         >
-          <GlassCard padding="md" hover={false}>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2 h-2 rounded-full gradient-bg" />
-              <span className="text-sm font-medium">Master</span>
+          <GlassCard padding="sm" hover={false}>
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full gradient-bg" />
+                <span className="text-xs font-medium">Master</span>
+              </div>
+              <span className="text-[10px] text-muted-foreground">
+                {formatTime(currentTime)} / {formatTime(duration)}
+              </span>
             </div>
             <WaveformDisplay
               waveformData={masterWaveform}
               currentTime={currentTime}
               duration={duration}
               color="hsl(var(--primary))"
-              height={60}
+              height={44}
               onSeek={seek}
               isPlaying={isPlaying}
+              mirrored={true}
             />
-            <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-              <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(duration)}</span>
-            </div>
           </GlassCard>
         </motion.div>
 
-        {/* Stem Tracks */}
+        {/* Stem Tracks - Scrollable if needed */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="space-y-3"
+          className="flex-1 overflow-y-auto hide-scrollbar space-y-2 pb-2"
         >
           {song.stems.map((stem) => (
             <motion.div key={stem.id} variants={itemVariants}>
@@ -193,38 +207,21 @@ export default function TrainingMode() {
             </motion.div>
           ))}
         </motion.div>
-
-        {/* Reset button */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-6 flex justify-center"
-        >
-          <GlassButton
-            variant="ghost"
-            size="sm"
-            icon={<RotateCcw className="w-4 h-4" />}
-            onClick={resetMixer}
-          >
-            Reset Mixer
-          </GlassButton>
-        </motion.div>
       </div>
 
-      {/* Fixed Transport Controls */}
+      {/* Fixed Transport Controls - More compact */}
       <motion.div
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-50",
-          "glass-card-solid rounded-t-3xl border-x-0 border-b-0",
+          "z-50 flex-shrink-0",
+          "glass-card-solid rounded-t-2xl border-x-0 border-b-0",
           "safe-bottom"
         )}
       >
-        <div className="px-6 py-4">
+        <div className="px-4 py-3">
           {/* Progress bar */}
-          <div className="h-1 bg-muted/30 rounded-full mb-4 overflow-hidden">
+          <div className="h-1 bg-muted/30 rounded-full mb-3 overflow-hidden">
             <motion.div
               className="h-full gradient-bg"
               style={{ width: `${(currentTime / duration) * 100}%` }}
@@ -232,11 +229,12 @@ export default function TrainingMode() {
           </div>
 
           {/* Controls */}
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center gap-3">
             {/* Loop toggle */}
             <IconButton
               icon={Repeat}
               variant="accent"
+              size="sm"
               active={isLooping}
               onClick={toggleLoop}
               label="Toggle loop"
@@ -246,7 +244,6 @@ export default function TrainingMode() {
             <IconButton
               icon={SkipBack}
               variant="ghost"
-              size="lg"
               onClick={handleSkipBack}
               label="Skip back 10 seconds"
             />
@@ -257,8 +254,8 @@ export default function TrainingMode() {
               whileTap={{ scale: 0.95 }}
               onClick={togglePlayPause}
               className={cn(
-                "w-16 h-16 rounded-full flex items-center justify-center",
-                "gradient-bg shadow-2xl relative"
+                "w-14 h-14 rounded-full flex items-center justify-center",
+                "gradient-bg shadow-xl relative"
               )}
             >
               {/* Pulsing ring when playing */}
@@ -266,11 +263,11 @@ export default function TrainingMode() {
                 <motion.div
                   className="absolute inset-0 rounded-full border-2 border-white/30"
                   animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.5, 0, 0.5],
+                    scale: [1, 1.15, 1],
+                    opacity: [0.4, 0, 0.4],
                   }}
                   transition={{
-                    duration: 2,
+                    duration: 1.5,
                     repeat: Infinity,
                     ease: "easeInOut",
                   }}
@@ -278,9 +275,9 @@ export default function TrainingMode() {
               )}
 
               {isPlaying ? (
-                <Pause className="w-7 h-7 text-white fill-white" />
+                <Pause className="w-6 h-6 text-white fill-white" />
               ) : (
-                <Play className="w-7 h-7 text-white fill-white ml-1" />
+                <Play className="w-6 h-6 text-white fill-white ml-0.5" />
               )}
             </motion.button>
 
@@ -288,20 +285,12 @@ export default function TrainingMode() {
             <IconButton
               icon={SkipForward}
               variant="ghost"
-              size="lg"
               onClick={handleSkipForward}
               label="Skip forward 10 seconds"
             />
 
             {/* Placeholder for symmetry */}
-            <div className="w-11 h-11" />
-          </div>
-
-          {/* Time display */}
-          <div className="flex justify-center mt-2">
-            <span className="text-sm text-muted-foreground">
-              {formatTime(currentTime)} / {formatTime(duration)}
-            </span>
+            <div className="w-10 h-10" />
           </div>
         </div>
       </motion.div>

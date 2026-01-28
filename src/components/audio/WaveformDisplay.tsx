@@ -12,6 +12,7 @@ interface WaveformDisplayProps {
   isPlaying?: boolean;
   showProgress?: boolean;
   className?: string;
+  mirrored?: boolean;
 }
 
 export function WaveformDisplay({
@@ -24,13 +25,24 @@ export function WaveformDisplay({
   isPlaying = false,
   showProgress = true,
   className,
+  mirrored = true,
 }: WaveformDisplayProps) {
   const progress = duration > 0 ? currentTime / duration : 0;
 
-  // Normalize waveform data
+  // Normalize and downsample waveform data for cleaner display
   const normalizedData = useMemo(() => {
-    const max = Math.max(...waveformData);
-    return waveformData.map((v) => v / max);
+    const max = Math.max(...waveformData, 0.1);
+    const targetBars = Math.min(waveformData.length, 80);
+    const step = Math.max(1, Math.floor(waveformData.length / targetBars));
+    
+    const downsampled: number[] = [];
+    for (let i = 0; i < waveformData.length; i += step) {
+      const chunk = waveformData.slice(i, i + step);
+      const avg = chunk.reduce((a, b) => a + b, 0) / chunk.length;
+      downsampled.push(avg / max);
+    }
+    
+    return downsampled;
   }, [waveformData]);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -52,25 +64,102 @@ export function WaveformDisplay({
       style={{ height }}
       onClick={handleClick}
     >
-      {/* Waveform bars */}
-      <div className="absolute inset-0 flex items-center gap-[2px]">
+      {/* Background glow effect */}
+      <div
+        className="absolute inset-0 rounded-lg opacity-20 blur-xl pointer-events-none"
+        style={{
+          background: `linear-gradient(90deg, ${color} 0%, transparent ${progress * 100 + 10}%)`,
+        }}
+      />
+
+      {/* Waveform bars container */}
+      <div className="absolute inset-0 flex items-center gap-[1px] px-1">
         {normalizedData.map((value, index) => {
           const barProgress = index / normalizedData.length;
           const isPlayed = barProgress < progress;
+          const barHeight = Math.max(0.15, value);
 
           return (
-            <motion.div
+            <div
               key={index}
-              className="flex-1 rounded-full transition-colors duration-100"
-              style={{
-                height: `${value * 100}%`,
-                backgroundColor: isPlayed ? color : `${color}33`,
-                minWidth: 2,
-              }}
-              initial={{ scaleY: 0 }}
-              animate={{ scaleY: 1 }}
-              transition={{ delay: index * 0.002, duration: 0.3 }}
-            />
+              className="flex-1 flex flex-col items-center justify-center gap-[1px]"
+              style={{ height: "100%" }}
+            >
+              {mirrored ? (
+                // Mirrored waveform - bars extend from center
+                <>
+                  {/* Top bar */}
+                  <motion.div
+                    className="w-full rounded-full transition-all duration-75"
+                    style={{
+                      height: `${barHeight * 50}%`,
+                      background: isPlayed
+                        ? `linear-gradient(to top, ${color}, ${color}cc)`
+                        : `linear-gradient(to top, ${color}40, ${color}20)`,
+                      minHeight: 2,
+                    }}
+                    initial={{ scaleY: 0 }}
+                    animate={{ 
+                      scaleY: 1,
+                      opacity: isPlaying && isPlayed ? [0.85, 1, 0.85] : 1,
+                    }}
+                    transition={{
+                      scaleY: { delay: index * 0.003, duration: 0.2 },
+                      opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
+                    }}
+                  />
+                  {/* Center line */}
+                  <div 
+                    className="w-full transition-colors duration-75"
+                    style={{
+                      height: 1,
+                      background: isPlayed ? `${color}60` : `${color}20`,
+                    }}
+                  />
+                  {/* Bottom bar (mirrored) */}
+                  <motion.div
+                    className="w-full rounded-full transition-all duration-75"
+                    style={{
+                      height: `${barHeight * 50}%`,
+                      background: isPlayed
+                        ? `linear-gradient(to bottom, ${color}, ${color}cc)`
+                        : `linear-gradient(to bottom, ${color}40, ${color}20)`,
+                      minHeight: 2,
+                    }}
+                    initial={{ scaleY: 0 }}
+                    animate={{ 
+                      scaleY: 1,
+                      opacity: isPlaying && isPlayed ? [0.85, 1, 0.85] : 1,
+                    }}
+                    transition={{
+                      scaleY: { delay: index * 0.003, duration: 0.2 },
+                      opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.75 },
+                    }}
+                  />
+                </>
+              ) : (
+                // Single bar - grows from bottom
+                <motion.div
+                  className="w-full rounded-full transition-all duration-75"
+                  style={{
+                    height: `${barHeight * 100}%`,
+                    background: isPlayed
+                      ? `linear-gradient(to top, ${color}cc, ${color})`
+                      : `linear-gradient(to top, ${color}30, ${color}20)`,
+                    minHeight: 2,
+                  }}
+                  initial={{ scaleY: 0 }}
+                  animate={{ 
+                    scaleY: 1,
+                    opacity: isPlaying && isPlayed ? [0.85, 1, 0.85] : 1,
+                  }}
+                  transition={{
+                    scaleY: { delay: index * 0.003, duration: 0.2 },
+                    opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut" },
+                  }}
+                />
+              )}
+            </div>
           );
         })}
       </div>
