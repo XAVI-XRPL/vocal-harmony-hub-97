@@ -14,6 +14,7 @@ import Library from "./pages/Library";
 import SongDetail from "./pages/SongDetail";
 import TrainingMode from "./pages/TrainingMode";
 import Profile from "./pages/Profile";
+import Progress from "./pages/Progress";
 import Subscription from "./pages/Subscription";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
@@ -68,6 +69,7 @@ function AppContent() {
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/library" element={<Library />} />
+                  <Route path="/progress" element={<Progress />} />
                   <Route path="/song/:id" element={<SongDetail />} />
                   <Route path="/training/:id" element={<TrainingMode />} />
                   <Route path="/training" element={<Library />} />
