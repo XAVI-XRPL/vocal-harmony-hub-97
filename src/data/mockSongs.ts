@@ -31,6 +31,18 @@ const covers = {
   acoustic: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?w=400&h=400&fit=crop',
   electronic: 'https://images.unsplash.com/photo-1571974599782-87624638275e?w=400&h=400&fit=crop',
   classical: 'https://images.unsplash.com/photo-1507838153414-b4b713384a76?w=400&h=400&fit=crop',
+  gospel: 'https://images.unsplash.com/photo-1478147427282-58a87a120781?w=400&h=400&fit=crop',
+};
+
+// Use hex colors for proper inline style usage
+const stemColors: Record<StemType, string> = {
+  vocal: '#14b8a6',      // teal/cyan
+  harmony: '#a855f7',    // purple
+  instrumental: '#f59e0b', // amber
+  drums: '#ef4444',      // red
+  bass: '#8b5cf6',       // violet
+  keys: '#10b981',       // green
+  other: '#6b7280',      // gray
 };
 
 // Create stem templates with hex colors for proper CSS usage
@@ -45,28 +57,100 @@ const createStems = (types: StemType[]): Stem[] => {
     other: 'Other',
   };
 
-  // Use hex colors for proper inline style usage
-  const stemColors: Record<StemType, string> = {
-    vocal: '#14b8a6',      // teal/cyan
-    harmony: '#a855f7',    // purple
-    instrumental: '#f59e0b', // amber
-    drums: '#ef4444',      // red
-    bass: '#8b5cf6',       // violet
-    keys: '#10b981',       // green
-    other: '#6b7280',      // gray
-  };
-
   return types.map((type, index) => ({
     id: `stem-${type}-${index}`,
     name: stemNames[type],
     type,
-    url: '', // We'll use mock audio or leave empty for visual demo
+    url: '', // Empty for mock songs
     color: stemColors[type],
     waveformData: generateMockWaveform(200),
   }));
 };
 
+// Real song: Bouncing on a Blessing with actual audio stems
+const bouncingOnABlessingStems: Stem[] = [
+  {
+    id: 'bouncing-vocal',
+    name: 'Lead Vocals',
+    type: 'vocal',
+    url: '/audio/bouncing-on-a-blessing/lead-vocals.mp3',
+    color: stemColors.vocal,
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'bouncing-harmony',
+    name: 'Backing Vocals',
+    type: 'harmony',
+    url: '/audio/bouncing-on-a-blessing/backing-vocals.mp3',
+    color: stemColors.harmony,
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'bouncing-drums',
+    name: 'Drums',
+    type: 'drums',
+    url: '/audio/bouncing-on-a-blessing/drums.mp3',
+    color: stemColors.drums,
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'bouncing-bass',
+    name: 'Bass',
+    type: 'bass',
+    url: '/audio/bouncing-on-a-blessing/bass.mp3',
+    color: stemColors.bass,
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'bouncing-guitar',
+    name: 'Guitar',
+    type: 'instrumental',
+    url: '/audio/bouncing-on-a-blessing/guitar.mp3',
+    color: stemColors.instrumental,
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'bouncing-keyboard',
+    name: 'Keyboard',
+    type: 'keys',
+    url: '/audio/bouncing-on-a-blessing/keyboard.mp3',
+    color: stemColors.keys,
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'bouncing-synth',
+    name: 'Synth',
+    type: 'other',
+    url: '/audio/bouncing-on-a-blessing/synth.mp3',
+    color: '#ec4899', // pink for synth
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'bouncing-other',
+    name: 'Other',
+    type: 'other',
+    url: '/audio/bouncing-on-a-blessing/other.mp3',
+    color: stemColors.other,
+    waveformData: generateMockWaveform(200),
+  },
+];
+
 export const mockSongs: Song[] = [
+  // Real song with actual audio - FIRST for easy access
+  {
+    id: 'bouncing-on-a-blessing',
+    title: 'Bouncing on a Blessing',
+    artist: 'RVMT Demo',
+    coverArt: covers.gospel,
+    duration: 210, // Will be updated by Howler
+    bpm: 95,
+    key: 'G Major',
+    fullMixUrl: '',
+    stems: bouncingOnABlessingStems,
+    difficulty: 'intermediate',
+    genre: 'Soul',
+    isPremium: false,
+  },
   {
     id: '1',
     title: 'Midnight Dreams',

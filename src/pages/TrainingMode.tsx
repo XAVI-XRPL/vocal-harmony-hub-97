@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -11,6 +11,7 @@ import {
   RotateCcw,
   Volume2,
   VolumeX,
+  Loader2,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -21,6 +22,7 @@ import { WaveformDisplay } from "@/components/audio/WaveformDisplay";
 import { StemTrack } from "@/components/audio/StemTrack";
 import { getSongById, generateMockWaveform } from "@/data/mockSongs";
 import { useAudioStore } from "@/stores/audioStore";
+import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { cn } from "@/lib/utils";
 
 const containerVariants = {
@@ -53,10 +55,8 @@ export default function TrainingMode() {
   const song = getSongById(id || "");
   const intervalRef = useRef<number | null>(null);
 
-  // Master track controls
-  const [masterVolume, setMasterVolume] = useState(1);
-  const [masterMuted, setMasterMuted] = useState(false);
-  const [masterSolo, setMasterSolo] = useState(false);
+  // Audio player hook for real audio
+  const { isLoaded, loadingProgress, seekTo, hasRealAudio } = useAudioPlayer();
 
   const {
     currentSong,
@@ -64,12 +64,21 @@ export default function TrainingMode() {
     currentTime,
     duration,
     isLooping,
+    stemStates,
     setCurrentSong,
     togglePlayPause,
     seek,
     toggleLoop,
     resetMixer,
+    updateCurrentTime,
   } = useAudioStore();
+
+  // Calculate master volume/mute from stem states
+  const hasSoloedStems = stemStates.some(s => s.isSolo);
+  const allMuted = stemStates.every(s => s.isMuted);
+  const masterVolume = stemStates.length > 0 
+    ? stemStates.reduce((acc, s) => acc + s.volume, 0) / stemStates.length 
+    : 1;
 
   // Set current song on mount
   useEffect(() => {
@@ -78,8 +87,11 @@ export default function TrainingMode() {
     }
   }, [song, currentSong, setCurrentSong]);
 
-  // Simulate playback timer
+  // Simulate playback timer for mock songs (no real audio)
   useEffect(() => {
+    // Only use simulated timer if no real audio is loaded
+    if (hasRealAudio) return;
+
     if (isPlaying) {
       intervalRef.current = window.setInterval(() => {
         useAudioStore.getState().updateCurrentTime(
@@ -100,7 +112,7 @@ export default function TrainingMode() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isPlaying]);
+  }, [isPlaying, hasRealAudio]);
 
   // Redirect if song not found
   useEffect(() => {
@@ -118,15 +130,36 @@ export default function TrainingMode() {
   };
 
   const handleSkipBack = () => {
-    seek(Math.max(0, currentTime - 10));
+    const newTime = Math.max(0, currentTime - 10);
+    if (hasRealAudio) {
+      seekTo(newTime);
+    } else {
+      seek(newTime);
+    }
   };
 
   const handleSkipForward = () => {
-    seek(Math.min(duration, currentTime + 10));
+    const newTime = Math.min(duration, currentTime + 10);
+    if (hasRealAudio) {
+      seekTo(newTime);
+    } else {
+      seek(newTime);
+    }
+  };
+
+  const handleSeek = (time: number) => {
+    if (hasRealAudio) {
+      seekTo(time);
+    } else {
+      seek(time);
+    }
   };
 
   // Generate master waveform from all stems combined
   const masterWaveform = generateMockWaveform(200);
+
+  // Check if this song has real audio
+  const songHasRealAudio = song.stems.some(stem => stem.url && stem.url.length > 0);
 
   return (
     <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
@@ -147,6 +180,13 @@ export default function TrainingMode() {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {/* Loading indicator */}
+            {songHasRealAudio && !isLoaded && (
+              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/20 text-primary text-xs">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>{Math.round(loadingProgress)}%</span>
+              </div>
+            )}
             <GlassButton
               variant="ghost"
               size="sm"
@@ -163,7 +203,7 @@ export default function TrainingMode() {
 
       {/* Main content area - flex grow with hidden overflow */}
       <div className="flex-1 flex flex-col min-h-0 px-3 py-2">
-        {/* Master Waveform - With Solo/Mute controls */}
+        {/* Master Waveform - With indicator for real audio */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -174,7 +214,7 @@ export default function TrainingMode() {
             hover={false}
             className={cn(
               "transition-opacity duration-200",
-              masterMuted && "opacity-50"
+              allMuted && "opacity-50"
             )}
           >
             {/* Master header row with controls */}
@@ -183,62 +223,26 @@ export default function TrainingMode() {
               <div className="flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 rounded-full gradient-bg" />
                 <span className="text-xs font-medium">Master</span>
+                {songHasRealAudio && isLoaded && (
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-green-500/20 text-green-500">
+                    LIVE
+                  </span>
+                )}
               </div>
 
-              {/* Solo button */}
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setMasterSolo(!masterSolo)}
-                className={cn(
-                  "w-7 h-7 rounded-lg border flex items-center justify-center",
-                  "transition-all duration-200",
-                  masterSolo
-                    ? "border-transparent"
-                    : "bg-glass border-glass-border hover:border-glass-border-hover"
-                )}
-                style={masterSolo ? {
-                  background: "linear-gradient(135deg, #818cf8 0%, #a855f7 100%)",
-                  boxShadow: "0 0 16px rgba(129, 140, 248, 0.5)",
-                } : undefined}
-              >
-                <span
-                  className={cn(
-                    "text-[10px] font-bold",
-                    masterSolo ? "text-white" : "text-muted-foreground"
-                  )}
-                >
-                  S
-                </span>
-              </motion.button>
-
-              {/* Mute button */}
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setMasterMuted(!masterMuted)}
-                className={cn(
-                  "w-7 h-7 rounded-lg border flex items-center justify-center",
-                  "transition-all duration-200",
-                  masterMuted
-                    ? "bg-destructive/30 border-destructive/60"
-                    : "bg-glass border-glass-border hover:border-glass-border-hover"
-                )}
-              >
-                {masterMuted ? (
-                  <VolumeX className="w-3.5 h-3.5 text-destructive" />
+              {/* Volume indicator */}
+              <div className="flex-1 min-w-0 flex items-center gap-2">
+                {allMuted ? (
+                  <VolumeX className="w-3.5 h-3.5 text-destructive shrink-0" />
                 ) : (
-                  <Volume2 className="w-3.5 h-3.5 text-muted-foreground" />
+                  <Volume2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                 )}
-              </motion.button>
-
-              {/* Volume slider */}
-              <div className="flex-1 min-w-0">
-                <GlassSlider
-                  value={masterVolume}
-                  onChange={setMasterVolume}
-                  color="#818cf8"
-                  size="sm"
-                  disabled={masterMuted}
-                />
+                <div className="flex-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full gradient-bg transition-all duration-200"
+                    style={{ width: `${masterVolume * 100}%` }}
+                  />
+                </div>
               </div>
 
               {/* Time display */}
@@ -254,10 +258,10 @@ export default function TrainingMode() {
               duration={duration}
               color="#818cf8"
               height={40}
-              onSeek={seek}
+              onSeek={handleSeek}
               isPlaying={isPlaying}
               mirrored={true}
-              showProgress={!masterMuted}
+              showProgress={!allMuted}
             />
           </GlassCard>
         </motion.div>
@@ -275,7 +279,7 @@ export default function TrainingMode() {
                 stem={stem}
                 currentTime={currentTime}
                 duration={duration}
-                onSeek={seek}
+                onSeek={handleSeek}
               />
             </motion.div>
           ))}
@@ -294,7 +298,14 @@ export default function TrainingMode() {
       >
         <div className="px-4 py-3">
           {/* Progress bar */}
-          <div className="h-1 bg-muted/30 rounded-full mb-3 overflow-hidden">
+          <div 
+            className="h-1 bg-muted/30 rounded-full mb-3 overflow-hidden cursor-pointer"
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const percent = (e.clientX - rect.left) / rect.width;
+              handleSeek(percent * duration);
+            }}
+          >
             <motion.div
               className="h-full gradient-bg"
               style={{ width: `${(currentTime / duration) * 100}%` }}
@@ -326,9 +337,11 @@ export default function TrainingMode() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={togglePlayPause}
+              disabled={songHasRealAudio && !isLoaded}
               className={cn(
                 "w-14 h-14 rounded-full flex items-center justify-center",
-                "gradient-bg shadow-xl relative"
+                "gradient-bg shadow-xl relative",
+                songHasRealAudio && !isLoaded && "opacity-50"
               )}
             >
               {/* Pulsing ring when playing */}
@@ -347,7 +360,9 @@ export default function TrainingMode() {
                 />
               )}
 
-              {isPlaying ? (
+              {songHasRealAudio && !isLoaded ? (
+                <Loader2 className="w-6 h-6 text-white animate-spin" />
+              ) : isPlaying ? (
                 <Pause className="w-6 h-6 text-white fill-white" />
               ) : (
                 <Play className="w-6 h-6 text-white fill-white ml-0.5" />

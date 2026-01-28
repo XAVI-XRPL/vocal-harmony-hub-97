@@ -1,4 +1,4 @@
-import { useState, useMemo, forwardRef } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Search, Filter, X, Music } from "lucide-react";
 import { Header } from "@/components/layout/Header";
@@ -28,7 +28,7 @@ const itemVariants = {
   visible: { opacity: 1, y: 0 },
 };
 
-const Library = forwardRef<HTMLDivElement>((_, ref) => {
+export default function Library() {
   const { searchQuery, setSearchQuery, activeFilters, setFilter, clearFilters } = useUIStore();
   const [isLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -63,7 +63,7 @@ const Library = forwardRef<HTMLDivElement>((_, ref) => {
   const hasActiveFilters = activeFilters.genre || activeFilters.difficulty;
 
   return (
-    <div ref={ref} className="min-h-screen">
+    <div className="min-h-screen">
       <Header title="Library" showSearch={false} />
 
       <div className="px-4 pb-8">
@@ -222,8 +222,4 @@ const Library = forwardRef<HTMLDivElement>((_, ref) => {
       </div>
     </div>
   );
-});
-
-Library.displayName = "Library";
-
-export default Library;
+}
