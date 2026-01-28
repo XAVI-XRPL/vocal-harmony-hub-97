@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Search, Menu, Bell } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { useUIStore } from "@/stores/uiStore";
 import { cn } from "@/lib/utils";
 
@@ -41,9 +42,13 @@ export function Header({ className, showSearch = true, title }: HeaderProps) {
           <h1 className="text-lg font-semibold text-foreground">{title}</h1>
         ) : (
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl gradient-bg flex items-center justify-center">
+            <motion.div 
+              className="w-8 h-8 rounded-xl gradient-bg flex items-center justify-center shadow-lg"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
               <span className="text-white font-bold text-sm">R</span>
-            </div>
+            </motion.div>
             <span className="font-semibold text-lg gradient-text hidden sm:block">RVMT</span>
           </div>
         )}
@@ -65,8 +70,8 @@ export function Header({ className, showSearch = true, title }: HeaderProps) {
                 "w-full h-10 pl-10 pr-4 rounded-xl",
                 "bg-glass border border-glass-border",
                 "text-sm text-foreground placeholder:text-muted-foreground",
-                "focus:outline-none focus:border-glass-border-hover focus:bg-glass-hover",
-                "transition-all duration-200"
+                "focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50",
+                "transition-all duration-300"
               )}
             />
           </div>
@@ -84,6 +89,7 @@ export function Header({ className, showSearch = true, title }: HeaderProps) {
             className="sm:hidden"
           />
         )}
+        <ThemeToggle />
         <IconButton
           icon={Bell}
           variant="ghost"

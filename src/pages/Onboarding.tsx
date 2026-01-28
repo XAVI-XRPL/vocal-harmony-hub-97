@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "next-themes";
 import { Music4, Layers, SlidersHorizontal, ChevronRight } from "lucide-react";
 import { GlassButton } from "@/components/ui/glass-button";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,8 @@ const slides = [
 
 export default function Onboarding({ onComplete }: OnboardingProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {
@@ -50,7 +53,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background overflow-hidden">
-      {/* Background gradient */}
+      {/* Background gradient - Theme aware */}
       <div className="absolute inset-0">
         <motion.div
           key={currentSlide}
@@ -59,20 +62,41 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           exit={{ opacity: 0 }}
           className="absolute inset-0"
           style={{
-            background: `radial-gradient(circle at 50% 40%, ${slide.color}20 0%, transparent 60%)`,
+            background: `radial-gradient(circle at 50% 40%, ${slide.color}${isDark ? '20' : '12'} 0%, transparent 60%)`,
           }}
         />
+        
+        {/* Extra ambient blobs for light mode */}
+        {!isDark && (
+          <>
+            <motion.div
+              className="absolute w-64 h-64 rounded-full"
+              style={{
+                background: `radial-gradient(circle, ${slide.color}08 0%, transparent 70%)`,
+                top: "60%",
+                right: "10%",
+              }}
+              animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.5, 0.8, 0.5],
+              }}
+              transition={{ duration: 4, repeat: Infinity }}
+            />
+          </>
+        )}
       </div>
 
       {/* Skip button */}
       <div className="relative z-10 flex justify-end p-4 safe-top">
         {!isLastSlide && (
-          <button
+          <motion.button
             onClick={handleSkip}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-full hover:bg-glass"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
             Skip
-          </button>
+          </motion.button>
         )}
       </div>
 
@@ -91,8 +115,8 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
             <motion.div
               className="w-32 h-32 rounded-3xl flex items-center justify-center mb-8"
               style={{
-                background: `linear-gradient(135deg, ${slide.color}40, ${slide.color}20)`,
-                boxShadow: `0 0 60px ${slide.color}40`,
+                background: `linear-gradient(135deg, ${slide.color}${isDark ? '40' : '25'}, ${slide.color}${isDark ? '20' : '10'})`,
+                boxShadow: `0 0 60px ${slide.color}${isDark ? '40' : '20'}`,
               }}
               animate={{
                 scale: [1, 1.05, 1],
@@ -185,11 +209,12 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         {/* Progress dots */}
         <div className="flex justify-center gap-2 mb-8">
           {slides.map((_, i) => (
-            <motion.div
+            <motion.button
               key={i}
+              onClick={() => setCurrentSlide(i)}
               className={cn(
                 "h-2 rounded-full transition-all duration-300",
-                i === currentSlide ? "w-8 gradient-bg" : "w-2 bg-muted"
+                i === currentSlide ? "w-8 gradient-bg" : "w-2 bg-muted hover:bg-muted-foreground/30"
               )}
               animate={i === currentSlide ? { scale: [1, 1.1, 1] } : {}}
               transition={{ duration: 0.3 }}

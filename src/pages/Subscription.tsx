@@ -77,11 +77,28 @@ export default function Subscription() {
         {/* Hero */}
         <motion.div variants={itemVariants} className="py-8 text-center">
           <motion.div
-            animate={{ y: [0, -5, 0], rotate: [0, 5, -5, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="w-20 h-20 mx-auto mb-6 rounded-3xl bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center shadow-2xl"
+            animate={{ y: [0, -8, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+            className="relative w-20 h-20 mx-auto mb-6"
           >
-            <Crown className="w-10 h-10 text-white" />
+            <motion.div
+              className="w-full h-full rounded-3xl bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center shadow-2xl"
+              animate={{
+                boxShadow: [
+                  "0 20px 50px -12px rgba(245, 158, 11, 0.4)",
+                  "0 25px 60px -12px rgba(249, 115, 22, 0.5)",
+                  "0 20px 50px -12px rgba(245, 158, 11, 0.4)",
+                ],
+                rotate: [0, 5, -5, 0],
+              }}
+              transition={{
+                duration: 4,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+            >
+              <Crown className="w-10 h-10 text-white" />
+            </motion.div>
           </motion.div>
 
           <h1 className="text-2xl font-bold mb-2">
@@ -96,24 +113,28 @@ export default function Subscription() {
 
         {/* Feature highlights */}
         <motion.div variants={itemVariants} className="grid grid-cols-3 gap-3 mb-8">
-          <GlassCard padding="md" hover={false} className="text-center">
-            <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-stem-vocal/20 flex items-center justify-center">
-              <Music2 className="w-5 h-5 text-stem-vocal" />
-            </div>
-            <p className="text-xs font-medium">100+ Songs</p>
-          </GlassCard>
-          <GlassCard padding="md" hover={false} className="text-center">
-            <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-stem-harmony/20 flex items-center justify-center">
-              <Sliders className="w-5 h-5 text-stem-harmony" />
-            </div>
-            <p className="text-xs font-medium">Full Controls</p>
-          </GlassCard>
-          <GlassCard padding="md" hover={false} className="text-center">
-            <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-stem-instrumental/20 flex items-center justify-center">
-              <Repeat className="w-5 h-5 text-stem-instrumental" />
-            </div>
-            <p className="text-xs font-medium">Loop & Tempo</p>
-          </GlassCard>
+          {[
+            { icon: Music2, label: "100+ Songs", color: "stem-vocal" },
+            { icon: Sliders, label: "Full Controls", color: "stem-harmony" },
+            { icon: Repeat, label: "Loop & Tempo", color: "stem-instrumental" },
+          ].map((item, index) => (
+            <motion.div
+              key={item.label}
+              whileHover={{ scale: 1.05, y: -2 }}
+              transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            >
+              <GlassCard padding="md" hover={false} className="text-center">
+                <motion.div
+                  className={cn("w-10 h-10 mx-auto mb-2 rounded-xl flex items-center justify-center", `bg-${item.color}/20`)}
+                  animate={{ y: [0, -3, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
+                >
+                  <item.icon className={cn("w-5 h-5", `text-${item.color}`)} />
+                </motion.div>
+                <p className="text-xs font-medium">{item.label}</p>
+              </GlassCard>
+            </motion.div>
+          ))}
         </motion.div>
 
         {/* Pricing cards */}
@@ -134,7 +155,7 @@ export default function Subscription() {
             <ul className="space-y-2">
               {features.free.map((feature) => (
                 <li key={feature} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Check className="w-4 h-4 text-muted-foreground" />
+                  <Check className="w-4 h-4 text-muted-foreground shrink-0" />
                   {feature}
                 </li>
               ))}
@@ -142,58 +163,93 @@ export default function Subscription() {
           </GlassCard>
 
           {/* Pro plan */}
-          <GlassCard
-            padding="lg"
-            hover={false}
-            className={cn(
-              "border-2 relative overflow-hidden",
-              isPro ? "border-amber-500/50" : "border-primary/50"
-            )}
-            glow
-            glowColor="accent"
+          <motion.div
+            animate={!isPro ? {
+              boxShadow: [
+                "0 0 0 0 hsl(var(--primary) / 0)",
+                "0 0 30px 0 hsl(var(--primary) / 0.2)",
+                "0 0 0 0 hsl(var(--primary) / 0)",
+              ],
+            } : {}}
+            transition={{ duration: 2, repeat: Infinity }}
           >
-            {/* Popular badge */}
-            <div className="absolute top-0 right-0 px-3 py-1 rounded-bl-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-medium">
-              Most Popular
-            </div>
-
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="font-semibold flex items-center gap-2">
-                  <Crown className="w-5 h-5 text-amber-400" />
-                  Pro
-                </h3>
-                <div className="flex items-baseline gap-1">
-                  <p className="text-2xl font-bold">$9.99</p>
-                  <span className="text-muted-foreground text-sm">/month</span>
-                </div>
-              </div>
-              {isPro && (
-                <span className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 text-xs font-medium border border-amber-500/30">
-                  Active
-                </span>
+            <GlassCard
+              padding="lg"
+              hover={false}
+              className={cn(
+                "border-2 relative overflow-hidden",
+                isPro ? "border-amber-500/50" : "border-primary/50"
               )}
-            </div>
-            <ul className="space-y-2 mb-6">
-              {features.pro.map((feature) => (
-                <li key={feature} className="flex items-center gap-2 text-sm">
-                  <Check className="w-4 h-4 text-primary" />
-                  {feature}
-                </li>
-              ))}
-            </ul>
-
-            {!isPro && (
-              <GlassButton
-                fullWidth
-                size="lg"
-                icon={<Zap className="w-5 h-5" />}
-                onClick={handleUpgrade}
+              glow
+              glowColor="accent"
+            >
+              {/* Popular badge */}
+              <motion.div 
+                className="absolute top-0 right-0 px-3 py-1 rounded-bl-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-medium"
+                animate={{ scale: [1, 1.02, 1] }}
+                transition={{ duration: 2, repeat: Infinity }}
               >
-                Start Free Trial
-              </GlassButton>
-            )}
-          </GlassCard>
+                Most Popular
+              </motion.div>
+
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <motion.div
+                      animate={{ rotate: [0, 10, -10, 0] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      <Crown className="w-5 h-5 text-amber-400" />
+                    </motion.div>
+                    Pro
+                  </h3>
+                  <div className="flex items-baseline gap-1">
+                    <p className="text-2xl font-bold">$9.99</p>
+                    <span className="text-muted-foreground text-sm">/month</span>
+                  </div>
+                </div>
+                {isPro && (
+                  <motion.span 
+                    className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-400 text-xs font-medium border border-amber-500/30"
+                    animate={{ scale: [1, 1.05, 1] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    Active
+                  </motion.span>
+                )}
+              </div>
+              <ul className="space-y-2 mb-6">
+                {features.pro.map((feature, index) => (
+                  <motion.li 
+                    key={feature} 
+                    className="flex items-center gap-2 text-sm"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <motion.div
+                      animate={{ scale: [1, 1.2, 1] }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                    >
+                      <Check className="w-4 h-4 text-primary shrink-0" />
+                    </motion.div>
+                    {feature}
+                  </motion.li>
+                ))}
+              </ul>
+
+              {!isPro && (
+                <GlassButton
+                  fullWidth
+                  size="lg"
+                  icon={<Zap className="w-5 h-5" />}
+                  onClick={handleUpgrade}
+                >
+                  Start Free Trial
+                </GlassButton>
+              )}
+            </GlassCard>
+          </motion.div>
         </motion.div>
 
         {/* FAQ or additional info */}
