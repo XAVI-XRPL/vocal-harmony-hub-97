@@ -1,217 +1,277 @@
 
-
-# Premium Polish, Light Mode Enhancement & Route Verification Plan
+# Practice Progress, A-B Loop & Tempo Control Implementation Plan
 
 ## Overview
 
-This plan adds premium polish across all pages, ensures all routes and navigation work correctly, fixes React ref warnings, and creates a beautiful light mode with animated background gradients.
+This plan implements three key training features:
+1. **Database storage** for practice sessions with user authentication
+2. **A-B loop functionality** to repeat specific song sections
+3. **Tempo control** with playback speed adjustment (0.5x to 1.5x)
 
 ---
 
-## 1. Fix React Ref Warnings
+## 1. Database Schema & Authentication
 
-The console shows warnings about function components not accepting refs. This needs to be fixed in two components.
+### Database Tables
 
-### SongCard Component
-- Wrap the `SongCard` component with `React.forwardRef`
-- This allows parent components (like motion.div) to pass refs correctly
-- Prevents console warnings during development
+Create the following tables in Lovable Cloud:
 
-### Library Page
-- The Library page is being used with AnimatePresence which may pass refs
-- Wrap the page export with `forwardRef` if needed
+**profiles table** - User profile information
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid (PK, FK to auth.users) | User ID |
+| display_name | text | User's display name |
+| avatar_url | text | Profile picture URL |
+| created_at | timestamptz | Account creation date |
+| updated_at | timestamptz | Last update time |
 
----
+**practice_sessions table** - Individual practice sessions
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid (PK) | Session ID |
+| user_id | uuid (FK to profiles) | User who practiced |
+| song_id | text | Song identifier |
+| started_at | timestamptz | Session start time |
+| ended_at | timestamptz | Session end time |
+| duration_seconds | integer | Total practice time |
+| tempo_used | float | Playback speed used |
+| loops_practiced | integer | Number of A-B loops |
 
-## 2. Enhanced Light Mode with Animated Gradients
+**user_song_progress table** - Aggregate progress per song
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid (PK) | Record ID |
+| user_id | uuid (FK to profiles) | User ID |
+| song_id | text | Song identifier |
+| total_practice_time | integer | Cumulative seconds |
+| times_practiced | integer | Session count |
+| last_practiced_at | timestamptz | Most recent session |
+| is_favorite | boolean | Favorited flag |
 
-Currently, light mode has basic color tokens but lacks the animated background effects that make dark mode feel premium.
+### Row Level Security Policies
 
-### New Light Mode Background System
+- Users can only read/write their own profile data
+- Users can only access their own practice sessions and progress
+- Enable RLS on all tables
 
-Add animated gradient blobs to `AppShell.tsx` that work in both themes:
+### Authentication Flow
 
-```text
-Dark Mode:                    Light Mode:
-┌─────────────────────┐      ┌─────────────────────┐
-│ ◉ primary/20        │      │ ◉ primary/10        │
-│      (purple blur)  │      │      (soft blue)    │
-│            ◉ accent │      │            ◉ accent │
-│    ◉ secondary      │      │    ◉ secondary      │
-└─────────────────────┘      └─────────────────────┘
-```
-
-### Light Mode Gradient Colors (in index.css)
-- **Primary blob**: Soft indigo with 10% opacity
-- **Accent blob**: Soft purple with 8% opacity  
-- **Secondary blob**: Soft pink with 6% opacity
-- Slower animation speeds for a calmer feel in light mode
-
-### New CSS Animations for Light Mode
-- `@keyframes gradientShift` - Smooth color transitions
-- `@keyframes floatSlow` - Gentle floating movement
-- Different blur intensities (lighter blur for light mode)
-
----
-
-## 3. Polish All Pages
-
-### Home Page Enhancements
-- Add subtle gradient overlay behind hero section
-- Improve card hover animations with scale and shadow transitions
-- Add floating particle effects in the background (optional)
-- Better spacing and typography refinements
-
-### Library Page Polish
-- Sticky search bar with enhanced glass blur
-- Smoother filter chip animations
-- Better loading skeleton with shimmer
-- Empty state with animated illustration
-
-### Song Detail Page
-- More dramatic album art presentation
-- Pulsing border animation around cover
-- Better meta badge styling
-- Enhanced waveform glow effects
-
-### Training Mode
-- Refined stem track cards with better spacing
-- More visible waveform animations
-- Enhanced transport bar glass effect
-- Better visual feedback for solo/mute states
-
-### Profile Page
-- Avatar with gradient ring animation
-- Better stat cards with hover effects
-- Menu items with subtle press feedback
-
-### Subscription Page
-- Animated pricing card borders
-- Better feature list checkmarks
-- Floating crown animation for Pro plan
-
-### NotFound Page (Currently Unstyled)
-- Match app's glass morphism design
-- Add animated 404 illustration
-- Include animated background gradients
-- "Return Home" button with glass styling
+Create an `/auth` page with:
+- Email/password sign in and sign up forms
+- Form validation using zod
+- Redirect handling after successful auth
+- Error message display for common issues
+- Auto-confirm email enabled for easier testing
 
 ---
 
-## 4. Navigation & Route Verification
+## 2. A-B Loop Functionality
 
-### Current Routes (All Defined)
-| Route | Component | Status |
-|-------|-----------|--------|
-| `/` | Home | Working |
-| `/library` | Library | Working |
-| `/song/:id` | SongDetail | Working |
-| `/training/:id` | TrainingMode | Working |
-| `/training` | Library | Working |
-| `/profile` | Profile | Working |
-| `/subscription` | Subscription | Working |
-| `*` | NotFound | Needs styling |
+### Current State
+The audio store already has loop-related state:
+- `isLooping: boolean`
+- `loopStart: number` 
+- `loopEnd: number`
+- `setLoop()`, `toggleLoop()`, `clearLoop()` actions
 
-### Navigation Bar Enhancement
-- Add active state glow effect
-- Smoother icon transitions
-- Better touch feedback animations
-- Safe area padding verification
+The `useAudioPlayer` hook already handles looping in the time update loop.
 
-### Header Improvements
-- Add ThemeToggle to main Header component
-- Better search input glass styling
-- Improved notification badge design
+### UI Implementation
+
+Add loop controls to the Training Mode page:
+
+**Loop Region Selector**
+- Two draggable markers on the master waveform (A and B points)
+- Visual highlight of the loop region between markers
+- Touch-friendly handles for mobile
+
+**Loop Control Buttons**
+- "Set A" button - marks current position as loop start
+- "Set B" button - marks current position as loop end  
+- Loop toggle button (already exists, needs connection to real loop points)
+- "Clear" button to reset loop region
+
+**Visual Feedback**
+- Shaded region on waveform showing loop area
+- Loop badge showing "A 0:15 - B 0:32" time range
+- Active glow effect when looping is enabled
+
+---
+
+## 3. Tempo Control (Playback Rate)
+
+### Current State
+The audio store already has:
+- `playbackRate: number` (defaults to 1)
+- `setPlaybackRate()` action
+
+The `useAudioPlayer` hook already applies playback rate to all stems via Howler's `rate()` method.
+
+### UI Implementation
+
+Add tempo controls to the Training Mode transport bar:
+
+**Tempo Slider**
+- Range: 0.5x to 1.5x (slower to faster)
+- Step increments: 0.05x for fine control
+- Shows current percentage (50% - 150%)
+- Default value: 100% (1x)
+
+**Quick Presets**
+- 0.5x (50%) - Half speed for difficult passages
+- 0.75x (75%) - Slower practice tempo
+- 1.0x (100%) - Normal speed
+- 1.25x (125%) - Challenge mode
+- 1.5x (150%) - Fast practice
+
+**Visual Indicator**
+- Color coding: slow = blue, normal = white, fast = orange
+- Badge showing current tempo near transport controls
 
 ---
 
-## 5. Global Polish Elements
+## Files to Create
 
-### Enhanced Glass Effects
-Update glass card styles for more premium feel:
-- Stronger backdrop blur (60px base)
-- Subtle inner glow on hover
-- Better border gradient on active states
-- Smoother transition curves
-
-### Typography Refinements
-- Consistent heading weights
-- Better line height for readability
-- Improved truncation with fade effect
-
-### Micro-interactions
-- Button press scale animations
-- Card hover lift effects
-- Icon rotation on toggle
-- Progress bar shine effect
-
----
+| File | Purpose |
+|------|---------|
+| `src/pages/Auth.tsx` | Authentication page with login/signup |
+| `src/hooks/useAuth.ts` | Authentication hook with Supabase integration |
+| `src/hooks/usePracticeSession.ts` | Practice tracking and database sync |
+| `src/components/audio/LoopRegion.tsx` | Visual loop region on waveform |
+| `src/components/audio/TempoControl.tsx` | Tempo adjustment UI component |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/song/SongCard.tsx` | Wrap with forwardRef |
-| `src/pages/Library.tsx` | Wrap with forwardRef |
-| `src/pages/NotFound.tsx` | Complete redesign with glass styling |
-| `src/index.css` | Add light mode gradient animations |
-| `src/components/layout/AppShell.tsx` | Theme-aware background blobs |
-| `src/components/layout/Header.tsx` | Add ThemeToggle component |
-| `src/components/layout/MobileNav.tsx` | Enhanced active states |
-| `src/pages/Home.tsx` | Add background effects, polish cards |
-| `src/pages/Profile.tsx` | Avatar animation, card polish |
-| `src/pages/Subscription.tsx` | Animated pricing cards |
-| `src/pages/Splash.tsx` | Theme-aware gradients |
-| `src/pages/Onboarding.tsx` | Theme-aware gradients |
+| `src/App.tsx` | Add /auth route, wrap with auth provider |
+| `src/stores/userStore.ts` | Connect to Supabase auth state |
+| `src/pages/TrainingMode.tsx` | Add loop UI, tempo controls, session tracking |
+| `src/stores/audioStore.ts` | Minor refinements if needed |
+| `src/hooks/useAudioPlayer.ts` | Ensure loop bounds are respected |
+| `src/components/audio/WaveformDisplay.tsx` | Add loop region visualization |
+| `src/pages/Profile.tsx` | Display real practice stats from database |
 
 ---
 
-## Technical Implementation Details
+## Implementation Flow
 
-### forwardRef Pattern for SongCard
+```text
+Phase 1: Database & Auth
+┌─────────────────────────────────────────────────────────┐
+│  1. Create database tables via migration                │
+│  2. Set up RLS policies                                 │
+│  3. Create Auth.tsx page                                │
+│  4. Create useAuth hook                                 │
+│  5. Connect userStore to Supabase                       │
+│  6. Add /auth route                                     │
+└─────────────────────────────────────────────────────────┘
+          │
+          ▼
+Phase 2: Tempo Control
+┌─────────────────────────────────────────────────────────┐
+│  1. Create TempoControl component                       │
+│  2. Add to TrainingMode transport bar                   │
+│  3. Connect to audioStore.setPlaybackRate               │
+│  4. Style with glass morphism                           │
+└─────────────────────────────────────────────────────────┘
+          │
+          ▼
+Phase 3: A-B Loop
+┌─────────────────────────────────────────────────────────┐
+│  1. Create LoopRegion component                         │
+│  2. Add loop markers to WaveformDisplay                 │
+│  3. Add "Set A/B" buttons to transport                  │
+│  4. Connect to audioStore loop state                    │
+│  5. Add visual loop region highlight                    │
+└─────────────────────────────────────────────────────────┘
+          │
+          ▼
+Phase 4: Practice Tracking
+┌─────────────────────────────────────────────────────────┐
+│  1. Create usePracticeSession hook                      │
+│  2. Start session on TrainingMode mount                 │
+│  3. Track time, tempo, loop usage                       │
+│  4. Save to database on unmount/pause                   │
+│  5. Update Profile page with real stats                 │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Technical Details
+
+### Authentication Implementation
+
 ```typescript
-const SongCard = forwardRef<HTMLDivElement, SongCardProps>(
-  ({ song, variant = "default", className }, ref) => {
-    // Component logic
-    return (
-      <GlassCard ref={ref} ...>
-        {/* Content */}
-      </GlassCard>
-    );
+// useAuth hook pattern
+const { data: { subscription } } = supabase.auth.onAuthStateChange(
+  (event, session) => {
+    setSession(session);
+    setUser(session?.user ?? null);
   }
 );
-SongCard.displayName = "SongCard";
+
+// Then check existing session
+supabase.auth.getSession().then(({ data: { session } }) => {
+  setSession(session);
+  setUser(session?.user ?? null);
+});
 ```
 
-### Theme-Aware Background Gradient Logic
+### Tempo Control Logic
 ```typescript
-// In AppShell.tsx
-const { theme } = useTheme();
-const isDark = theme === 'dark';
+// TempoControl.tsx - connects to store
+const { playbackRate, setPlaybackRate } = useAudioStore();
 
-// Adjust blob colors and opacity based on theme
-const blobOpacity = isDark ? 0.2 : 0.08;
-const blurIntensity = isDark ? 'blur-[80px]' : 'blur-[100px]';
+// Slider with 0.5 to 1.5 range
+<GlassSlider
+  value={playbackRate}
+  min={0.5}
+  max={1.5}
+  step={0.05}
+  onChange={setPlaybackRate}
+/>
 ```
 
-### Light Mode Gradient Animation (CSS)
-```css
-.light .liquid-blob {
-  filter: blur(100px);
-  opacity: 0.3;
-  animation: liquidFlowSlow 12s ease-in-out infinite;
-}
+### A-B Loop Logic
+```typescript
+// Set loop points at current time
+const handleSetLoopA = () => {
+  setLoopStart(currentTime);
+};
 
-@keyframes liquidFlowSlow {
-  0%, 100% {
-    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-    transform: translate(0, 0);
-  }
-  50% {
-    border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
-    transform: translate(20px, -20px);
-  }
-}
+const handleSetLoopB = () => {
+  setLoopEnd(currentTime);
+  setLoop(loopStart, currentTime);
+};
+
+// Waveform visual region
+const loopStartPercent = (loopStart / duration) * 100;
+const loopEndPercent = (loopEnd / duration) * 100;
+```
+
+### Practice Session Tracking
+```typescript
+// Start session on mount
+useEffect(() => {
+  if (!user) return;
+  
+  const sessionStart = new Date();
+  
+  return () => {
+    // Save session on unmount
+    savePracticeSession({
+      user_id: user.id,
+      song_id: currentSong.id,
+      started_at: sessionStart,
+      ended_at: new Date(),
+      duration_seconds: totalTime,
+      tempo_used: playbackRate,
+      loops_practiced: loopCount,
+    });
+  };
+}, [currentSong?.id]);
 ```
 
 ---
@@ -219,12 +279,12 @@ const blurIntensity = isDark ? 'blur-[80px]' : 'blur-[100px]';
 ## Expected Results
 
 After implementation:
-- All console warnings fixed (forwardRef properly applied)
-- Beautiful animated gradient backgrounds in both light and dark modes
-- All routes verified working with proper styling
-- NotFound page matches app design language
-- Premium polish across all pages with consistent micro-interactions
-- Theme toggle accessible from header
-- Smoother navigation transitions
-- Enhanced glass morphism effects throughout
-
+- Users can sign up and log in with email/password
+- Practice time is tracked and saved to the database
+- Profile page shows real practice statistics
+- Users can set A-B loop points by clicking buttons or dragging markers
+- Loop region is visually highlighted on the waveform
+- Playback automatically loops between A and B points
+- Tempo slider allows 0.5x to 1.5x playback speed
+- Quick tempo presets for common practice speeds
+- All audio stems stay synchronized at any tempo
