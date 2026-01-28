@@ -1,277 +1,286 @@
 
-# Practice Progress, A-B Loop & Tempo Control Implementation Plan
+
+# Navigation & Liquid Glass UI Polish Plan
 
 ## Overview
 
-This plan implements three key training features:
-1. **Database storage** for practice sessions with user authentication
-2. **A-B loop functionality** to repeat specific song sections
-3. **Tempo control** with playback speed adjustment (0.5x to 1.5x)
+This plan enhances the navigation bars and overall UI to feel more like premium "liquid glass" with the following key changes:
+
+1. **Bottom Nav**: Icon-only with centered elevated Home button
+2. **Add Progress Page**: New route for viewing practice progress
+3. **Top Nav**: Enhanced liquid glass styling
+4. **Global Polish**: More liquid glass effects throughout
 
 ---
 
-## 1. Database Schema & Authentication
-
-### Database Tables
-
-Create the following tables in Lovable Cloud:
-
-**profiles table** - User profile information
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid (PK, FK to auth.users) | User ID |
-| display_name | text | User's display name |
-| avatar_url | text | Profile picture URL |
-| created_at | timestamptz | Account creation date |
-| updated_at | timestamptz | Last update time |
-
-**practice_sessions table** - Individual practice sessions
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid (PK) | Session ID |
-| user_id | uuid (FK to profiles) | User who practiced |
-| song_id | text | Song identifier |
-| started_at | timestamptz | Session start time |
-| ended_at | timestamptz | Session end time |
-| duration_seconds | integer | Total practice time |
-| tempo_used | float | Playback speed used |
-| loops_practiced | integer | Number of A-B loops |
-
-**user_song_progress table** - Aggregate progress per song
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid (PK) | Record ID |
-| user_id | uuid (FK to profiles) | User ID |
-| song_id | text | Song identifier |
-| total_practice_time | integer | Cumulative seconds |
-| times_practiced | integer | Session count |
-| last_practiced_at | timestamptz | Most recent session |
-| is_favorite | boolean | Favorited flag |
-
-### Row Level Security Policies
-
-- Users can only read/write their own profile data
-- Users can only access their own practice sessions and progress
-- Enable RLS on all tables
-
-### Authentication Flow
-
-Create an `/auth` page with:
-- Email/password sign in and sign up forms
-- Form validation using zod
-- Redirect handling after successful auth
-- Error message display for common issues
-- Auto-confirm email enabled for easier testing
-
----
-
-## 2. A-B Loop Functionality
+## 1. Redesigned Bottom Navigation
 
 ### Current State
-The audio store already has loop-related state:
-- `isLooping: boolean`
-- `loopStart: number` 
-- `loopEnd: number`
-- `setLoop()`, `toggleLoop()`, `clearLoop()` actions
+- 4 items: Home, Library, Train, Profile
+- Text labels under each icon
+- Home is on the far left
+- Flat glass card styling
 
-The `useAudioPlayer` hook already handles looping in the time update loop.
+### New Design
 
-### UI Implementation
+```text
+┌─────────────────────────────────────────────────────────┐
+│                                                         │
+│   📚        📊        🏠         🎤         👤         │
+│ Library   Progress   (HOME)    Train     Profile       │
+│                       ⬆                                │
+│                   Elevated                             │
+│                   Gradient                             │
+│                   Glowing                              │
+└─────────────────────────────────────────────────────────┘
+```
 
-Add loop controls to the Training Mode page:
-
-**Loop Region Selector**
-- Two draggable markers on the master waveform (A and B points)
-- Visual highlight of the loop region between markers
-- Touch-friendly handles for mobile
-
-**Loop Control Buttons**
-- "Set A" button - marks current position as loop start
-- "Set B" button - marks current position as loop end  
-- Loop toggle button (already exists, needs connection to real loop points)
-- "Clear" button to reset loop region
-
-**Visual Feedback**
-- Shaded region on waveform showing loop area
-- Loop badge showing "A 0:15 - B 0:32" time range
-- Active glow effect when looping is enabled
-
----
-
-## 3. Tempo Control (Playback Rate)
-
-### Current State
-The audio store already has:
-- `playbackRate: number` (defaults to 1)
-- `setPlaybackRate()` action
-
-The `useAudioPlayer` hook already applies playback rate to all stems via Howler's `rate()` method.
-
-### UI Implementation
-
-Add tempo controls to the Training Mode transport bar:
-
-**Tempo Slider**
-- Range: 0.5x to 1.5x (slower to faster)
-- Step increments: 0.05x for fine control
-- Shows current percentage (50% - 150%)
-- Default value: 100% (1x)
-
-**Quick Presets**
-- 0.5x (50%) - Half speed for difficult passages
-- 0.75x (75%) - Slower practice tempo
-- 1.0x (100%) - Normal speed
-- 1.25x (125%) - Challenge mode
-- 1.5x (150%) - Fast practice
-
-**Visual Indicator**
-- Color coding: slow = blue, normal = white, fast = orange
-- Badge showing current tempo near transport controls
+### Changes
+- **Remove all text labels** - icons only for cleaner look
+- **5 navigation items**: Library, Progress, Home, Train, Profile
+- **Center Home button** with elevated circular design
+- **Home button styling**:
+  - Larger size (56px vs 48px for others)
+  - Elevated above nav bar by ~12px
+  - Gradient background with glow effect
+  - Pulsing animation when inactive
+  - Scale + glow animation when active
+- **Enhanced glass effect** on the nav bar itself
+  - Stronger blur (60px)
+  - Subtle gradient border on top
+  - More refined shadow
 
 ---
 
-## Files to Create
+## 2. New Progress Page
+
+### Purpose
+Display practice history, achievements, and detailed statistics.
+
+### Features
+- Practice streaks visualization
+- Weekly practice time chart
+- Song-by-song progress breakdown
+- Achievement badges
+- Links to recent practice sessions
+
+### Route
+`/progress` - Added to App.tsx routes
+
+---
+
+## 3. Enhanced Top Navigation (Header)
+
+### Current Issues
+- Basic glass card styling
+- Logo/branding could be more refined
+- Search bar styling is standard
+
+### Improvements
+- **Refined glass effect** with gradient border glow
+- **Logo enhancement**: Larger, with subtle animation
+- **Search bar**: More liquid glass feel with inner glow
+- **Notification badge**: Gradient pulse effect
+- **Better spacing and visual hierarchy**
+
+---
+
+## 4. Liquid Glass Polish Enhancements
+
+### New CSS Classes/Tokens
+Add to `index.css`:
+
+**Enhanced Nav Glass**
+```css
+.nav-glass {
+  background: linear-gradient(
+    180deg,
+    hsl(0 0% 100% / 0.08) 0%,
+    hsl(0 0% 100% / 0.03) 100%
+  );
+  backdrop-filter: blur(60px) saturate(180%);
+  border-top: 1px solid hsl(0 0% 100% / 0.15);
+  box-shadow: 
+    0 -8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 hsl(0 0% 100% / 0.1);
+}
+```
+
+**Home Button Glow**
+```css
+.home-button-glow {
+  box-shadow: 
+    0 4px 20px hsl(var(--primary) / 0.4),
+    0 0 40px hsl(var(--primary) / 0.2),
+    inset 0 1px 0 hsl(0 0% 100% / 0.3);
+}
+```
+
+**Floating Effect**
+```css
+.nav-float {
+  transform: translateY(-12px);
+  z-index: 10;
+}
+```
+
+---
+
+## 5. Files to Create
 
 | File | Purpose |
 |------|---------|
-| `src/pages/Auth.tsx` | Authentication page with login/signup |
-| `src/hooks/useAuth.ts` | Authentication hook with Supabase integration |
-| `src/hooks/usePracticeSession.ts` | Practice tracking and database sync |
-| `src/components/audio/LoopRegion.tsx` | Visual loop region on waveform |
-| `src/components/audio/TempoControl.tsx` | Tempo adjustment UI component |
+| `src/pages/Progress.tsx` | New progress/stats page |
 
-## Files to Modify
+## 6. Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/App.tsx` | Add /auth route, wrap with auth provider |
-| `src/stores/userStore.ts` | Connect to Supabase auth state |
-| `src/pages/TrainingMode.tsx` | Add loop UI, tempo controls, session tracking |
-| `src/stores/audioStore.ts` | Minor refinements if needed |
-| `src/hooks/useAudioPlayer.ts` | Ensure loop bounds are respected |
-| `src/components/audio/WaveformDisplay.tsx` | Add loop region visualization |
-| `src/pages/Profile.tsx` | Display real practice stats from database |
+| `src/components/layout/MobileNav.tsx` | Complete redesign with centered home, icon-only, new items |
+| `src/components/layout/Header.tsx` | Enhanced liquid glass styling |
+| `src/index.css` | New nav-glass, home-button-glow, and polish classes |
+| `src/App.tsx` | Add /progress route |
+| `src/components/layout/AppShell.tsx` | Adjust padding for new nav height |
 
 ---
 
-## Implementation Flow
+## Technical Implementation Details
 
+### MobileNav.tsx Redesign
+
+**Navigation Items (new order)**:
+1. Library (`/library`) - BookOpen icon
+2. Progress (`/progress`) - BarChart3 icon  
+3. Home (`/`) - Home icon (SPECIAL)
+4. Train (`/training`) - Mic2 icon
+5. Profile (`/profile`) - User icon
+
+**Home Button Special Styling**:
+```typescript
+// Home button gets special treatment
+const isHomeItem = item.path === "/";
+
+if (isHomeItem) {
+  return (
+    <motion.button
+      className={cn(
+        "relative -mt-6 z-10", // Float above nav
+        "w-14 h-14 rounded-full",
+        "gradient-bg",
+        "flex items-center justify-center",
+        "shadow-[0_4px_20px_hsl(var(--primary)/0.4)]"
+      )}
+      animate={{
+        scale: active ? 1.1 : 1,
+        boxShadow: active 
+          ? "0 6px 30px hsl(var(--primary)/0.6)"
+          : "0 4px 20px hsl(var(--primary)/0.4)"
+      }}
+    >
+      <Home className="w-6 h-6 text-white" />
+    </motion.button>
+  );
+}
+```
+
+**Icon-only for other items**:
+```typescript
+// Remove the <span>{item.label}</span>
+// Keep only the icon
+```
+
+### Header.tsx Enhancements
+
+**Gradient border glow**:
+```typescript
+<motion.header
+  className={cn(
+    "sticky top-0 z-40",
+    "glass-card rounded-none border-x-0 border-t-0",
+    // Add gradient line at bottom
+    "after:absolute after:bottom-0 after:left-0 after:right-0",
+    "after:h-px after:bg-gradient-to-r",
+    "after:from-transparent after:via-primary/30 after:to-transparent"
+  )}
+>
+```
+
+**Logo animation enhancement**:
+```typescript
+<motion.div 
+  className="w-9 h-9 rounded-xl gradient-bg"
+  animate={{ 
+    boxShadow: [
+      "0 0 0 hsl(var(--primary)/0)",
+      "0 0 20px hsl(var(--primary)/0.3)",
+      "0 0 0 hsl(var(--primary)/0)"
+    ]
+  }}
+  transition={{ duration: 3, repeat: Infinity }}
+>
+```
+
+### Progress.tsx Page Structure
+
+```typescript
+export default function Progress() {
+  return (
+    <div className="min-h-screen">
+      <Header title="Progress" showSearch={false} />
+      
+      <motion.div className="px-4 pb-8">
+        {/* Practice Streak */}
+        <GlassCard>
+          <div className="flex items-center gap-3">
+            <Flame className="text-orange-500" />
+            <span>7 Day Streak!</span>
+          </div>
+        </GlassCard>
+
+        {/* Weekly Stats Chart */}
+        <GlassCard>
+          <h3>This Week</h3>
+          {/* Bar chart showing daily practice time */}
+        </GlassCard>
+
+        {/* Song Progress List */}
+        <GlassCard>
+          <h3>Song Progress</h3>
+          {/* List of songs with progress indicators */}
+        </GlassCard>
+
+        {/* Achievements */}
+        <GlassCard>
+          <h3>Achievements</h3>
+          {/* Badge grid */}
+        </GlassCard>
+      </motion.div>
+    </div>
+  );
+}
+```
+
+---
+
+## Visual Comparison
+
+### Before (Bottom Nav)
 ```text
-Phase 1: Database & Auth
-┌─────────────────────────────────────────────────────────┐
-│  1. Create database tables via migration                │
-│  2. Set up RLS policies                                 │
-│  3. Create Auth.tsx page                                │
-│  4. Create useAuth hook                                 │
-│  5. Connect userStore to Supabase                       │
-│  6. Add /auth route                                     │
-└─────────────────────────────────────────────────────────┘
-          │
-          ▼
-Phase 2: Tempo Control
-┌─────────────────────────────────────────────────────────┐
-│  1. Create TempoControl component                       │
-│  2. Add to TrainingMode transport bar                   │
-│  3. Connect to audioStore.setPlaybackRate               │
-│  4. Style with glass morphism                           │
-└─────────────────────────────────────────────────────────┘
-          │
-          ▼
-Phase 3: A-B Loop
-┌─────────────────────────────────────────────────────────┐
-│  1. Create LoopRegion component                         │
-│  2. Add loop markers to WaveformDisplay                 │
-│  3. Add "Set A/B" buttons to transport                  │
-│  4. Connect to audioStore loop state                    │
-│  5. Add visual loop region highlight                    │
-└─────────────────────────────────────────────────────────┘
-          │
-          ▼
-Phase 4: Practice Tracking
-┌─────────────────────────────────────────────────────────┐
-│  1. Create usePracticeSession hook                      │
-│  2. Start session on TrainingMode mount                 │
-│  3. Track time, tempo, loop usage                       │
-│  4. Save to database on unmount/pause                   │
-│  5. Update Profile page with real stats                 │
-└─────────────────────────────────────────────────────────┘
+┌──────┬──────┬──────┬──────┐
+│  🏠  │  📚  │  🎤  │  👤  │
+│ Home │ Lib  │Train │ Prof │
+└──────┴──────┴──────┴──────┘
 ```
 
----
-
-## Technical Details
-
-### Authentication Implementation
-
-```typescript
-// useAuth hook pattern
-const { data: { subscription } } = supabase.auth.onAuthStateChange(
-  (event, session) => {
-    setSession(session);
-    setUser(session?.user ?? null);
-  }
-);
-
-// Then check existing session
-supabase.auth.getSession().then(({ data: { session } }) => {
-  setSession(session);
-  setUser(session?.user ?? null);
-});
-```
-
-### Tempo Control Logic
-```typescript
-// TempoControl.tsx - connects to store
-const { playbackRate, setPlaybackRate } = useAudioStore();
-
-// Slider with 0.5 to 1.5 range
-<GlassSlider
-  value={playbackRate}
-  min={0.5}
-  max={1.5}
-  step={0.05}
-  onChange={setPlaybackRate}
-/>
-```
-
-### A-B Loop Logic
-```typescript
-// Set loop points at current time
-const handleSetLoopA = () => {
-  setLoopStart(currentTime);
-};
-
-const handleSetLoopB = () => {
-  setLoopEnd(currentTime);
-  setLoop(loopStart, currentTime);
-};
-
-// Waveform visual region
-const loopStartPercent = (loopStart / duration) * 100;
-const loopEndPercent = (loopEnd / duration) * 100;
-```
-
-### Practice Session Tracking
-```typescript
-// Start session on mount
-useEffect(() => {
-  if (!user) return;
-  
-  const sessionStart = new Date();
-  
-  return () => {
-    // Save session on unmount
-    savePracticeSession({
-      user_id: user.id,
-      song_id: currentSong.id,
-      started_at: sessionStart,
-      ended_at: new Date(),
-      duration_seconds: totalTime,
-      tempo_used: playbackRate,
-      loops_practiced: loopCount,
-    });
-  };
-}, [currentSong?.id]);
+### After (Bottom Nav)
+```text
+          ╭──────╮
+          │  🏠  │ ← Elevated, glowing
+          ╰──────╯
+┌─────┬─────┬─────┬─────┬─────┐
+│  📚 │  📊 │     │  🎤 │  👤 │
+└─────┴─────┴─────┴─────┴─────┘
+         ↑ No labels, icon-only
 ```
 
 ---
@@ -279,12 +288,10 @@ useEffect(() => {
 ## Expected Results
 
 After implementation:
-- Users can sign up and log in with email/password
-- Practice time is tracked and saved to the database
-- Profile page shows real practice statistics
-- Users can set A-B loop points by clicking buttons or dragging markers
-- Loop region is visually highlighted on the waveform
-- Playback automatically loops between A and B points
-- Tempo slider allows 0.5x to 1.5x playback speed
-- Quick tempo presets for common practice speeds
-- All audio stems stay synchronized at any tempo
+- Bottom nav has 5 icon-only buttons
+- Home button floats above nav with gradient glow
+- Progress page shows practice statistics
+- Header has refined liquid glass with gradient accents
+- All glass effects feel more "liquid" and premium
+- Consistent liquid glass aesthetic throughout app
+
