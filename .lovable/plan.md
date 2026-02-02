@@ -1,305 +1,393 @@
 
-# RMVT Cinematic Stadium Blue Theme Implementation
+
+# Home Page Polish & Training Flow Enhancement
 
 ## Overview
 
-This plan transforms the app's visual identity around the uploaded RMVT stadium logo, creating a cohesive blue-themed cinematic experience with animated backgrounds that evoke a concert/stadium atmosphere.
+This plan transforms the home page into a static, focused landing experience with a beautiful vocal training progress diagram. It adds a prominent "Start Training" button that takes users to a training module selection page before entering the training mode.
 
 ---
 
-## 1. Logo Integration
+## 1. New Home Page Layout
 
-### Implementation
+### Current State
+- Carousel-based featured section
+- Scrolling content with multiple sections
+- "Start Training" goes directly to Library
 
-- **Copy logo** to `src/assets/rmvt-logo.png`
-- **Style as app icon**: Rounded corners (rounded-2xl) with subtle glow
-- **Header update**: Replace the gradient "R" square with the RMVT logo image
-- **Splash/loading screens**: Use logo with stadium light glow effect
+### New Design (Static Focus)
 
-### Logo Component
-Create a reusable `RMVTLogo` component that:
-- Displays the stadium light logo image
-- Has curved edges (like an app icon)
-- Includes optional animated glow matching the stadium lights
-- Scales responsively for different contexts (header, splash, etc.)
-
----
-
-## 2. Color Scheme Restructure
-
-### Extracted Colors from Logo
-The logo features:
-- **Stadium Blue**: Deep atmospheric blue (~hsl(210, 70%, 15%))
-- **Light Blue Glow**: Bright stadium lights (~hsl(200, 80%, 70%))
-- **White**: Pure stadium light dots
-- **Fog/Mist Blue**: Atmospheric haze (~hsl(210, 40%, 50%))
-
-### Dark Mode (Primary Experience - Stadium at Night)
-
-| Token | Current | New Value | Purpose |
-|-------|---------|-----------|---------|
-| --background | 230 25% 3% | 215 80% 4% | Deep stadium night blue |
-| --card | 230 25% 5% | 215 70% 7% | Slightly lighter blue surface |
-| --primary | 239 84% 67% | 200 90% 55% | Stadium light cyan-blue |
-| --accent | 270 91% 65% | 210 85% 65% | Brighter stadium blue |
-| --muted | 230 20% 15% | 215 50% 15% | Atmospheric dark blue |
-| --gradient-start | 239 84% 67% | 195 85% 50% | Cyan stadium light |
-| --gradient-mid | 270 91% 65% | 210 80% 60% | Mid blue glow |
-| --gradient-end | 330 81% 60% | 220 75% 70% | Soft sky blue |
-
-### Light Mode (Stadium at Dusk/Day)
-
-| Token | Current | New Value | Purpose |
-|-------|---------|-----------|---------|
-| --background | 220 20% 98% | 205 60% 97% | Soft sky blue-white |
-| --card | 0 0% 100% | 205 40% 99% | Clean white with blue tint |
-| --primary | 239 84% 57% | 200 85% 45% | Deep stadium blue |
-| --accent | 270 91% 55% | 210 80% 55% | Accent stadium blue |
-| --muted | 220 15% 96% | 205 40% 94% | Light blue-grey |
-| --gradient-start | 239 84% 57% | 195 80% 45% | Cyan |
-| --gradient-mid | 270 91% 55% | 210 75% 50% | Blue |
-| --gradient-end | 330 81% 55% | 220 70% 60% | Sky blue |
-
----
-
-## 3. Animated Stadium Background
-
-### Concept
-Create an immersive animated background that evokes stadium concert lighting with:
-- Floating light orbs (like distant stadium lights)
-- Animated fog/mist effect
-- Subtle beam rays from top
-- Blue atmospheric gradient
-
-### CSS Animations
-
-**Stadium Light Animation**
-```css
-@keyframes stadiumLightPulse {
-  0%, 100% {
-    opacity: 0.3;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.6;
-    transform: scale(1.1);
-  }
-}
+```text
++------------------------------------------+
+|   [Header with RMVT Logo]                |
++------------------------------------------+
+|                                          |
+|   "Master Your Voice"                    |
+|   Subtitle text                          |
+|                                          |
+|   +----------------------------------+   |
+|   |                                  |   |
+|   |   VOCAL TRAINING PROGRESS        |   |
+|   |   [Beautiful Circular Diagram]   |   |
+|   |                                  |   |
+|   |   Level: Intermediate            |   |
+|   |   Sessions: 12   Streak: 7 days  |   |
+|   |                                  |   |
+|   +----------------------------------+   |
+|                                          |
+|   +----------------------------------+   |
+|   |    [ START TRAINING ]            |   |
+|   |    Large gradient button         |   |
+|   +----------------------------------+   |
+|                                          |
+|   Quick Stats (2 cards)                  |
+|   +------------+  +------------+         |
+|   | Songs: 12  |  | Time: 3.5h |         |
+|   +------------+  +------------+         |
+|                                          |
+|   Continue Practice (1-2 recent songs)   |
+|                                          |
++------------------------------------------+
 ```
 
-**Light Beam Sweep**
-```css
-@keyframes lightBeamSweep {
-  0% {
-    transform: translateX(-100%) rotate(15deg);
-    opacity: 0;
-  }
-  50% {
-    opacity: 0.15;
-  }
-  100% {
-    transform: translateX(200%) rotate(15deg);
-    opacity: 0;
-  }
-}
+---
+
+## 2. Beautiful Vocal Training Progress Diagram
+
+### Design Concept
+A circular/radial progress visualization showing:
+- Overall training level (ring progress)
+- Skill breakdown by category
+- Animated pulsing glow effect
+- Stadium light aesthetic
+
+### Components
+
+**Outer Ring**: Main progress (0-100%)
+- Gradient stroke matching stadium blue theme
+- Animated fill with glow
+
+**Inner Circle**: Level badge
+- Shows current level (Beginner/Intermediate/Advanced)
+- Pulsing animation
+
+**Skill Indicators** (around the ring):
+- Pitch Accuracy
+- Breath Control  
+- Range Extension
+- Rhythm
+
+### Visual Reference
+
+```text
+           ╭── Pitch ──╮
+          ╱             ╲
+    Range │    ████     │ Breath
+          │  LEVEL 3    │
+          │ Intermediate│
+          ╲             ╱
+           ╰── Rhythm ──╯
+           
+    ████████████░░░░░░░░ 67%
 ```
-
-**Fog Drift**
-```css
-@keyframes fogDrift {
-  0%, 100% {
-    transform: translateX(0) translateY(0);
-    opacity: 0.2;
-  }
-  50% {
-    transform: translateX(20px) translateY(-10px);
-    opacity: 0.35;
-  }
-}
-```
-
-### Background Component
-
-Create a new `StadiumBackground` component with:
-- Fixed position covering entire viewport
-- Multiple animated blur blobs (stadium light orbs)
-- Gradient overlay simulating atmospheric haze
-- Subtle animated light beams crossing the screen
-- Different configurations for dark/light mode
 
 ---
 
-## 4. Files to Create
+## 3. Training Module Selection Page
+
+### New Route: `/training-select`
+
+### Design
+
+```text
++------------------------------------------+
+|   [Back] Training Modules                |
++------------------------------------------+
+|                                          |
+|   Choose Your Training Focus             |
+|                                          |
+|   +----------------------------------+   |
+|   | 🎤 PITCH TRAINING                |   |
+|   | Master pitch accuracy            |   |
+|   | 12 exercises | Intermediate      |   |
+|   +----------------------------------+   |
+|                                          |
+|   +----------------------------------+   |
+|   | 🎵 BREATH CONTROL                |   |
+|   | Improve your breathing           |   |
+|   | 8 exercises | Beginner           |   |
+|   +----------------------------------+   |
+|                                          |
+|   +----------------------------------+   |
+|   | 🎸 FREESTYLE PRACTICE            |   |
+|   | Practice with any song           |   |
+|   | 8 songs available                |   |
+|   +----------------------------------+   |
+|                                          |
++------------------------------------------+
+```
+
+### Training Modules (Mock Data):
+1. **Pitch Training** - Focus on pitch accuracy
+2. **Breath Control** - Breathing exercises  
+3. **Range Extension** - Expand vocal range
+4. **Rhythm Training** - Timing and rhythm
+5. **Freestyle Practice** - Opens Library to choose song
+
+---
+
+## 4. User Flow
+
+```text
+Home Page
+    │
+    ├─── [Start Training] button
+    │         │
+    │         ▼
+    │    Training Select (/training-select)
+    │         │
+    │         ├─── Module 1-4 → TrainingMode with module context
+    │         │
+    │         └─── Freestyle → Library (/library)
+    │
+    └─── Continue Practice card → SongDetail → TrainingMode
+```
+
+---
+
+## 5. Files to Create
 
 | File | Purpose |
 |------|---------|
-| `src/assets/rmvt-logo.png` | Copy of uploaded logo |
-| `src/components/ui/RMVTLogo.tsx` | Reusable logo component with animations |
-| `src/components/layout/StadiumBackground.tsx` | Animated cinematic background |
+| `src/pages/TrainingSelect.tsx` | Training module selection page |
+| `src/components/home/VocalProgressDiagram.tsx` | Circular progress visualization |
+| `src/components/home/ContinuePractice.tsx` | Recent/in-progress song card |
 
 ---
 
-## 5. Files to Modify
+## 6. Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/index.css` | Complete color token overhaul for blue theme + new stadium animations |
-| `src/components/layout/Header.tsx` | Replace gradient square with RMVT logo image |
-| `src/components/layout/AppShell.tsx` | Integrate StadiumBackground component |
-| `src/components/layout/MobileNav.tsx` | Update home button gradient to blue theme |
-| `tailwind.config.ts` | Add stadium-specific color tokens if needed |
+| `src/pages/Home.tsx` | Complete redesign - static layout with progress diagram |
+| `src/App.tsx` | Add `/training-select` route |
+| `src/data/mockSongs.ts` | Add training modules mock data (optional) |
 
 ---
 
-## 6. Implementation Details
+## 7. Implementation Details
 
-### RMVTLogo Component
+### VocalProgressDiagram Component
 
 ```typescript
-interface RMVTLogoProps {
-  size?: "sm" | "md" | "lg" | "xl";
-  animated?: boolean;
-  className?: string;
-}
-
-export function RMVTLogo({ size = "md", animated = true, className }: RMVTLogoProps) {
-  const sizeMap = {
-    sm: "w-8 h-8",
-    md: "w-10 h-10", 
-    lg: "w-16 h-16",
-    xl: "w-24 h-24",
+interface VocalProgressDiagramProps {
+  overallProgress: number; // 0-100
+  level: "beginner" | "intermediate" | "advanced";
+  skills: {
+    pitch: number;
+    breath: number;
+    range: number;
+    rhythm: number;
   };
-
-  return (
-    <motion.div
-      className={cn(
-        sizeMap[size],
-        "rounded-2xl overflow-hidden",
-        "shadow-[0_0_30px_hsl(200_90%_55%/0.3)]",
-        className
-      )}
-      animate={animated ? {
-        boxShadow: [
-          "0 0 20px hsl(200 90% 55% / 0.2)",
-          "0 0 40px hsl(200 90% 55% / 0.4)",
-          "0 0 20px hsl(200 90% 55% / 0.2)",
-        ],
-      } : undefined}
-      transition={{ duration: 3, repeat: Infinity }}
-    >
-      <img src={rmvtLogo} alt="RMVT" className="w-full h-full object-cover" />
-    </motion.div>
-  );
+  streak: number;
+  sessions: number;
 }
 ```
 
-### StadiumBackground Component
+**Key Features:**
+- SVG-based circular progress ring
+- Animated gradient stroke
+- Skill indicator dots around perimeter
+- Center displays level badge with glow
+- Stadium light pulsing animation
+- Responsive sizing
 
-```typescript
-export function StadiumBackground() {
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
+**Animation Details:**
+- Progress ring fills with `framer-motion` spring
+- Skill dots pulse sequentially
+- Center badge has subtle breathing animation
+- Glow intensifies on hover
 
+### Home Page Structure
+
+```tsx
+export default function Home() {
   return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden">
-      {/* Base gradient - deep stadium blue */}
-      <div className={cn(
-        "absolute inset-0",
-        isDark 
-          ? "bg-gradient-to-b from-[hsl(215,80%,8%)] via-[hsl(210,70%,6%)] to-[hsl(220,60%,4%)]"
-          : "bg-gradient-to-b from-[hsl(205,60%,95%)] via-[hsl(210,50%,92%)] to-[hsl(215,40%,88%)]"
-      )} />
+    <div className="min-h-screen">
+      <Header showSearch={false} />
+      
+      <motion.div className="px-4 pb-8">
+        {/* Hero Section */}
+        <section className="text-center py-8">
+          <h1>Master Your <span className="gradient-text">Voice</span></h1>
+          <p>Train with isolated stems...</p>
+        </section>
 
-      {/* Stadium light orbs */}
-      <motion.div
-        className="absolute w-96 h-96 -top-20 left-1/4 rounded-full bg-[hsl(200,80%,60%)] blur-[120px]"
-        animate={{
-          opacity: [0.15, 0.25, 0.15],
-          scale: [1, 1.1, 1],
-        }}
-        transition={{ duration: 6, repeat: Infinity }}
-      />
+        {/* Vocal Progress Diagram */}
+        <VocalProgressDiagram
+          overallProgress={67}
+          level="intermediate"
+          skills={{ pitch: 75, breath: 60, range: 45, rhythm: 80 }}
+          streak={7}
+          sessions={12}
+        />
 
-      {/* Light beam effect */}
-      <motion.div
-        className="absolute top-0 left-0 w-full h-full"
-        style={{
-          background: "linear-gradient(135deg, transparent 40%, hsl(200 80% 70% / 0.1) 50%, transparent 60%)",
-        }}
-        animate={{
-          backgroundPosition: ["-100% -100%", "200% 200%"],
-        }}
-        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-      />
+        {/* Start Training CTA */}
+        <GlassButton 
+          size="lg" 
+          onClick={() => navigate("/training-select")}
+          className="w-full"
+        >
+          Start Training
+        </GlassButton>
 
-      {/* Fog/mist layers */}
-      <motion.div
-        className="absolute bottom-0 left-0 right-0 h-1/3 bg-gradient-to-t from-[hsl(210,50%,40%/0.1)] to-transparent"
-        animate={{ opacity: [0.3, 0.5, 0.3] }}
-        transition={{ duration: 10, repeat: Infinity }}
-      />
+        {/* Quick Stats */}
+        <div className="grid grid-cols-2 gap-3">
+          <StatCard icon={Music} value="12" label="Songs" />
+          <StatCard icon={Clock} value="3.5h" label="Time" />
+        </div>
+
+        {/* Continue Practice */}
+        <ContinuePractice />
+      </motion.div>
     </div>
   );
 }
 ```
 
-### Header Logo Update
+### TrainingSelect Page
 
-```typescript
-// In Header.tsx, replace the gradient square:
-<RMVTLogo size="md" animated />
-<span className="font-semibold text-lg gradient-text hidden sm:block">RMVT</span>
+```tsx
+const trainingModules = [
+  {
+    id: "pitch",
+    title: "Pitch Training",
+    description: "Master pitch accuracy and intonation",
+    icon: Target,
+    exercises: 12,
+    difficulty: "intermediate",
+    color: "hsl(200, 90%, 55%)",
+  },
+  {
+    id: "breath",
+    title: "Breath Control",
+    description: "Improve breathing technique",
+    icon: Wind,
+    exercises: 8,
+    difficulty: "beginner",
+    color: "hsl(170, 80%, 50%)",
+  },
+  {
+    id: "range",
+    title: "Range Extension",
+    description: "Expand your vocal range",
+    icon: TrendingUp,
+    exercises: 10,
+    difficulty: "advanced",
+    color: "hsl(280, 80%, 60%)",
+  },
+  {
+    id: "rhythm",
+    title: "Rhythm Training",
+    description: "Perfect your timing",
+    icon: Timer,
+    exercises: 6,
+    difficulty: "beginner",
+    color: "hsl(45, 90%, 55%)",
+  },
+  {
+    id: "freestyle",
+    title: "Freestyle Practice",
+    description: "Practice with any song from library",
+    icon: Music,
+    songsAvailable: 8,
+    color: "hsl(var(--primary))",
+  },
+];
+```
+
+### Progress Diagram SVG Structure
+
+```tsx
+<svg viewBox="0 0 200 200">
+  {/* Background ring */}
+  <circle cx="100" cy="100" r="80" 
+    stroke="hsl(var(--muted))" 
+    strokeWidth="8" 
+    fill="none" 
+  />
+  
+  {/* Progress ring with gradient */}
+  <motion.circle cx="100" cy="100" r="80"
+    stroke="url(#progressGradient)"
+    strokeWidth="8"
+    fill="none"
+    strokeDasharray={circumference}
+    initial={{ strokeDashoffset: circumference }}
+    animate={{ strokeDashoffset: circumference * (1 - progress) }}
+    strokeLinecap="round"
+  />
+  
+  {/* Skill indicator dots */}
+  {skills.map((skill, i) => (
+    <circle 
+      cx={calculatePosition(i).x}
+      cy={calculatePosition(i).y}
+      r="6"
+      fill={skill.color}
+    />
+  ))}
+  
+  {/* Center content */}
+  <text x="100" y="90" textAnchor="middle">LEVEL 3</text>
+  <text x="100" y="110" textAnchor="middle">Intermediate</text>
+  
+  {/* Gradient definition */}
+  <defs>
+    <linearGradient id="progressGradient">
+      <stop offset="0%" stopColor="hsl(195, 85%, 50%)" />
+      <stop offset="100%" stopColor="hsl(220, 75%, 70%)" />
+    </linearGradient>
+  </defs>
+</svg>
 ```
 
 ---
 
-## 7. Visual Reference
+## 8. Visual Design Notes
 
-### Dark Mode Atmosphere
+### Progress Diagram Aesthetics
+- Matches stadium blue theme
+- Subtle particle effects behind
+- Glow effects on progress fill
+- Glass-morphism for center badge
+- Animated skill dots with stadium light pulse
 
-```text
-┌─────────────────────────────────────────────┐
-│ ✦ ✦     ✦        ✦   ✦      ← Stadium lights
-│      ~~~~  light beams  ~~~~                │
-│  ╭─────╮                                    │
-│  │RMVT │  RMVT              ← Header + Logo │
-│  ╰─────╯                                    │
-│                                             │
-│     Deep blue gradient background           │
-│     with floating cyan light orbs           │
-│                                             │
-│  ░░░░░░░░░░░░░░░░░░░░░░░░░░  ← Fog effect  │
-└─────────────────────────────────────────────┘
-```
+### Training Module Cards
+- Full-width glass cards
+- Left icon with gradient background
+- Right arrow indicator
+- Difficulty badge
+- Hover glow effect matching icon color
 
-### Light Mode Atmosphere
-
-```text
-┌─────────────────────────────────────────────┐
-│     Soft sky blue background                │
-│                                             │
-│  ╭─────╮                                    │
-│  │RMVT │  RMVT              ← Header + Logo │
-│  ╰─────╯                                    │
-│                                             │
-│     Clean blue-tinted surfaces              │
-│     with subtle light orb accents           │
-│                                             │
-│  ░░░░░░░░░░░░░░░░░░░░░░░░░░  ← Soft haze   │
-└─────────────────────────────────────────────┘
-```
+### Color Usage
+- Primary actions: Stadium cyan-blue gradient
+- Pitch: Cyan (#00bcd4)
+- Breath: Teal (#26a69a)
+- Range: Purple (#7c4dff)
+- Rhythm: Amber (#ffc107)
 
 ---
 
-## 8. Expected Results
+## 9. Expected Results
 
 After implementation:
-- RMVT stadium logo displayed as app icon with rounded corners
-- Deep cinematic blue theme in dark mode (stadium at night feel)
-- Clean sky-blue theme in light mode (stadium at dusk)
-- Animated floating light orbs creating stadium atmosphere
-- Subtle light beam sweeping animations
-- Fog/mist effects at bottom of screen
-- All existing glass effects updated to blue tones
-- Gradient buttons and accents use stadium cyan-blues
-- Cohesive premium "concert" experience throughout app
+- Clean, static home page focused on training
+- Beautiful animated circular progress diagram
+- Clear CTA to start training
+- Training module selection with 5 options
+- Smooth navigation flow to training mode
+- Stadium-themed visual consistency
+- Progress tracking visualization
+- Quick access to continue previous practice
+
