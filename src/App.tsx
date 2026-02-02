@@ -12,6 +12,7 @@ import Onboarding from "./pages/Onboarding";
 import Home from "./pages/Home";
 import Library from "./pages/Library";
 import SongDetail from "./pages/SongDetail";
+import TrainingSelect from "./pages/TrainingSelect";
 import TrainingMode from "./pages/TrainingMode";
 import Profile from "./pages/Profile";
 import Progress from "./pages/Progress";
@@ -71,6 +72,7 @@ function AppContent() {
                   <Route path="/library" element={<Library />} />
                   <Route path="/progress" element={<Progress />} />
                   <Route path="/song/:id" element={<SongDetail />} />
+                  <Route path="/training-select" element={<TrainingSelect />} />
                   <Route path="/training/:id" element={<TrainingMode />} />
                   <Route path="/training" element={<Library />} />
                   <Route path="/profile" element={<Profile />} />
