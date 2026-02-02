@@ -195,7 +195,7 @@ export default function TrainingMode() {
               icon={ArrowLeft}
               variant="ghost"
               size="sm"
-              onClick={() => navigate(`/song/${song.id}`)}
+              onClick={() => navigate("/")}
               label="Go back"
             />
             <div className="min-w-0">
