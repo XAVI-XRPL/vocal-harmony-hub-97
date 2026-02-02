@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Search, Menu, Bell } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { RMVTLogo } from "@/components/ui/RMVTLogo";
 import { useUIStore } from "@/stores/uiStore";
 import { cn } from "@/lib/utils";
 
@@ -59,22 +60,8 @@ export function Header({ className, showSearch = true, title }: HeaderProps) {
           <h1 className="text-lg font-semibold text-foreground">{title}</h1>
         ) : (
           <div className="flex items-center gap-2.5">
-            <motion.div 
-              className="w-9 h-9 rounded-xl gradient-bg flex items-center justify-center"
-              animate={{
-                boxShadow: [
-                  "0 0 0 hsl(var(--primary) / 0)",
-                  "0 0 20px hsl(var(--primary) / 0.4)",
-                  "0 0 0 hsl(var(--primary) / 0)",
-                ],
-              }}
-              transition={{ duration: 3, repeat: Infinity }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <span className="text-white font-bold text-sm">R</span>
-            </motion.div>
-            <span className="font-semibold text-lg gradient-text hidden sm:block">RVMT</span>
+            <RMVTLogo size="sm" animated />
+            <span className="font-semibold text-lg gradient-text hidden sm:block">RMVT</span>
           </div>
         )}
       </div>

@@ -2,36 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-/* RVMT Design System - Liquid Glass Morphism */
+/* RMVT Design System - Cinematic Stadium Blue Theme */
 
 @layer base {
   :root {
-    /* Base Dark Theme */
-    --background: 230 25% 3%;
+    /* Base Dark Theme - Stadium Night */
+    --background: 215 80% 4%;
     --foreground: 0 0% 95%;
 
     /* Card surfaces */
-    --card: 230 25% 5%;
+    --card: 215 70% 7%;
     --card-foreground: 0 0% 95%;
 
     /* Popover */
-    --popover: 230 25% 5%;
+    --popover: 215 70% 7%;
     --popover-foreground: 0 0% 95%;
 
-    /* Primary - Indigo */
-    --primary: 239 84% 67%;
+    /* Primary - Stadium Cyan-Blue */
+    --primary: 200 90% 55%;
     --primary-foreground: 0 0% 100%;
 
     /* Secondary */
-    --secondary: 230 20% 12%;
+    --secondary: 215 50% 12%;
     --secondary-foreground: 0 0% 95%;
 
     /* Muted */
-    --muted: 230 20% 15%;
+    --muted: 215 50% 15%;
     --muted-foreground: 0 0% 65%;
 
-    /* Accent */
-    --accent: 270 91% 65%;
+    /* Accent - Brighter Stadium Blue */
+    --accent: 210 85% 65%;
     --accent-foreground: 0 0% 100%;
 
     /* Destructive */
@@ -39,49 +39,49 @@
     --destructive-foreground: 0 0% 98%;
 
     /* Border & Input */
-    --border: 0 0% 100% / 0.08;
-    --input: 0 0% 100% / 0.08;
-    --ring: 239 84% 67%;
+    --border: 200 40% 30% / 0.15;
+    --input: 200 40% 30% / 0.15;
+    --ring: 200 90% 55%;
 
     --radius: 1rem;
 
     /* Sidebar */
-    --sidebar-background: 230 25% 5%;
+    --sidebar-background: 215 70% 6%;
     --sidebar-foreground: 0 0% 85%;
-    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary: 200 90% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 230 20% 12%;
+    --sidebar-accent: 215 50% 12%;
     --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 0 0% 100% / 0.08;
-    --sidebar-ring: 239 84% 67%;
+    --sidebar-border: 200 40% 30% / 0.15;
+    --sidebar-ring: 200 90% 55%;
 
-    /* ========== RVMT Custom Tokens ========== */
+    /* ========== RMVT Custom Tokens ========== */
 
-    /* Glass Surface Tokens */
-    --glass-bg: 0 0% 100% / 0.03;
-    --glass-bg-hover: 0 0% 100% / 0.06;
-    --glass-bg-active: 0 0% 100% / 0.09;
-    --glass-border: 0 0% 100% / 0.08;
-    --glass-border-hover: 0 0% 100% / 0.15;
+    /* Glass Surface Tokens - Blue tinted */
+    --glass-bg: 200 50% 50% / 0.04;
+    --glass-bg-hover: 200 50% 50% / 0.08;
+    --glass-bg-active: 200 50% 50% / 0.12;
+    --glass-border: 200 60% 70% / 0.1;
+    --glass-border-hover: 200 60% 70% / 0.2;
 
-    /* Gradient Tokens (stored as HSL values for use in gradients) */
-    --gradient-start: 239 84% 67%;
-    --gradient-mid: 270 91% 65%;
-    --gradient-end: 330 81% 60%;
-    --gradient-secondary-start: 187 80% 43%;
-    --gradient-secondary-end: 217 91% 60%;
+    /* Gradient Tokens - Stadium Blues */
+    --gradient-start: 195 85% 50%;
+    --gradient-mid: 210 80% 60%;
+    --gradient-end: 220 75% 70%;
+    --gradient-secondary-start: 195 80% 45%;
+    --gradient-secondary-end: 215 85% 55%;
 
     /* Stem Colors */
-    --stem-vocal: 187 80% 43%;
-    --stem-harmony: 270 91% 65%;
+    --stem-vocal: 195 85% 50%;
+    --stem-harmony: 210 80% 60%;
     --stem-instrumental: 38 92% 50%;
     --stem-drums: 0 84% 60%;
     --stem-bass: 262 83% 58%;
     --stem-keys: 160 84% 39%;
 
-    /* Glow Effects */
-    --glow-primary: 0 0 40px hsl(239 84% 67% / 0.3);
-    --glow-accent: 0 0 60px hsl(270 91% 65% / 0.2);
+    /* Glow Effects - Stadium Blues */
+    --glow-primary: 0 0 40px hsl(200 90% 55% / 0.3);
+    --glow-accent: 0 0 60px hsl(210 85% 65% / 0.2);
 
     /* Touch Targets */
     --touch-target-min: 44px;
@@ -102,61 +102,61 @@
     --space-2xl: 48px;
   }
 
-  /* Light mode - Premium Polish */
+  /* Light mode - Stadium at Dusk */
   .light {
-    --background: 220 20% 98%;
-    --foreground: 230 25% 10%;
+    --background: 205 60% 97%;
+    --foreground: 215 70% 10%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 230 25% 10%;
+    --card: 205 40% 99%;
+    --card-foreground: 215 70% 10%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 230 25% 10%;
+    --popover: 205 40% 99%;
+    --popover-foreground: 215 70% 10%;
 
-    --primary: 239 84% 57%;
+    --primary: 200 85% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 15% 94%;
-    --secondary-foreground: 230 25% 15%;
+    --secondary: 205 40% 92%;
+    --secondary-foreground: 215 60% 15%;
 
-    --muted: 220 15% 96%;
-    --muted-foreground: 230 15% 40%;
+    --muted: 205 40% 94%;
+    --muted-foreground: 215 30% 40%;
 
-    --accent: 270 91% 55%;
+    --accent: 210 80% 55%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 55%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 15% 90%;
-    --input: 220 15% 90%;
-    --ring: 239 84% 57%;
+    --border: 205 30% 85%;
+    --input: 205 30% 85%;
+    --ring: 200 85% 45%;
 
-    /* Glass Surface Tokens - Light mode with stronger opacity */
-    --glass-bg: 0 0% 100% / 0.75;
-    --glass-bg-hover: 0 0% 100% / 0.88;
-    --glass-bg-active: 0 0% 100% / 0.95;
-    --glass-border: 230 25% 30% / 0.12;
-    --glass-border-hover: 230 25% 30% / 0.2;
+    /* Glass Surface Tokens - Light mode with blue tint */
+    --glass-bg: 205 50% 100% / 0.75;
+    --glass-bg-hover: 205 50% 100% / 0.88;
+    --glass-bg-active: 205 50% 100% / 0.95;
+    --glass-border: 210 40% 50% / 0.12;
+    --glass-border-hover: 210 40% 50% / 0.2;
 
-    /* Gradient Tokens - Slightly richer for light mode */
-    --gradient-start: 239 84% 57%;
-    --gradient-mid: 270 91% 55%;
-    --gradient-end: 330 81% 55%;
+    /* Gradient Tokens - Stadium Blues for light mode */
+    --gradient-start: 195 80% 45%;
+    --gradient-mid: 210 75% 50%;
+    --gradient-end: 220 70% 60%;
 
     /* Sidebar */
-    --sidebar-background: 220 20% 97%;
-    --sidebar-foreground: 230 25% 20%;
-    --sidebar-primary: 239 84% 57%;
+    --sidebar-background: 205 50% 96%;
+    --sidebar-foreground: 215 60% 20%;
+    --sidebar-primary: 200 85% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 94%;
-    --sidebar-accent-foreground: 230 25% 15%;
-    --sidebar-border: 220 15% 90%;
-    --sidebar-ring: 239 84% 57%;
+    --sidebar-accent: 205 40% 92%;
+    --sidebar-accent-foreground: 215 60% 15%;
+    --sidebar-border: 205 30% 85%;
+    --sidebar-ring: 200 85% 45%;
 
     /* Glow Effects - Softer for light mode */
-    --glow-primary: 0 0 25px hsl(239 84% 57% / 0.15);
-    --glow-accent: 0 0 35px hsl(270 91% 55% / 0.12);
+    --glow-primary: 0 0 25px hsl(200 85% 45% / 0.15);
+    --glow-accent: 0 0 35px hsl(210 80% 55% / 0.12);
   }
 }
 
@@ -181,7 +181,7 @@
 }
 
 @layer components {
-  /* Glass Card Styles - Enhanced for both themes */
+  /* Glass Card Styles - Enhanced with stadium blue tints */
   .glass-card {
     background: hsl(var(--glass-bg));
     backdrop-filter: blur(40px) saturate(150%);
@@ -189,16 +189,16 @@
     border: 1px solid hsl(var(--glass-border));
     border-radius: var(--radius);
     box-shadow: 
-      0 4px 24px -1px rgba(0, 0, 0, 0.2),
-      0 0 1px 0 rgba(255, 255, 255, 0.1) inset,
-      0 1px 0 0 rgba(255, 255, 255, 0.05) inset;
+      0 4px 24px -1px rgba(0, 30, 60, 0.25),
+      0 0 1px 0 rgba(100, 180, 255, 0.1) inset,
+      0 1px 0 0 rgba(150, 200, 255, 0.05) inset;
     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .light .glass-card {
     box-shadow: 
-      0 4px 24px -1px rgba(0, 0, 0, 0.08),
-      0 1px 3px 0 rgba(0, 0, 0, 0.04),
+      0 4px 24px -1px rgba(0, 50, 100, 0.08),
+      0 1px 3px 0 rgba(0, 50, 100, 0.04),
       0 0 0 1px rgba(255, 255, 255, 0.8) inset;
   }
 
@@ -207,123 +207,123 @@
     border-color: hsl(var(--glass-border-hover));
   }
 
-  /* Navigation Glass - Enhanced liquid effect */
+  /* Navigation Glass - Stadium blue effect */
   .nav-glass {
     background: linear-gradient(
       180deg,
-      hsl(0 0% 100% / 0.08) 0%,
-      hsl(0 0% 100% / 0.03) 100%
+      hsl(200 60% 50% / 0.1) 0%,
+      hsl(210 50% 40% / 0.05) 100%
     );
     backdrop-filter: blur(60px) saturate(180%);
     -webkit-backdrop-filter: blur(60px) saturate(180%);
-    border-top: 1px solid hsl(0 0% 100% / 0.12);
+    border-top: 1px solid hsl(200 60% 70% / 0.15);
     box-shadow: 
-      0 -8px 32px rgba(0, 0, 0, 0.25),
-      inset 0 1px 0 hsl(0 0% 100% / 0.08);
+      0 -8px 32px rgba(0, 50, 100, 0.3),
+      inset 0 1px 0 hsl(200 70% 80% / 0.1);
   }
 
   .light .nav-glass {
     background: linear-gradient(
       180deg,
-      hsl(0 0% 100% / 0.85) 0%,
-      hsl(0 0% 100% / 0.75) 100%
+      hsl(205 50% 100% / 0.85) 0%,
+      hsl(210 40% 98% / 0.75) 100%
     );
     border-top: 1px solid hsl(var(--glass-border));
     box-shadow: 
-      0 -8px 32px rgba(0, 0, 0, 0.08),
+      0 -8px 32px rgba(0, 50, 100, 0.08),
       inset 0 1px 0 hsl(0 0% 100% / 0.9);
   }
 
-  /* Header Glass - Refined liquid effect */
+  /* Header Glass - Stadium blue effect */
   .header-glass {
     background: linear-gradient(
       180deg,
-      hsl(0 0% 100% / 0.06) 0%,
-      hsl(0 0% 100% / 0.02) 100%
+      hsl(200 60% 50% / 0.08) 0%,
+      hsl(210 50% 40% / 0.03) 100%
     );
     backdrop-filter: blur(50px) saturate(160%);
     -webkit-backdrop-filter: blur(50px) saturate(160%);
-    border-bottom: 1px solid hsl(0 0% 100% / 0.08);
+    border-bottom: 1px solid hsl(200 60% 70% / 0.1);
     box-shadow: 
-      0 4px 24px rgba(0, 0, 0, 0.15),
-      inset 0 -1px 0 hsl(0 0% 100% / 0.05);
+      0 4px 24px rgba(0, 50, 100, 0.2),
+      inset 0 -1px 0 hsl(200 70% 80% / 0.05);
   }
 
   .light .header-glass {
     background: linear-gradient(
       180deg,
-      hsl(0 0% 100% / 0.9) 0%,
-      hsl(0 0% 100% / 0.8) 100%
+      hsl(205 50% 100% / 0.9) 0%,
+      hsl(210 40% 98% / 0.8) 100%
     );
     border-bottom: 1px solid hsl(var(--glass-border));
     box-shadow: 
-      0 4px 24px rgba(0, 0, 0, 0.05),
+      0 4px 24px rgba(0, 50, 100, 0.05),
       inset 0 -1px 0 hsl(0 0% 100% / 0.9);
   }
 
   /* Search Glass Input */
   .search-glass {
-    background: hsl(0 0% 100% / 0.04);
-    border: 1px solid hsl(0 0% 100% / 0.08);
+    background: hsl(200 50% 50% / 0.06);
+    border: 1px solid hsl(200 60% 70% / 0.1);
     box-shadow: 
-      inset 0 1px 2px rgba(0, 0, 0, 0.1),
+      inset 0 1px 2px rgba(0, 30, 60, 0.15),
       0 0 0 0 hsl(var(--primary) / 0);
     transition: all 0.3s ease;
   }
 
   .search-glass:focus {
-    background: hsl(0 0% 100% / 0.06);
+    background: hsl(200 50% 50% / 0.1);
     border-color: hsl(var(--primary) / 0.5);
     box-shadow: 
-      inset 0 1px 2px rgba(0, 0, 0, 0.1),
-      0 0 20px hsl(var(--primary) / 0.15);
+      inset 0 1px 2px rgba(0, 30, 60, 0.1),
+      0 0 20px hsl(var(--primary) / 0.2);
   }
 
   .light .search-glass {
-    background: hsl(0 0% 100% / 0.7);
+    background: hsl(205 50% 100% / 0.7);
     border: 1px solid hsl(var(--glass-border));
-    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+    box-shadow: inset 0 1px 2px rgba(0, 50, 100, 0.04);
   }
 
   .light .search-glass:focus {
-    background: hsl(0 0% 100% / 0.9);
+    background: hsl(205 50% 100% / 0.9);
     box-shadow: 
-      inset 0 1px 2px rgba(0, 0, 0, 0.04),
-      0 0 15px hsl(var(--primary) / 0.1);
+      inset 0 1px 2px rgba(0, 50, 100, 0.04),
+      0 0 15px hsl(var(--primary) / 0.15);
   }
 
-  /* Home Button Glow */
+  /* Home Button Glow - Stadium blue */
   .home-button-glow {
     box-shadow: 
-      0 4px 20px hsl(var(--primary) / 0.4),
-      0 0 40px hsl(var(--primary) / 0.2),
+      0 4px 20px hsl(var(--primary) / 0.5),
+      0 0 40px hsl(200 90% 55% / 0.3),
       inset 0 1px 0 hsl(0 0% 100% / 0.3);
   }
 
   .light .home-button-glow {
     box-shadow: 
-      0 4px 20px hsl(var(--primary) / 0.3),
-      0 0 30px hsl(var(--primary) / 0.15),
+      0 4px 20px hsl(var(--primary) / 0.35),
+      0 0 30px hsl(200 85% 45% / 0.2),
       inset 0 1px 0 hsl(0 0% 100% / 0.5);
   }
 
   .glass-card-solid {
     background: linear-gradient(
       135deg,
-      hsl(0 0% 100% / 0.05) 0%,
-      hsl(0 0% 100% / 0.02) 100%
+      hsl(200 50% 50% / 0.08) 0%,
+      hsl(210 40% 40% / 0.03) 100%
     );
     backdrop-filter: blur(60px) saturate(180%);
     -webkit-backdrop-filter: blur(60px) saturate(180%);
-    border: 1px solid hsl(0 0% 100% / 0.1);
+    border: 1px solid hsl(200 60% 70% / 0.12);
     border-radius: calc(var(--radius) + 4px);
   }
 
   .light .glass-card-solid {
     background: linear-gradient(
       135deg,
-      hsl(0 0% 100% / 0.9) 0%,
-      hsl(0 0% 100% / 0.7) 100%
+      hsl(205 50% 100% / 0.9) 0%,
+      hsl(210 40% 98% / 0.7) 100%
     );
     border: 1px solid hsl(var(--glass-border));
   }
@@ -358,9 +358,9 @@
   .shimmer {
     background: linear-gradient(
       90deg,
-      hsl(0 0% 100% / 0) 0%,
-      hsl(0 0% 100% / 0.05) 50%,
-      hsl(0 0% 100% / 0) 100%
+      hsl(200 50% 50% / 0) 0%,
+      hsl(200 50% 60% / 0.08) 50%,
+      hsl(200 50% 50% / 0) 100%
     );
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
@@ -369,14 +369,14 @@
   .light .shimmer {
     background: linear-gradient(
       90deg,
-      hsl(0 0% 0% / 0) 0%,
-      hsl(0 0% 0% / 0.04) 50%,
-      hsl(0 0% 0% / 0) 100%
+      hsl(200 40% 50% / 0) 0%,
+      hsl(200 40% 50% / 0.06) 50%,
+      hsl(200 40% 50% / 0) 100%
     );
     background-size: 200% 100%;
   }
 
-  /* Playhead Glow */
+  /* Playhead Glow - Stadium blue */
   .playhead {
     position: absolute;
     width: 2px;
@@ -422,7 +422,7 @@
 }
 
 @layer utilities {
-  /* Liquid Blob Background Helper - Enhanced for both themes */
+  /* Liquid Blob Background Helper - Stadium blue themed */
   .liquid-blob {
     position: absolute;
     filter: blur(80px);
@@ -460,6 +460,19 @@
 
   .safe-right {
     padding-right: max(var(--space-md), var(--safe-area-right));
+  }
+
+  /* Stadium light glow utility */
+  .stadium-glow {
+    box-shadow: 
+      0 0 30px hsl(200 90% 55% / 0.3),
+      0 0 60px hsl(200 85% 60% / 0.2);
+  }
+
+  .light .stadium-glow {
+    box-shadow: 
+      0 0 20px hsl(200 85% 45% / 0.2),
+      0 0 40px hsl(200 80% 50% / 0.1);
   }
 }
 
@@ -597,6 +610,43 @@
   }
 }
 
+/* Stadium Light Animations */
+@keyframes stadiumLightPulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.1);
+  }
+}
+
+@keyframes lightBeamSweep {
+  0% {
+    transform: translateX(-100%) rotate(15deg);
+    opacity: 0;
+  }
+  50% {
+    opacity: 0.15;
+  }
+  100% {
+    transform: translateX(200%) rotate(15deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fogDrift {
+  0%, 100% {
+    transform: translateX(0) translateY(0);
+    opacity: 0.2;
+  }
+  50% {
+    transform: translateX(20px) translateY(-10px);
+    opacity: 0.35;
+  }
+}
+
 /* Animation utility classes */
 .animate-breathe {
   animation: breathe 2s ease-in-out infinite;
@@ -629,4 +679,16 @@
 .animate-gradient-shift {
   background-size: 200% 200%;
   animation: gradientShift 6s ease infinite;
+}
+
+.animate-stadium-light {
+  animation: stadiumLightPulse 4s ease-in-out infinite;
+}
+
+.animate-light-beam {
+  animation: lightBeamSweep 8s linear infinite;
+}
+
+.animate-fog {
+  animation: fogDrift 10s ease-in-out infinite;
 }
