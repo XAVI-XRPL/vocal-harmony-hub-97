@@ -8,6 +8,9 @@ export interface GlassCardProps extends HTMLMotionProps<"div"> {
   glowColor?: "primary" | "accent" | "stem-vocal" | "stem-harmony";
   padding?: "none" | "sm" | "md" | "lg";
   hover?: boolean;
+  depth?: "flat" | "raised" | "floating";
+  tilt?: boolean;
+  shine?: boolean;
 }
 
 const paddingClasses = {
@@ -24,6 +27,12 @@ const glowClasses = {
   "stem-harmony": "hover:shadow-[0_0_30px_hsl(var(--stem-harmony)/0.3)]",
 };
 
+const depthClasses = {
+  flat: "",
+  raised: "glass-card-raised",
+  floating: "glass-card-floating",
+};
+
 const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
   (
     {
@@ -33,16 +42,42 @@ const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
       glowColor = "primary",
       padding = "md",
       hover = true,
+      depth = "flat",
+      tilt = false,
+      shine = false,
       children,
+      style,
       ...props
     },
     ref
   ) => {
+    const [tiltStyle, setTiltStyle] = React.useState({ rotateX: 0, rotateY: 0 });
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!tilt) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const width = rect.width;
+      const height = rect.height;
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      const xPct = (mouseX / width - 0.5) * 2;
+      const yPct = (mouseY / height - 0.5) * 2;
+      setTiltStyle({
+        rotateX: -yPct * 6,
+        rotateY: xPct * 6,
+      });
+    };
+
+    const handleMouseLeave = () => {
+      setTiltStyle({ rotateX: 0, rotateY: 0 });
+    };
+
     const baseClasses = cn(
-      "rounded-2xl transition-all duration-300",
+      "rounded-2xl transition-all duration-300 relative overflow-hidden",
       paddingClasses[padding],
       hover && "cursor-pointer",
-      glow && glowClasses[glowColor]
+      glow && glowClasses[glowColor],
+      depthClasses[depth]
     );
 
     const variantClasses = {
@@ -59,12 +94,26 @@ const GlassCard = React.forwardRef<HTMLDivElement, GlassCardProps>(
       <motion.div
         ref={ref}
         className={cn(baseClasses, variantClasses[variant], className)}
-        whileHover={hover ? { y: -2, scale: 1.01 } : undefined}
+        style={
+          tilt
+            ? {
+                ...style,
+                transformStyle: "preserve-3d" as const,
+              }
+            : style
+        }
+        animate={tilt ? tiltStyle : undefined}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        whileHover={hover && !tilt ? { y: -2, scale: 1.01 } : undefined}
         whileTap={hover ? { scale: 0.99 } : undefined}
         transition={{ type: "spring", stiffness: 400, damping: 25 }}
         {...props}
       >
-        {children}
+        {shine && (
+          <div className="card-shine pointer-events-none absolute inset-0 rounded-2xl" />
+        )}
+        {children as React.ReactNode}
       </motion.div>
     );
   }

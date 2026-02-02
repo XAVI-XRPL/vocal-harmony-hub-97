@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Play, Music2, TrendingUp, Clock, Sparkles } from "lucide-react";
+import { Play, TrendingUp, Clock, Sparkles } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -52,28 +52,8 @@ export default function Home() {
         animate="visible"
         className="px-4 pb-8"
       >
-        {/* Hero Section */}
+        {/* Hero Section - Clean without icon */}
         <motion.section variants={itemVariants} className="py-6 text-center">
-          <motion.div
-            animate={{ y: [0, -6, 0] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-            className="relative w-16 h-16 mx-auto mb-4"
-          >
-            <motion.div
-              className="w-full h-full rounded-2xl gradient-bg flex items-center justify-center shadow-xl"
-              animate={{
-                boxShadow: [
-                  "0 15px 40px -10px hsl(var(--primary) / 0.4)",
-                  "0 20px 50px -10px hsl(var(--accent) / 0.5)",
-                  "0 15px 40px -10px hsl(var(--primary) / 0.4)",
-                ],
-              }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <Music2 className="w-8 h-8 text-white" />
-            </motion.div>
-          </motion.div>
-
           <h1 className="text-2xl sm:text-3xl font-bold mb-2">
             Master Your <span className="gradient-text">Voice</span>
           </h1>
@@ -102,7 +82,7 @@ export default function Home() {
         {/* Quick Stats */}
         <motion.section variants={itemVariants} className="mb-6">
           <div className="grid grid-cols-2 gap-3">
-            <GlassCard padding="md" hover={false}>
+            <GlassCard padding="md" hover={false} depth="raised" shine>
               <div className="flex items-center gap-3">
                 <motion.div
                   className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center"
@@ -117,7 +97,7 @@ export default function Home() {
                 </div>
               </div>
             </GlassCard>
-            <GlassCard padding="md" hover={false}>
+            <GlassCard padding="md" hover={false} depth="raised" shine>
               <div className="flex items-center gap-3">
                 <motion.div
                   className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center"
