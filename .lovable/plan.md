@@ -1,10 +1,10 @@
 
 
-# Premium Dark Splash Screen with Full-Screen Image
+# Video Splash Screen Upgrade
 
 ## Overview
 
-Redesign the splash screen to feature the uploaded RMVT promotional image as a stunning full-screen intro. The design will be dark-themed, mobile-optimized, with elegant fade-in and fade-out transitions that create a premium, cinematic first impression.
+Replace the static RMVT image with the uploaded video file to create a dynamic, cinema-quality splash intro. The video will play automatically, muted, filling the screen with the same premium dark aesthetic and smooth fade transitions.
 
 ---
 
@@ -13,13 +13,13 @@ Redesign the splash screen to feature the uploaded RMVT promotional image as a s
 ```text
 +----------------------------------+
 |                                  |
-|  [Full-screen RMVT image]        |
-|  - Stadium lights at top         |
-|  - "RMVT" LED text               |
-|  - "RAab VOCAL MIX TAPE"         |
-|  - Vocal coach with crowd        |
+|  [Full-screen RMVT VIDEO]        |
+|  - Stadium lights animation      |
+|  - "RMVT" LED text glowing       |
+|  - Dynamic crowd movement        |
+|  - Vocal coach motion            |
 |                                  |
-|  Overlay gradient for depth      |
+|  Dark overlay gradients          |
 |                                  |
 |  +----------------------------+  |
 |  |  [Subtle loading bar]      |  |
@@ -28,168 +28,133 @@ Redesign the splash screen to feature the uploaded RMVT promotional image as a s
 +----------------------------------+
 
 Animation sequence:
-1. Black screen -> Image fades in (0.8s)
-2. Hold with subtle animations (2s)
-3. Image + screen fades out to black (0.6s)
+1. Black screen -> Video fades in (0.6s)
+2. Video plays (auto, muted, loop optional)
+3. Screen fades out to black (0.6s)
 4. Transition to main app
 ```
 
 ---
 
-## Design Approach
+## Implementation Approach
 
-### 1. Full-Screen Image Background
-- Use the uploaded image as a cover background
-- Fill entire viewport with `object-cover`
-- Optimized for mobile portrait orientation
+### 1. Copy Video to Public Folder
+Video files should go in `public/` folder because:
+- Videos are large and shouldn't be bundled with JS
+- Better streaming/loading performance
+- Direct URL reference works better for `<video>` elements
 
-### 2. Dark Overlay Gradients
-- Top gradient: Enhance stadium lights glow
-- Bottom gradient: Darken for loading bar visibility
-- Overall: Slight dark vignette for depth
+### 2. Replace Image with Video Element
 
-### 3. Animation Sequence
+```typescript
+<motion.video
+  src="/video/RVMTvideo.mp4"
+  autoPlay
+  muted
+  playsInline
+  className="absolute inset-0 w-full h-full object-cover object-top"
+  initial={{ opacity: 0, scale: 1.05 }}
+  animate={{ opacity: 1, scale: 1 }}
+  exit={{ opacity: 0, scale: 1.02 }}
+  transition={{ duration: 0.6, ease: "easeOut" }}
+/>
+```
 
-**Phase 1: Fade In (0-1s)**
-- Screen starts completely black
-- Image fades in smoothly with opacity 0 -> 1
-- Slight scale animation (1.05 -> 1) for depth
+### 3. Key Video Properties
 
-**Phase 2: Hold (1-2.5s)**
-- Subtle floating/breathing animation on image
-- Loading progress bar fills
-- Optional: Gentle light pulse effect
-
-**Phase 3: Fade Out (2.5-3.2s)**
-- Entire screen fades to black (opacity 1 -> 0)
-- Scale slightly zooms in (1 -> 1.02)
-- Seamless transition to app
-
-### 4. Mobile-First Design
-- Full viewport height (100dvh for mobile browsers)
-- Safe area padding for notch/status bar
-- Touch-friendly, minimal UI
+| Property | Value | Purpose |
+|----------|-------|---------|
+| `autoPlay` | true | Start playing immediately |
+| `muted` | true | Required for autoplay on mobile |
+| `playsInline` | true | Prevent iOS fullscreen takeover |
+| `loop` | false | Play once during splash duration |
+| `preload` | "auto" | Start loading video early |
 
 ---
 
-## Implementation
-
-### File Changes
+## File Changes
 
 | File | Action |
 |------|--------|
-| `src/pages/Splash.tsx` | Complete redesign with new animation system |
-| `src/assets/RVMT.png` | Copy uploaded image to assets |
-
-### New Splash Component Structure
-
-```typescript
-// Animation phases with Framer Motion
-const splashVariants = {
-  hidden: { 
-    opacity: 0, 
-    scale: 1.05 
-  },
-  visible: { 
-    opacity: 1, 
-    scale: 1,
-    transition: { duration: 0.8, ease: "easeOut" }
-  },
-  exit: { 
-    opacity: 0, 
-    scale: 1.02,
-    transition: { duration: 0.6, ease: "easeIn" }
-  }
-};
-```
-
-### Image Styling
-
-```typescript
-// Full-screen cover image
-<motion.img
-  src={splashImage}
-  alt="RMVT"
-  className="absolute inset-0 w-full h-full object-cover object-top"
-  variants={imageVariants}
-/>
-
-// Dark overlay gradients
-<div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
-```
-
-### Loading Indicator
-
-```typescript
-// Minimal, premium loading bar at bottom
-<motion.div 
-  className="absolute bottom-16 left-1/2 -translate-x-1/2"
-  initial={{ opacity: 0 }}
-  animate={{ opacity: 1 }}
-  transition={{ delay: 0.5 }}
->
-  <div className="w-32 h-0.5 bg-white/20 rounded-full overflow-hidden">
-    <motion.div
-      className="h-full bg-white/60"
-      initial={{ width: "0%" }}
-      animate={{ width: "100%" }}
-      transition={{ duration: 2, ease: "easeInOut" }}
-    />
-  </div>
-</motion.div>
-```
+| `public/video/RVMTvideo.mp4` | Copy uploaded video here |
+| `src/pages/Splash.tsx` | Replace `<img>` with `<video>` element |
 
 ---
 
 ## Technical Details
 
-### Animation Timing
-- **Total duration**: ~3 seconds
-- **Fade in**: 0.8s with easeOut
-- **Hold time**: ~1.7s (while progress fills)
-- **Fade out**: 0.6s with easeIn
-- Smooth, premium feel without feeling slow
+### Video Element vs Image
+- Replace `motion.img` with `motion.video`
+- Remove the ES module import (videos load via URL)
+- Add video-specific attributes for mobile compatibility
+
+### Timing Adjustments
+- May need to sync splash duration with video length
+- Keep minimum 2.5s display time
+- Video continues playing until fade-out begins
 
 ### Mobile Optimizations
-- Use `100dvh` for true mobile viewport height
-- `object-position: top` to prioritize the RMVT logo and lights
-- Safe area insets for modern phones
-- Hardware-accelerated transforms only
+- `playsInline` prevents iOS from hijacking to fullscreen
+- `muted` is mandatory for autoplay to work on all browsers
+- Keep `object-cover` and `object-top` for proper framing
 
-### Color Palette (Dark Theme Only)
-- Background: Pure black (#000) for deep contrast
-- Overlay gradients: Black with varying opacity
-- Loading bar: White with transparency
-
-### Image Considerations
-- Import image as ES module for proper bundling
-- Use `object-cover` to fill viewport without distortion
-- Position at top to keep LED "RMVT" text visible
-- Add subtle Ken Burns-style movement for life
+### Fallback Strategy
+- Keep the image as a poster/fallback if video fails to load
+- Add `onLoadedData` event to ensure smooth transition
 
 ---
 
-## Animation Keyframes
+## Updated Component Structure
 
-```text
-Time:     0s    0.8s         2.5s    3.1s
-          |______|____________|_______|
+```typescript
+export default function Splash({ onComplete }: SplashProps) {
+  const [isExiting, setIsExiting] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [videoLoaded, setVideoLoaded] = useState(false);
+
+  // ... existing timing logic
+
+  return (
+    <AnimatePresence mode="wait">
+      {!isExiting && (
+        <motion.div className="fixed inset-0 z-50 bg-black" style={{ height: "100dvh" }}>
           
-Opacity:  0% -> 100%         100% -> 0%
-Scale:    105% -> 100%       100% -> 102%
+          {/* Full-screen video */}
+          <motion.video
+            src="/video/RVMTvideo.mp4"
+            autoPlay
+            muted
+            playsInline
+            poster={splashImage} // Fallback image
+            onLoadedData={() => setVideoLoaded(true)}
+            className="absolute inset-0 w-full h-full object-cover object-top"
+            initial={{ opacity: 0, scale: 1.05 }}
+            animate={{ opacity: videoLoaded ? 1 : 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.02 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          />
+
+          {/* Dark overlay gradients - keep existing */}
+          {/* Vignette effect - keep existing */}
+          {/* Loading bar - keep existing */}
+          {/* Safe area padding - keep existing */}
           
-Progress: 0%                 100%
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
 ```
 
 ---
 
 ## Expected Result
 
-A premium, cinema-quality splash screen that:
-- Opens from pure black for dramatic effect
-- Shows the full RMVT promotional image beautifully
-- Has smooth, buttery fade animations
-- Feels professional and high-end on mobile
-- Creates anticipation before the main app loads
-- Matches the overall stadium blue aesthetic when transitioning
+A premium, dynamic video splash screen that:
+- Opens from black with the video fading in smoothly
+- Plays the RMVT promo video automatically
+- Works seamlessly on mobile (muted autoplay)
+- Maintains the dark overlay aesthetic for depth
+- Fades out elegantly to the main app
+- Falls back to static image if video fails
 
