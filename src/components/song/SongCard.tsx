@@ -37,7 +37,8 @@ export function SongCard({ song, variant = "default", className }: SongCardProps
       navigate("/subscription");
       return;
     }
-    navigate(`/song/${song.id}`);
+    setCurrentSong(song);
+    navigate(`/training/${song.id}`);
   };
 
   const handlePlay = (e: React.MouseEvent) => {
