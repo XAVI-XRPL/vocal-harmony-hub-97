@@ -1,271 +1,190 @@
 
 
-# Premium Home Page with Radar Chart & Glass-morphism 3D Cards
+# Animated Frosted Glass Button for "Start Training"
 
 ## Overview
 
-This plan transforms the home page into a premium, polished experience by:
-1. Replacing the circular progress chart with a beautiful radar chart using Recharts
-2. Removing the floating icon above "Master Your Voice"
-3. Adding glass-morphism 3D feeling cards with depth and premium aesthetics
-4. Enhancing UI/UX with subtle animations and refined visual hierarchy
+Transform the "Start Training" button into a premium animated frosted glass effect with shimmer, glow pulsing, and depth - matching the premium aesthetic of the rest of the home page.
 
 ---
 
-## 1. Premium Radar Chart Design
+## Visual Concept
 
-### Concept
-Replace the current circular SVG progress ring with a professional Recharts radar chart that displays all vocal skills in an elegant, readable format.
-
-### Visual Design
 ```text
-              Pitch (75%)
-                 ╱╲
-                ╱  ╲
-               ╱    ╲
-    Rhythm ───╱      ╲─── Breath
-    (80%)     ╲      ╱     (60%)
-               ╲    ╱
-                ╲  ╱
-                 ╲╱
-             Range (45%)
-```
-
-### Features
-- Filled gradient area with stadium blue theme colors
-- Animated dots at each skill vertex
-- Custom styled grid lines (subtle glass effect)
-- Smooth animation on mount
-- Hover effects on data points
-- Level badge overlay in center
-
----
-
-## 2. Home Page Cleanup
-
-### Current Issues to Fix
-- Remove the floating Music2 icon above "Master Your Voice"
-- Simplify hero section for cleaner visual flow
-- Streamline content hierarchy
-
-### New Layout
-```text
-+------------------------------------------+
-|   [Header with RMVT Logo]                |
-+------------------------------------------+
-|                                          |
-|   "Master Your Voice"                    |
-|   Subtitle text                          |
-|                                          |
-|   +----------------------------------+   |
-|   |     PREMIUM RADAR CHART          |   |
-|   |     [Animated Skill Radar]       |   |
-|   |     Level Badge + Stats          |   |
-|   +----------------------------------+   |
-|                                          |
-|   [ START TRAINING ] Full-width CTA      |
-|                                          |
-|   +-------------+  +-------------+       |
-|   |   Songs     |  |   Time      |       |
-|   |   3D Card   |  |   3D Card   |       |
-|   +-------------+  +-------------+       |
-|                                          |
-|   Continue Practice Section              |
-|                                          |
-+------------------------------------------+
++--------------------------------------------------+
+|                                                  |
+|   ╭────────────────────────────────────────────╮ |
+|   │  ✨ ░░░░░░░░░ shimmer effect ░░░░░░░░░ ✨  │ |
+|   │                                            │ |
+|   │     ▶  Start Training                      │ |
+|   │                                            │ |
+|   │  frosted glass backdrop blur               │ |
+|   ╰────────────────────────────────────────────╯ |
+|       ⬇ animated glow pulse underneath ⬇        |
+|                                                  |
++--------------------------------------------------+
 ```
 
 ---
 
-## 3. Glass-morphism 3D Cards
+## Features
 
-### 3D Card Effects
-Add depth and premium feel with:
-- Subtle 3D transform on hover (perspective + rotateX/Y)
-- Multi-layer shadows for depth
-- Gradient borders with glow
-- Inner light reflection (inset shadow)
-- Smooth spring animations
+### 1. Frosted Glass Effect
+- Strong backdrop blur (40-60px)
+- Semi-transparent gradient background
+- Subtle inner light reflection (inset shadow)
+- Blue-tinted glass matching stadium theme
 
-### New CSS Classes to Add
+### 2. Animated Shimmer
+- Continuous light sweep animation across button
+- Subtle white gradient moving left to right
+- 3-4 second animation loop
+
+### 3. Pulsing Glow
+- Soft outer glow that pulses subtly
+- Stadium blue color (primary)
+- Creates depth and "alive" feeling
+
+### 4. Hover Effects
+- Intensified glow on hover
+- Slightly brighter glass background
+- Scale up with spring animation (already exists)
+
+---
+
+## Implementation
+
+### New CSS Classes (add to index.css)
+
 ```css
-.glass-card-3d {
-  transform-style: preserve-3d;
-  perspective: 1000px;
-  background: linear-gradient(...);
-  border: 1px solid transparent;
-  background-clip: padding-box;
+/* Frosted Glass Button */
+.glass-button-frosted {
+  background: linear-gradient(
+    135deg,
+    hsl(200 50% 60% / 0.15) 0%,
+    hsl(210 50% 50% / 0.08) 100%
+  );
+  backdrop-filter: blur(40px) saturate(160%);
+  -webkit-backdrop-filter: blur(40px) saturate(160%);
+  border: 1px solid hsl(200 70% 70% / 0.25);
   box-shadow: 
-    0 25px 50px -12px rgba(0, 50, 100, 0.25),
-    0 12px 24px -8px rgba(0, 100, 200, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-```
-
-### Enhanced GlassCard Component
-Add new props:
-- `depth`: "flat" | "raised" | "floating"
-- `tilt`: boolean (enables 3D tilt on hover)
-- `shine`: boolean (adds animated shine effect)
-
----
-
-## 4. Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/components/home/VocalProgressDiagram.tsx` | Complete rewrite - replace SVG with Recharts radar chart |
-| `src/pages/Home.tsx` | Remove floating icon, clean up layout, enhance card styling |
-| `src/components/ui/glass-card.tsx` | Add 3D depth variants and tilt effects |
-| `src/index.css` | Add 3D card utilities, shine animation, enhanced shadows |
-
----
-
-## 5. Implementation Details
-
-### Radar Chart Component Structure
-
-```typescript
-// Skill data for radar chart
-const radarData = [
-  { skill: "Pitch", value: 75, fullMark: 100 },
-  { skill: "Breath", value: 60, fullMark: 100 },
-  { skill: "Range", value: 45, fullMark: 100 },
-  { skill: "Rhythm", value: 80, fullMark: 100 },
-];
-
-// Chart configuration
-const chartConfig = {
-  value: {
-    label: "Progress",
-    color: "hsl(200, 90%, 55%)",
-  },
-};
-```
-
-### 3D Card Animation Logic
-
-```typescript
-// Tilt effect on mouse move
-const handleMouseMove = (e: MouseEvent) => {
-  const rect = cardRef.current.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  const centerX = rect.width / 2;
-  const centerY = rect.height / 2;
-  
-  const rotateX = (y - centerY) / 20;
-  const rotateY = (centerX - x) / 20;
-  
-  setTilt({ x: rotateX, y: rotateY });
-};
-```
-
-### Enhanced Glass Card Variants
-
-```typescript
-const depthVariants = {
-  flat: "shadow-md",
-  raised: "shadow-xl translate-z-2",
-  floating: cn(
-    "shadow-2xl",
-    "before:absolute before:inset-0",
-    "before:bg-gradient-to-b before:from-white/10 before:to-transparent",
-    "before:rounded-2xl before:pointer-events-none"
-  )
-};
-```
-
----
-
-## 6. Visual Design Details
-
-### Radar Chart Styling
-- Fill: Gradient from `hsl(195, 85%, 50%)` to `hsl(220, 75%, 70%)` with 40% opacity
-- Stroke: Stadium blue primary color with glow
-- Grid: Subtle circular lines with glass effect
-- Labels: Clean typography with muted foreground
-- Dots: Glowing stadium light effect on hover
-
-### 3D Card Depth Levels
-
-**Flat (default)**
-```css
-box-shadow: 0 4px 24px rgba(0, 50, 100, 0.15);
-```
-
-**Raised**
-```css
-box-shadow: 
-  0 8px 30px rgba(0, 50, 100, 0.2),
-  0 4px 12px rgba(0, 100, 200, 0.15);
-transform: translateY(-2px);
-```
-
-**Floating**
-```css
-box-shadow: 
-  0 25px 50px rgba(0, 50, 100, 0.25),
-  0 12px 24px rgba(0, 100, 200, 0.18),
-  inset 0 1px 0 rgba(255, 255, 255, 0.12);
-transform: translateY(-4px);
-```
-
-### Shine Animation
-```css
-@keyframes cardShine {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+    0 8px 32px hsl(200 90% 55% / 0.25),
+    0 4px 16px hsl(210 80% 50% / 0.15),
+    inset 0 1px 0 hsl(0 0% 100% / 0.15),
+    inset 0 -1px 0 hsl(200 50% 50% / 0.1);
 }
 
-.card-shine::before {
+/* Animated shimmer overlay */
+@keyframes buttonShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.glass-button-shimmer::before {
   content: '';
   position: absolute;
   inset: 0;
   background: linear-gradient(
     90deg,
-    transparent,
-    rgba(255, 255, 255, 0.08),
-    transparent
+    transparent 0%,
+    hsl(0 0% 100% / 0.1) 50%,
+    transparent 100%
   );
-  background-size: 200% 100%;
-  animation: cardShine 3s ease-in-out infinite;
+  transform: translateX(-100%);
+  animation: buttonShimmer 3s ease-in-out infinite;
 }
+
+/* Pulsing glow animation */
+@keyframes glowPulse {
+  0%, 100% { 
+    box-shadow: 
+      0 8px 32px hsl(200 90% 55% / 0.25),
+      0 0 40px hsl(200 90% 55% / 0.15);
+  }
+  50% { 
+    box-shadow: 
+      0 8px 32px hsl(200 90% 55% / 0.4),
+      0 0 60px hsl(200 90% 55% / 0.25);
+  }
+}
+
+.glass-button-glow {
+  animation: glowPulse 2.5s ease-in-out infinite;
+}
+```
+
+### New GlassButton Variant
+
+Add a new `frosted` variant to the GlassButton component:
+
+```typescript
+const variantClasses = {
+  // ... existing variants
+  frosted: cn(
+    "glass-button-frosted glass-button-shimmer glass-button-glow",
+    "text-white font-semibold",
+    "hover:bg-white/10 hover:border-white/30"
+  ),
+};
+```
+
+### Home.tsx Update
+
+```tsx
+<GlassButton
+  variant="frosted"
+  size="lg"
+  icon={<Play className="w-5 h-5 fill-white" />}
+  onClick={() => navigate("/training-select")}
+  className="w-full text-base py-6"
+>
+  Start Training
+</GlassButton>
 ```
 
 ---
 
-## 7. Expected Results
+## Files to Modify
 
-After implementation:
-- Clean, focused hero without floating icon
-- Premium radar chart showing all 4 vocal skills beautifully
-- 3D glass cards with depth, shadows, and subtle tilt effects
-- Animated shine effects on premium elements
-- Cohesive stadium blue theme throughout
-- Smooth spring animations for all interactions
-- Professional, polished UI/UX feel
+| File | Changes |
+|------|---------|
+| `src/index.css` | Add frosted glass button animations and styles |
+| `src/components/ui/glass-button.tsx` | Add new "frosted" variant |
+| `src/pages/Home.tsx` | Update Start Training button to use frosted variant |
 
 ---
 
-## 8. Technical Notes
+## Technical Details
 
-### Dependencies
-- `recharts` (already installed - v2.15.4)
-- `class-variance-authority` (already installed - v0.7.1)
-- No new npm installs required
+### Animation Timing
+- **Shimmer**: 3 seconds loop (smooth, not distracting)
+- **Glow pulse**: 2.5 seconds (subtle breathing effect)
+- Both use `ease-in-out` for natural feel
 
-### Chart Component
-Using the existing `src/components/ui/chart.tsx` which already has:
-- `ChartContainer`
-- `ChartTooltip`
-- `ChartTooltipContent`
-- Theme-aware styling
+### Backdrop Blur
+- 40px blur creates strong frosted effect
+- 160% saturation enhances colors behind button
+- Works with stadium background gradient
 
-### Recharts Radar
-Import `RadarChart`, `PolarGrid`, `PolarAngleAxis`, `Radar` from recharts
+### Color Palette
+- Glass tint: `hsl(200 50% 60% / 0.15)`
+- Border: `hsl(200 70% 70% / 0.25)`
+- Glow: `hsl(200 90% 55%)` (primary)
+- Text: Pure white for contrast
+
+### Light Mode Support
+- Adjusted glass opacity for visibility
+- Stronger border for definition
+- Softer glow to not overpower
+
+---
+
+## Expected Result
+
+A premium, animated frosted glass button that:
+- Looks "alive" with subtle continuous animations
+- Has depth with multi-layer shadows
+- Matches the stadium blue aesthetic
+- Draws attention as the primary CTA
+- Feels premium and polished
 
