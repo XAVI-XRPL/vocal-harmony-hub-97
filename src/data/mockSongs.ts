@@ -1,4 +1,5 @@
 import { Song, Stem, StemType } from '@/types';
+import throwbackCover from '@/assets/throwback-exercise-cover.jpg';
 
 // Helper to generate fake waveform data for visual display
 export const generateMockWaveform = (length: number = 200): number[] => {
@@ -143,6 +144,58 @@ const testifyExerciseStems: Stem[] = [
   },
 ];
 
+// Real song: THROWBACK EXERCISE with actual audio stems
+const throwbackExerciseStems: Stem[] = [
+  {
+    id: 'throwback-raab-coaching',
+    name: 'RAab Coaching (Master)',
+    type: 'vocal',
+    url: '/audio/throwback-exercise/raab-coaching.mp3',
+    color: stemColors.vocal,
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'throwback-instrumental',
+    name: 'Instrumental',
+    type: 'instrumental',
+    url: '/audio/throwback-exercise/instrumental.mp3',
+    color: stemColors.instrumental,
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'throwback-piano',
+    name: 'Piano',
+    type: 'keys',
+    url: '/audio/throwback-exercise/piano.mp3',
+    color: stemColors.keys,
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'throwback-guitar',
+    name: 'Guitar',
+    type: 'instrumental',
+    url: '/audio/throwback-exercise/guitar.mp3',
+    color: '#f97316',
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'throwback-raab-exercise',
+    name: 'RAab Exercise (Lead)',
+    type: 'vocal',
+    url: '/audio/throwback-exercise/raab-exercise.mp3',
+    color: '#22d3ee',
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'throwback-jlevy-exercise',
+    name: 'JLevy Exercise 1',
+    type: 'vocal',
+    url: '/audio/throwback-exercise/jlevy-exercise-1.mp3',
+    color: '#06b6d4',
+    waveformData: generateMockWaveform(200),
+  },
+];
+
 export const mockSongs: Song[] = [
   // Real song with actual audio
   {
@@ -155,6 +208,20 @@ export const mockSongs: Song[] = [
     key: 'G Major',
     fullMixUrl: '',
     stems: testifyExerciseStems,
+    difficulty: 'beginner',
+    genre: 'Gospel',
+    isPremium: false,
+  },
+  {
+    id: 'throwback-exercise',
+    title: 'THROWBACK EXERCISE',
+    artist: 'RVMT',
+    coverArt: throwbackCover,
+    duration: 180,
+    bpm: 95,
+    key: 'C Major',
+    fullMixUrl: '',
+    stems: throwbackExerciseStems,
     difficulty: 'beginner',
     genre: 'Gospel',
     isPremium: false,
