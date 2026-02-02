@@ -1,10 +1,66 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 
+// Generate particle configurations
+const generateParticles = (count: number) => {
+  return Array.from({ length: count }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: Math.random() * 3 + 1,
+    duration: Math.random() * 15 + 10,
+    delay: Math.random() * 5,
+    drift: Math.random() * 30 - 15,
+  }));
+};
+
+interface ParticleProps {
+  x: number;
+  y: number;
+  size: number;
+  duration: number;
+  delay: number;
+  drift: number;
+  isDark: boolean;
+}
+
+function Particle({ x, y, size, duration, delay, drift, isDark }: ParticleProps) {
+  return (
+    <motion.div
+      className={cn(
+        "absolute rounded-full",
+        isDark ? "bg-white" : "bg-[hsl(200,80%,50%)]"
+      )}
+      style={{
+        left: `${x}%`,
+        top: `${y}%`,
+        width: size,
+        height: size,
+      }}
+      animate={{
+        y: [0, -100, -200],
+        x: [0, drift, drift * 0.5],
+        opacity: [0, isDark ? 0.6 : 0.4, 0],
+        scale: [0.5, 1, 0.3],
+      }}
+      transition={{
+        duration,
+        delay,
+        repeat: Infinity,
+        ease: "easeOut",
+      }}
+    />
+  );
+}
+
 export function StadiumBackground() {
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+
+  // Memoize particles to prevent regeneration on every render
+  const particles = useMemo(() => generateParticles(25), []);
 
   return (
     <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
@@ -97,6 +153,77 @@ export function StadiumBackground() {
           repeat: Infinity,
           ease: "linear",
           delay: 2,
+        }}
+      />
+
+      {/* Floating light specks / particles */}
+      <div className="absolute inset-0">
+        {particles.map((particle) => (
+          <Particle
+            key={particle.id}
+            x={particle.x}
+            y={particle.y}
+            size={particle.size}
+            duration={particle.duration}
+            delay={particle.delay}
+            drift={particle.drift}
+            isDark={isDark}
+          />
+        ))}
+      </div>
+
+      {/* Larger floating orbs */}
+      <motion.div
+        className={cn(
+          "absolute w-3 h-3 rounded-full blur-[1px]",
+          isDark ? "bg-[hsl(200,90%,80%)]" : "bg-[hsl(200,80%,60%)]"
+        )}
+        style={{ left: "15%", top: "60%" }}
+        animate={{
+          y: [0, -150, -300],
+          x: [0, 20, -10],
+          opacity: [0, isDark ? 0.5 : 0.3, 0],
+        }}
+        transition={{
+          duration: 12,
+          repeat: Infinity,
+          ease: "easeOut",
+        }}
+      />
+      <motion.div
+        className={cn(
+          "absolute w-2 h-2 rounded-full blur-[1px]",
+          isDark ? "bg-[hsl(195,85%,75%)]" : "bg-[hsl(195,75%,55%)]"
+        )}
+        style={{ left: "75%", top: "70%" }}
+        animate={{
+          y: [0, -120, -250],
+          x: [0, -15, 5],
+          opacity: [0, isDark ? 0.45 : 0.25, 0],
+        }}
+        transition={{
+          duration: 14,
+          delay: 3,
+          repeat: Infinity,
+          ease: "easeOut",
+        }}
+      />
+      <motion.div
+        className={cn(
+          "absolute w-4 h-4 rounded-full blur-[2px]",
+          isDark ? "bg-[hsl(210,80%,70%)]" : "bg-[hsl(210,70%,50%)]"
+        )}
+        style={{ left: "45%", top: "80%" }}
+        animate={{
+          y: [0, -200, -400],
+          x: [0, 30, 10],
+          opacity: [0, isDark ? 0.35 : 0.2, 0],
+        }}
+        transition={{
+          duration: 18,
+          delay: 5,
+          repeat: Infinity,
+          ease: "easeOut",
         }}
       />
 
