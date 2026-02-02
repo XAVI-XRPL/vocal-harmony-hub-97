@@ -1,88 +1,64 @@
 
 
-# Enhanced Vocal Progress Chart
+# Clean Up Training Controls Button - Glass Effect
 
 ## Overview
 
-Redesign the VocalProgressDiagram to be more visually dynamic with distinct colors for each skill and a separated Level badge that doesn't overlap the chart.
+Transform the "Training Controls" toggle button from its current gradient style to a premium frosted glass effect that matches the app's liquid glass morphism design language.
 
 ---
 
-## Visual Changes
+## Current vs New Design
 
 ```text
-CURRENT LAYOUT:
-┌─────────────────────────┐
-│       Pitch             │
-│    ┌─────────┐          │
-│ Rhythm │ LV.2 │ Breath  │  ← Badge overlaps chart
-│    └─────────┘          │
-│       Range             │
-│                         │
-│     67% Complete        │
-│   Sessions    Streak    │
-└─────────────────────────┘
+CURRENT BUTTON:
+┌──────────────────────────────────────────┐
+│  Training Controls              ▼        │  ← Gradient bg with primary/accent
+│  bg-gradient-to-r from-primary/20...     │
+└──────────────────────────────────────────┘
 
-NEW LAYOUT:
-┌─────────────────────────┐
-│       Pitch (cyan)      │
-│         •               │
-│    /───────\            │
-│ Rhythm     Breath       │  ← Chart fills the space
-│ (orange)  (green)       │
-│    \───────/            │
-│         •               │
-│      Range (purple)     │
-│                         │
-│    ┌───────────────┐    │
-│    │ 🏆 LV.2       │    │  ← Badge below chart
-│    │ Intermediate  │    │
-│    └───────────────┘    │
-│                         │
-│     67% Complete        │
-│   Sessions    Streak    │
-└─────────────────────────┘
+NEW BUTTON:
+┌──────────────────────────────────────────┐
+│  Training Controls              ▼        │  ← Frosted glass effect
+│  glass-button-frosted + shimmer + glow   │  ← Matches CTA buttons
+└──────────────────────────────────────────┘
 ```
-
----
-
-## Color Scheme for Skills
-
-| Skill | Color | HSL Value |
-|-------|-------|-----------|
-| **Pitch** | Cyan-Blue | `hsl(190, 90%, 55%)` |
-| **Breath** | Emerald Green | `hsl(160, 84%, 45%)` |
-| **Range** | Purple | `hsl(270, 85%, 65%)` |
-| **Rhythm** | Orange-Amber | `hsl(32, 95%, 55%)` |
 
 ---
 
 ## Implementation Details
 
-### 1. Add Skill Color Configuration
+### File: `src/pages/TrainingMode.tsx`
 
-Create a color mapping for each skill with both fill and glow colors.
+Replace the current button styling on lines 314-341 with the existing glass utility classes from the design system:
 
-### 2. Custom Tick Labels with Colors
+**Current inline styles:**
+```typescript
+className="w-full flex items-center justify-between py-2 px-3 -mx-3 rounded-xl 
+  bg-gradient-to-r from-primary/20 via-primary/10 to-accent/20 
+  border border-primary/30 hover:border-primary/50 
+  transition-all duration-300 relative overflow-hidden group"
+```
 
-Update `PolarAngleAxis` tick renderer to color-code each skill label with its corresponding color and add a glowing dot indicator.
+**New glass styles:**
+```typescript
+className="w-full flex items-center justify-between py-3 px-4 
+  rounded-xl relative overflow-hidden
+  glass-button-frosted glass-button-shimmer
+  hover:border-primary/40 transition-all duration-300 group"
+```
 
-### 3. Enhanced Radar with Multi-color Dots
+### Key Changes:
 
-Each data point on the radar will have its own skill-specific color with animated glow effects.
+1. **Remove gradient background** - Replace `bg-gradient-to-r from-primary/20 via-primary/10 to-accent/20` with `glass-button-frosted`
 
-### 4. Separate Level Badge Section
+2. **Add shimmer animation** - Apply `glass-button-shimmer` for the light-sweep effect
 
-Move the Level badge below the chart in its own styled section with:
-- Horizontal layout with trophy icon
-- Gradient background matching the skill colors
-- Animated entrance
+3. **Remove manual shine effect** - The shimmer class already handles this, so remove the nested shine div
 
-### 5. Add Dynamic Animations
+4. **Adjust padding** - Change from `py-2 px-3 -mx-3` to `py-3 px-4` for better touch targets
 
-- Staggered entrance for skill labels
-- Pulsing glow on the radar shape
-- Subtle rotating gradient effect on the level badge
+5. **Remove border override** - Let the glass-button-frosted handle the border styling
 
 ---
 
@@ -90,15 +66,15 @@ Move the Level badge below the chart in its own styled section with:
 
 | File | Change |
 |------|--------|
-| `src/components/home/VocalProgressDiagram.tsx` | Complete redesign with new color system, separated level badge, and enhanced animations |
+| `src/pages/TrainingMode.tsx` | Update Training Controls button classes (lines 314-341) |
 
 ---
 
 ## Expected Result
 
-- Each skill (Pitch, Breath, Range, Rhythm) has a unique, vibrant color
-- Skill labels show their color with a glowing dot indicator
-- Level badge is clearly visible below the chart, not overlapping
-- More dynamic feel with gradient effects and subtle animations
-- Premium, polished appearance matching the stadium theme
+- Button has a frosted glass appearance matching the app's premium aesthetic
+- Subtle light-sweep shimmer animation adds visual polish
+- Consistent styling with other glass buttons in the app
+- Proper border and shadow effects from the design system
+- Removed redundant inline shine effect
 
