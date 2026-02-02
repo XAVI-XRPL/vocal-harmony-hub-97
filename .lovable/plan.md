@@ -1,190 +1,238 @@
 
 
-# Desktop Experience: Premium Vocal Coach OS with Sidebar Navigation
+# Build Custom Playlist Feature for Vocal Exercises
 
 ## Overview
 
-Transform the RMVT app from a mobile-first layout to a responsive design that provides a premium "Vocal Coach OS" desktop experience featuring a collapsible glass-morphism sidebar while maintaining the existing mobile navigation.
+Add the ability for users to create and manage custom playlists of their favorite vocal exercises. This feature will include a dedicated Playlists page, playlist management functionality, and integration with the existing training/practice flow.
 
 ---
 
-## Architecture
+## User Experience Flow
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  DESKTOP (≥768px)                                                       │
-├───────────────┬─────────────────────────────────────────────────────────┤
-│               │                                                         │
-│   SIDEBAR     │              MAIN CONTENT AREA                          │
-│   ┌───────┐   │   ┌─────────────────────────────────────────────────┐   │
-│   │ RMVT  │   │   │  Header (search, notifications, theme)         │   │
-│   │ Logo  │   │   ├─────────────────────────────────────────────────┤   │
-│   ├───────┤   │   │                                                 │   │
-│   │ Home  │◄──│   │                                                 │   │
-│   │Library│   │   │              Page Content                       │   │
-│   │Progress   │   │                                                 │   │
-│   │ Train │   │   │                                                 │   │
-│   │Profile│   │   │                                                 │   │
-│   ├───────┤   │   │                                                 │   │
-│   │       │   │   │                                                 │   │
-│   │ Pro   │   │   └─────────────────────────────────────────────────┘   │
-│   │Upgrade│   │                                                         │
-│   └───────┘   │                                                         │
-│               │                                                         │
-└───────────────┴─────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────────┐
-│  MOBILE (<768px)                                                        │
+│                         PLAYLIST JOURNEY                                │
 ├─────────────────────────────────────────────────────────────────────────┤
-│   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │  Header                                                         │   │
-│   ├─────────────────────────────────────────────────────────────────┤   │
-│   │                                                                 │   │
-│   │                      Page Content                               │   │
-│   │                                                                 │   │
-│   │                                                                 │   │
-│   ├─────────────────────────────────────────────────────────────────┤   │
-│   │  ┌───┐ ┌───┐ ┌─────┐ ┌───┐ ┌───┐                               │   │
-│   │  │Lib│ │Prg│ │Home │ │Trn│ │Pro│  ← Bottom Nav (existing)      │   │
-│   │  └───┘ └───┘ └─────┘ └───┘ └───┘                               │   │
-│   └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
+│  1. VIEW PLAYLISTS          2. CREATE PLAYLIST       3. MANAGE          │
+│  ┌─────────────────┐        ┌─────────────────┐      ┌─────────────────┐│
+│  │ 🎵 Warm-ups     │   +    │ Create New      │      │ Edit Name       ││
+│  │ 🎵 Morning Voc  │  ───>  │ "Daily Practice"│ ───> │ Add/Remove Songs││
+│  │ 🎵 Advanced     │        │                 │      │ Reorder         ││
+│  └─────────────────┘        └─────────────────┘      └─────────────────┘│
+│          │                                                   │          │
+│          v                                                   v          │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │               4. PLAY PLAYLIST IN TRAINING MODE                 │   │
+│  │     Queue exercises → Auto-advance → Track progress             │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Design Principles
+## Features
 
-1. **Premium Glass Morphism** - Sidebar uses existing `glass-card-3d` and `nav-glass` effects
-2. **Collapsible Mini Mode** - Desktop sidebar collapses to icon-only rail (48px width)
-3. **Active Route Highlighting** - Gradient background with glow effect on active item
-4. **Smooth Animations** - Framer Motion transitions for expand/collapse
-5. **Keyboard Shortcut** - Cmd/Ctrl+B to toggle sidebar (built into shadcn sidebar)
-6. **Consistent with Mobile** - Same icons, same routes, same color scheme
+### Core Functionality
 
----
+| Feature | Description |
+|---------|-------------|
+| Create Playlist | Name and describe a new playlist |
+| Add Exercises | Add songs/exercises from Library or Training pages |
+| Remove Exercises | Remove items from a playlist |
+| Reorder Exercises | Drag to change order in playlist |
+| Edit Playlist | Rename or update description |
+| Delete Playlist | Remove entire playlist |
+| Play Playlist | Launch training mode with queued exercises |
 
-## Implementation
+### User Interface
 
-### 1. Create Desktop Sidebar Component
-
-**New File: `src/components/layout/DesktopSidebar.tsx`**
-
-A premium sidebar featuring:
-- RMVT logo at top with animated glow
-- Navigation items matching MobileNav (Library, Progress, Home, Train, Profile)
-- Active state with gradient background and glow
-- Mini mode showing icons only with tooltips
-- Collapsible rail with toggle button
-- "Upgrade to Pro" CTA at bottom for free users
-- Glass-morphism styling using existing CSS classes
-
-### 2. Update AppShell Component
-
-**Modify: `src/components/layout/AppShell.tsx`**
-
-- Wrap content in `SidebarProvider` for desktop
-- Show `DesktopSidebar` on desktop (hidden on mobile via md:block)
-- Keep existing `MobileNav` for mobile (hidden on desktop via md:hidden)
-- Use `SidebarInset` for main content area
-- Maintain existing MiniPlayer logic
-
-### 3. Add Sidebar Glass Styles
-
-**Modify: `src/index.css`**
-
-Add new CSS classes:
-- `.sidebar-glass` - Glass effect specifically for sidebar
-- `.sidebar-nav-item-active` - Active navigation item styling with gradient and glow
-- `.sidebar-divider` - Subtle glass divider between sections
-
-### 4. Update Header for Desktop
-
-**Modify: `src/components/layout/Header.tsx`**
-
-- Add `SidebarTrigger` for desktop (visible on md: and up)
-- Keep existing mobile menu button behavior
-- Ensure header integrates smoothly with sidebar
+| Screen | Purpose |
+|--------|---------|
+| Playlists Page | View all user playlists with exercise counts |
+| Playlist Detail | View exercises in a playlist, edit, play |
+| Create Dialog | Modal to create new playlist |
+| Add to Playlist | Quick action from Library/SongCard |
 
 ---
 
-## Component Details
+## Database Design
 
-### DesktopSidebar Features
+### New Table: `playlists`
 
-| Feature | Implementation |
-|---------|---------------|
-| Logo | RMVT logo with animated glow, shows text when expanded |
-| Nav Items | 5 items matching mobile: Library, Progress, Home, Train, Profile |
-| Active State | Gradient background + glow shadow + bold text |
-| Collapsed Mode | 48px width, icons only, tooltips on hover |
-| Pro CTA | Bottom section with Crown icon, gradient border |
-| Animations | Framer Motion for item hover/tap states |
-| Keyboard | Cmd/Ctrl+B toggles sidebar (via shadcn) |
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| user_id | uuid | Owner (references profiles) |
+| name | text | Playlist name |
+| description | text | Optional description |
+| cover_image_url | text | Optional custom cover |
+| created_at | timestamp | Creation date |
+| updated_at | timestamp | Last modified |
 
-### Navigation Items
+### New Table: `playlist_songs`
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Primary key |
+| playlist_id | uuid | Parent playlist |
+| song_id | text | Exercise/song ID |
+| position | integer | Order in playlist |
+| added_at | timestamp | When added |
+
+### RLS Policies
+
+- Users can only view/edit/delete their own playlists
+- Users can only modify songs in their own playlists
+
+---
+
+## Technical Implementation
+
+### 1. Database Migration
+
+Create two new tables with proper RLS policies:
+- `playlists` - Stores playlist metadata
+- `playlist_songs` - Junction table for playlist-song relationships
+
+### 2. New Files
+
+| File | Purpose |
+|------|---------|
+| `src/pages/Playlists.tsx` | Main playlists listing page |
+| `src/pages/PlaylistDetail.tsx` | Single playlist view with exercises |
+| `src/components/playlist/PlaylistCard.tsx` | Card component for playlist display |
+| `src/components/playlist/CreatePlaylistDialog.tsx` | Modal for creating playlists |
+| `src/components/playlist/AddToPlaylistDialog.tsx` | Modal for adding song to playlist |
+| `src/hooks/usePlaylists.ts` | Data fetching and mutations for playlists |
+
+### 3. Modified Files
+
+| File | Changes |
+|------|---------|
+| `src/App.tsx` | Add routes for /playlists and /playlist/:id |
+| `src/components/layout/DesktopSidebar.tsx` | Add Playlists nav item |
+| `src/components/layout/MobileNav.tsx` | Update to include Playlists (replace or add) |
+| `src/components/song/SongCard.tsx` | Add "Add to Playlist" action button |
+| `src/types/index.ts` | Add Playlist and PlaylistSong types |
+
+### 4. Navigation Updates
+
+Add "Playlists" to the navigation with a ListMusic icon:
+- Desktop: New sidebar item between Library and Progress
+- Mobile: Could replace one item or add as a sub-menu in Library
+
+---
+
+## Component Architecture
 
 ```text
-Icon        Label       Route           Description
-────────────────────────────────────────────────────
-Library     Library     /library        Browse all exercises
-BarChart3   Progress    /progress       View practice stats
-Home        Home        /               Dashboard
-Mic2        Train       /training       Start training
-User        Profile     /profile        Account settings
+Playlists Page
+├── Header (title: "My Playlists")
+├── Create Playlist Button
+├── PlaylistCard[] (grid/list)
+│   ├── Cover Art (generated from first 4 songs)
+│   ├── Name
+│   ├── Song count
+│   └── Play button
+└── Empty State (if no playlists)
+
+Playlist Detail Page
+├── Header (playlist name, back button)
+├── Playlist Info Card
+│   ├── Cover Art
+│   ├── Name + Description
+│   ├── Edit/Delete buttons
+│   └── Play All button
+├── Songs List (draggable)
+│   └── SongCard (compact variant)
+│       └── Remove from playlist action
+└── Add Songs button
 ```
+
+---
+
+## UI Design
+
+### Playlist Card (Glass Morphism)
+
+- 2x2 grid of song cover arts as thumbnail
+- Playlist name with gradient text
+- Song count and total duration
+- Play button with glow effect
+- Hover state with scale animation
+
+### Dialogs
+
+- Glass background matching app theme
+- Smooth enter/exit animations
+- Form validation for playlist name
 
 ---
 
 ## Technical Details
 
-### Files to Create
+### Playlist Hook (`usePlaylists.ts`)
 
-| File | Purpose |
-|------|---------|
-| `src/components/layout/DesktopSidebar.tsx` | New sidebar component with glass styling |
+```typescript
+// Functions to implement:
+- fetchPlaylists() - Get all user playlists
+- fetchPlaylistById(id) - Get single playlist with songs
+- createPlaylist(name, description?) - Create new playlist
+- updatePlaylist(id, updates) - Rename/update playlist
+- deletePlaylist(id) - Remove playlist
+- addSongToPlaylist(playlistId, songId) - Add exercise
+- removeSongFromPlaylist(playlistId, songId) - Remove exercise
+- reorderPlaylistSongs(playlistId, songIds[]) - Update order
+```
 
-### Files to Modify
+### Type Definitions
 
-| File | Changes |
-|------|---------|
-| `src/components/layout/AppShell.tsx` | Integrate sidebar provider and desktop layout |
-| `src/components/layout/Header.tsx` | Add sidebar trigger for desktop |
-| `src/index.css` | Add sidebar-specific glass styles |
+```typescript
+interface Playlist {
+  id: string;
+  userId: string;
+  name: string;
+  description: string | null;
+  coverImageUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+  songs?: PlaylistSong[];
+}
 
-### Responsive Behavior
-
-| Breakpoint | Layout |
-|------------|--------|
-| < 768px (mobile) | Bottom navigation bar, no sidebar |
-| ≥ 768px (tablet/desktop) | Collapsible sidebar, no bottom nav |
-
-### Existing Components Used
-
-- `SidebarProvider`, `Sidebar`, `SidebarContent`, `SidebarTrigger` from shadcn
-- `RMVTLogo` component for branding
-- `NavLink` for active route detection
-- Existing glass CSS classes (`glass-card-3d`, `nav-glass`, `gradient-bg`, etc.)
+interface PlaylistSong {
+  id: string;
+  playlistId: string;
+  songId: string;
+  position: number;
+  addedAt: string;
+  song?: Song; // Joined from mockSongs
+}
+```
 
 ---
 
-## Premium Visual Effects
+## Implementation Order
 
-1. **Sidebar Glass** - Deep blur with subtle blue tint, matching stadium theme
-2. **Active Glow** - Primary color glow on active navigation item
-3. **Hover States** - Subtle background shift with smooth transitions
-4. **Logo Animation** - Breathing glow effect on RMVT logo
-5. **Collapse Animation** - Smooth width transition with icon centering
-6. **Divider Lines** - Gradient dividers between sections
+1. **Database**: Create tables and RLS policies via migration
+2. **Types**: Add Playlist types to `src/types/index.ts`
+3. **Hook**: Create `usePlaylists.ts` with CRUD operations
+4. **Playlists Page**: Build main listing page with empty state
+5. **Create Dialog**: Add modal for new playlist creation
+6. **Playlist Detail**: Build single playlist view
+7. **SongCard Update**: Add "Add to Playlist" button
+8. **Add to Playlist Dialog**: Modal for selecting playlist
+9. **Navigation**: Update sidebar and mobile nav
+10. **Routes**: Add new routes to App.tsx
 
 ---
 
-## Expected Result
+## Authentication Requirement
 
-- Desktop users see a premium, collapsible sidebar with glass styling
-- Mobile users continue to use the existing bottom navigation
-- Consistent visual language across all breakpoints
-- Keyboard navigation support (Cmd/Ctrl+B)
-- Active route highlighting matches mobile behavior
-- Pro upgrade CTA visible to free users
+This feature requires users to be authenticated since playlists are stored per-user. The UI will:
+- Show playlists only to logged-in users
+- Prompt sign-in when trying to create a playlist while logged out
+- Hide "Add to Playlist" buttons for non-authenticated users
 
