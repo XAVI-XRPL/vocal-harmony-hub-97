@@ -313,14 +313,12 @@ export default function TrainingMode() {
             {/* Toggle header */}
             <button
               onClick={() => setShowControls(!showControls)}
-              className="w-full flex items-center justify-between py-2 px-3 -mx-3 rounded-xl bg-gradient-to-r from-primary/20 via-primary/10 to-accent/20 border border-primary/30 hover:border-primary/50 transition-all duration-300 relative overflow-hidden group"
+              className="w-full flex items-center justify-between py-3 px-4 rounded-xl relative overflow-hidden glass-button-frosted glass-button-shimmer hover:border-primary/40 transition-all duration-300 group"
             >
-              {/* Shine effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
               <span className="text-xs font-semibold text-foreground relative z-10">
                 Training Controls
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 relative z-10">
                 {/* Active indicators */}
                 {playbackRate !== 1 && (
                   <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-primary/20 text-primary">
