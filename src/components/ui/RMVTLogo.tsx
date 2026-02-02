@@ -20,7 +20,7 @@ export function RMVTLogo({ size = "md", animated = true, className }: RMVTLogoPr
     <motion.div
       className={cn(
         sizeMap[size],
-        "rounded-2xl overflow-hidden",
+        "rounded-[22%] overflow-hidden",
         "shadow-[0_0_30px_hsl(200_90%_55%/0.3)]",
         className
       )}
