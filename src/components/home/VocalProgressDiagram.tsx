@@ -31,6 +31,88 @@ const levelConfig = {
   advanced: { label: "Advanced", level: 3 },
 };
 
+// Skill color configuration
+const skillColors: Record<string, { main: string; glow: string }> = {
+  Pitch: { main: "hsl(190, 90%, 55%)", glow: "rgba(34, 211, 238, 0.4)" },
+  Breath: { main: "hsl(160, 84%, 45%)", glow: "rgba(16, 185, 129, 0.4)" },
+  Range: { main: "hsl(270, 85%, 65%)", glow: "rgba(167, 139, 250, 0.4)" },
+  Rhythm: { main: "hsl(32, 95%, 55%)", glow: "rgba(245, 158, 11, 0.4)" },
+};
+
+// Custom dot component for multi-colored radar points
+const CustomDot = (props: any) => {
+  const { cx, cy, payload } = props;
+  const color = skillColors[payload.skill] || { main: "hsl(200, 90%, 55%)", glow: "rgba(100, 200, 255, 0.4)" };
+  
+  return (
+    <g>
+      {/* Glow effect */}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={8}
+        fill={color.glow}
+        style={{ filter: "blur(3px)" }}
+      />
+      {/* Main dot */}
+      <circle
+        cx={cx}
+        cy={cy}
+        r={5}
+        fill={color.main}
+        stroke="white"
+        strokeWidth={2}
+      />
+    </g>
+  );
+};
+
+// Custom tick label with color indicator
+const CustomTickLabel = (props: any) => {
+  const { x, y, payload, textAnchor } = props;
+  const color = skillColors[payload.value] || { main: "hsl(200, 90%, 55%)", glow: "rgba(100, 200, 255, 0.4)" };
+  
+  // Adjust text position based on location
+  let adjustedY = y;
+  let adjustedX = x;
+  
+  if (payload.value === "Pitch") {
+    adjustedY = y - 8;
+  } else if (payload.value === "Range") {
+    adjustedY = y + 12;
+  } else if (payload.value === "Breath") {
+    adjustedX = x + 8;
+  } else if (payload.value === "Rhythm") {
+    adjustedX = x - 8;
+  }
+  
+  return (
+    <g transform={`translate(${adjustedX},${adjustedY})`}>
+      {/* Glowing dot indicator */}
+      <circle
+        cx={textAnchor === "end" ? -8 : textAnchor === "start" ? 8 : 0}
+        cy={payload.value === "Pitch" ? 12 : payload.value === "Range" ? -8 : 0}
+        r={4}
+        fill={color.main}
+        style={{ filter: `drop-shadow(0 0 4px ${color.glow})` }}
+      />
+      <text
+        x={0}
+        y={0}
+        dy={4}
+        textAnchor="middle"
+        fill={color.main}
+        className="text-xs font-semibold"
+        style={{ 
+          textShadow: `0 0 8px ${color.glow}`,
+        }}
+      >
+        {payload.value}
+      </text>
+    </g>
+  );
+};
+
 export function VocalProgressDiagram({
   overallProgress,
   level,
@@ -66,31 +148,21 @@ export function VocalProgressDiagram({
       <div className="pointer-events-none absolute inset-0 rounded-3xl bg-gradient-to-b from-white/5 to-transparent" />
 
       <div className="relative flex flex-col items-center">
-        {/* Radar Chart Container */}
-        <div className="relative h-[260px] w-full">
-          {/* Level Badge - Centered over chart */}
-          <motion.div
-            className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2"
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5, duration: 0.4 }}
-          >
-            <div className="glass-card-3d-inner flex h-20 w-20 flex-col items-center justify-center rounded-2xl">
-              <Trophy className="mb-1 h-5 w-5 text-primary" />
-              <span className="text-lg font-bold">LV.{levelNumber}</span>
-              <span className="text-[10px] text-muted-foreground">{levelLabel}</span>
-            </div>
-          </motion.div>
-
+        {/* Radar Chart Container - No overlapping badge */}
+        <div className="relative h-[220px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
+            <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="65%">
               <defs>
-                <linearGradient id="radarFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(195, 85%, 50%)" stopOpacity={0.6} />
-                  <stop offset="100%" stopColor="hsl(220, 75%, 70%)" stopOpacity={0.2} />
+                {/* Multi-color gradient fill */}
+                <linearGradient id="radarFillEnhanced" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="hsl(190, 90%, 55%)" stopOpacity={0.4} />
+                  <stop offset="25%" stopColor="hsl(160, 84%, 45%)" stopOpacity={0.3} />
+                  <stop offset="50%" stopColor="hsl(270, 85%, 65%)" stopOpacity={0.4} />
+                  <stop offset="75%" stopColor="hsl(32, 95%, 55%)" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="hsl(190, 90%, 55%)" stopOpacity={0.4} />
                 </linearGradient>
-                <filter id="radarGlow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="3" result="blur" />
+                <filter id="radarGlowEnhanced" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="4" result="blur" />
                   <feMerge>
                     <feMergeNode in="blur" />
                     <feMergeNode in="SourceGraphic" />
@@ -106,53 +178,83 @@ export function VocalProgressDiagram({
               
               <PolarAngleAxis
                 dataKey="skill"
-                tick={({ x, y, payload }) => (
-                  <g transform={`translate(${x},${y})`}>
-                    <text
-                      x={0}
-                      y={0}
-                      dy={4}
-                      textAnchor="middle"
-                      className="fill-muted-foreground text-xs font-medium"
-                    >
-                      {payload.value}
-                    </text>
-                  </g>
-                )}
-                stroke="hsl(200, 60%, 50%)"
-                strokeOpacity={0.2}
+                tick={CustomTickLabel}
+                stroke="transparent"
               />
               
               <Radar
                 name="Progress"
                 dataKey="value"
-                stroke="hsl(200, 90%, 55%)"
-                strokeWidth={2}
-                fill="url(#radarFill)"
-                filter="url(#radarGlow)"
-                dot={{
-                  r: 4,
-                  fill: "hsl(200, 90%, 55%)",
-                  stroke: "white",
-                  strokeWidth: 2,
-                }}
-                activeDot={{
-                  r: 6,
-                  fill: "hsl(200, 90%, 65%)",
-                  stroke: "white",
-                  strokeWidth: 2,
-                }}
+                stroke="url(#radarStrokeGradient)"
+                strokeWidth={2.5}
+                fill="url(#radarFillEnhanced)"
+                filter="url(#radarGlowEnhanced)"
+                dot={CustomDot}
                 isAnimationActive={true}
                 animationDuration={1500}
                 animationEasing="ease-out"
               />
+              
+              {/* Gradient stroke definition */}
+              <defs>
+                <linearGradient id="radarStrokeGradient" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="hsl(190, 90%, 55%)" />
+                  <stop offset="33%" stopColor="hsl(160, 84%, 45%)" />
+                  <stop offset="66%" stopColor="hsl(270, 85%, 65%)" />
+                  <stop offset="100%" stopColor="hsl(32, 95%, 55%)" />
+                </linearGradient>
+              </defs>
             </RadarChart>
           </ResponsiveContainer>
         </div>
 
+        {/* Level Badge - Separated below chart */}
+        <motion.div
+          className="mt-2 w-full max-w-[200px]"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.4 }}
+        >
+          <div 
+            className="relative flex items-center justify-center gap-3 rounded-2xl px-5 py-3 overflow-hidden"
+            style={{
+              background: "linear-gradient(135deg, rgba(34, 211, 238, 0.15) 0%, rgba(167, 139, 250, 0.15) 50%, rgba(245, 158, 11, 0.15) 100%)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              backdropFilter: "blur(8px)",
+            }}
+          >
+            {/* Animated gradient border effect */}
+            <motion.div
+              className="absolute inset-0 opacity-30"
+              style={{
+                background: "linear-gradient(90deg, hsl(190, 90%, 55%), hsl(160, 84%, 45%), hsl(270, 85%, 65%), hsl(32, 95%, 55%), hsl(190, 90%, 55%))",
+                backgroundSize: "200% 100%",
+              }}
+              animate={{
+                backgroundPosition: ["0% 0%", "200% 0%"],
+              }}
+              transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: "linear",
+              }}
+            />
+            
+            <div className="relative z-10 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/30">
+                <Trophy className="h-5 w-5 text-accent" />
+              </div>
+              <div className="text-left">
+                <span className="text-lg font-bold text-foreground">LV.{levelNumber}</span>
+                <p className="text-xs text-muted-foreground">{levelLabel}</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
         {/* Progress percentage */}
         <motion.div
-          className="mt-2 text-center"
+          className="mt-4 text-center"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
