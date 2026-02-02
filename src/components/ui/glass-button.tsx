@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 
 export interface GlassButtonProps extends Omit<HTMLMotionProps<"button">, "children"> {
   children: React.ReactNode;
-  variant?: "primary" | "secondary" | "ghost" | "danger";
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "frosted";
   size?: "sm" | "md" | "lg";
   icon?: React.ReactNode;
   iconPosition?: "left" | "right";
@@ -37,6 +37,11 @@ const variantClasses = {
   danger: cn(
     "bg-destructive/20 text-destructive border border-destructive/30",
     "hover:bg-destructive/30 hover:border-destructive/50"
+  ),
+  frosted: cn(
+    "glass-button-frosted glass-button-shimmer glass-button-glow overflow-hidden",
+    "text-white font-semibold",
+    "hover:bg-white/10 hover:border-white/30"
   ),
 };
 

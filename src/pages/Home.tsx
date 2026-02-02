@@ -70,6 +70,7 @@ export default function Home() {
         {/* Start Training CTA */}
         <motion.section variants={itemVariants} className="mb-6">
           <GlassButton
+            variant="frosted"
             size="lg"
             icon={<Play className="w-5 h-5 fill-white" />}
             onClick={() => navigate("/training-select")}
