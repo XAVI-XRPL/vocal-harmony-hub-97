@@ -896,3 +896,68 @@
 .animate-fog {
   animation: fogDrift 10s ease-in-out infinite;
 }
+
+/* ========== Desktop Sidebar Styles ========== */
+
+/* Sidebar Glass Effect */
+.sidebar-glass {
+  background: linear-gradient(
+    180deg,
+    hsl(200 60% 50% / 0.06) 0%,
+    hsl(210 50% 40% / 0.02) 100%
+  ) !important;
+  backdrop-filter: blur(60px) saturate(180%);
+  -webkit-backdrop-filter: blur(60px) saturate(180%);
+  border-right: 1px solid hsl(200 60% 70% / 0.1) !important;
+  box-shadow: 
+    4px 0 24px rgba(0, 50, 100, 0.15),
+    inset -1px 0 0 hsl(200 70% 80% / 0.05);
+}
+
+.light .sidebar-glass {
+  background: linear-gradient(
+    180deg,
+    hsl(205 50% 100% / 0.92) 0%,
+    hsl(210 40% 98% / 0.85) 100%
+  ) !important;
+  border-right: 1px solid hsl(205 30% 85%) !important;
+  box-shadow: 
+    4px 0 24px rgba(0, 50, 100, 0.06),
+    inset -1px 0 0 hsl(0 0% 100% / 0.9);
+}
+
+/* Active Nav Item */
+.sidebar-nav-item-active {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary) / 0.15) 0%,
+    hsl(var(--primary) / 0.08) 50%,
+    transparent 100%
+  );
+  box-shadow: 
+    inset 3px 0 0 hsl(var(--primary)),
+    0 0 20px hsl(var(--primary) / 0.1);
+}
+
+.light .sidebar-nav-item-active {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--primary) / 0.12) 0%,
+    hsl(var(--primary) / 0.05) 50%,
+    transparent 100%
+  );
+  box-shadow: 
+    inset 3px 0 0 hsl(var(--primary)),
+    0 0 15px hsl(var(--primary) / 0.08);
+}
+
+/* Sidebar Divider */
+.sidebar-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--primary) / 0.2) 50%,
+    transparent 100%
+  );
+}
