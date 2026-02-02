@@ -9,6 +9,7 @@ interface SplashProps {
 export default function Splash({ onComplete }: SplashProps) {
   const [isExiting, setIsExiting] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [videoLoaded, setVideoLoaded] = useState(false);
 
   useEffect(() => {
     // Progress animation
@@ -50,15 +51,20 @@ export default function Splash({ onComplete }: SplashProps) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6, ease: "easeIn" }}
         >
-          {/* Full-screen image */}
-          <motion.img
-            src={splashImage}
-            alt="RMVT - Raab Vocal Mix Tape"
+          {/* Full-screen video */}
+          <motion.video
+            src="/video/RVMTvideo.mp4"
+            autoPlay
+            muted
+            playsInline
+            preload="auto"
+            poster={splashImage}
+            onLoadedData={() => setVideoLoaded(true)}
             className="absolute inset-0 w-full h-full object-cover object-top"
             initial={{ opacity: 0, scale: 1.05 }}
-            animate={{ opacity: 1, scale: 1 }}
+            animate={{ opacity: videoLoaded ? 1 : 0, scale: 1 }}
             exit={{ opacity: 0, scale: 1.02 }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
           />
 
           {/* Dark overlay gradients for depth */}
