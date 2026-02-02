@@ -1,160 +1,202 @@
 
 
-# Video Splash Screen Upgrade
+# TESTIFY EXERCISE - Real Song Integration
 
 ## Overview
 
-Replace the static RMVT image with the uploaded video file to create a dynamic, cinema-quality splash intro. The video will play automatically, muted, filling the screen with the same premium dark aesthetic and smooth fade transitions.
+Replace the "Bouncing on a Blessing" song data with the new "TESTIFY EXERCISE" song using the 9 uploaded audio stems. The existing cover image from Bouncing on a Blessing will be retained for Testify Exercise.
 
 ---
 
-## Visual Concept
+## Stem Alignment (Ordered as Requested)
 
-```text
-+----------------------------------+
-|                                  |
-|  [Full-screen RMVT VIDEO]        |
-|  - Stadium lights animation      |
-|  - "RMVT" LED text glowing       |
-|  - Dynamic crowd movement        |
-|  - Vocal coach motion            |
-|                                  |
-|  Dark overlay gradients          |
-|                                  |
-|  +----------------------------+  |
-|  |  [Subtle loading bar]      |  |
-|  +----------------------------+  |
-|                                  |
-+----------------------------------+
+Based on your requested order and the uploaded files:
 
-Animation sequence:
-1. Black screen -> Video fades in (0.6s)
-2. Video plays (auto, muted, loop optional)
-3. Screen fades out to black (0.6s)
-4. Transition to main app
+| Order | Display Name | File | Stem Type |
+|-------|-------------|------|-----------|
+| 1 | RAab Coaching (Master) | RAab-Coaching.mp3 | vocal |
+| 2 | Instrumental | Instrumental.mp3 | instrumental |
+| 3 | Piano | PIANO.mp3 | keys |
+| 4 | Guitar | Guitar.mp3 | instrumental |
+| 5 | RAab Exercise (Lead) | RAab-Exercise.mp3 | vocal |
+| 6 | JLevy Exercise 1 | JLevy-Exercise-1.mp3 | vocal |
+| 7 | RAab Harmony 2 | RAab-Harmony-2.mp3 | harmony |
+| 8 | JLevy Harmony 2 | JLevy-Harmony-2.mp3 | harmony |
+| 9 | RAab Harmony 3 | RAab-Harmony-3.mp3 | harmony |
+
+---
+
+## File Operations
+
+### Step 1: Create New Audio Folder
+```
+public/audio/testify-exercise/
 ```
 
----
+### Step 2: Copy Audio Files
+| Source | Destination |
+|--------|-------------|
+| user-uploads://1-TESTIFY-EXERCISE-RAab-Coaching.mp3 | public/audio/testify-exercise/raab-coaching.mp3 |
+| user-uploads://1-TESTIFY-EXERCISE-Instrumental.mp3 | public/audio/testify-exercise/instrumental.mp3 |
+| user-uploads://1-TESTIFY-EXERCISE-PIANO.mp3 | public/audio/testify-exercise/piano.mp3 |
+| user-uploads://1-TESTIFY-EXERCISE-Guitar.mp3 | public/audio/testify-exercise/guitar.mp3 |
+| user-uploads://1-TESTIFY-EXERCISE-RAab-Exercise.mp3 | public/audio/testify-exercise/raab-exercise.mp3 |
+| user-uploads://1-TESTIFY-EXERCISE-JLevy-Exercise-1.mp3 | public/audio/testify-exercise/jlevy-exercise-1.mp3 |
+| user-uploads://1-TESTIFY-EXERCISE-RAab-Harmony-2.mp3 | public/audio/testify-exercise/raab-harmony-2.mp3 |
+| user-uploads://1-TESTIFY-EXERCISE-JLevy-Harmony-2.mp3 | public/audio/testify-exercise/jlevy-harmony-2.mp3 |
+| user-uploads://1-TESTIFY-EXERCISE-RAab-Harmony-3.mp3 | public/audio/testify-exercise/raab-harmony-3.mp3 |
 
-## Implementation Approach
+### Step 3: Update mockSongs.ts
 
-### 1. Copy Video to Public Folder
-Video files should go in `public/` folder because:
-- Videos are large and shouldn't be bundled with JS
-- Better streaming/loading performance
-- Direct URL reference works better for `<video>` elements
-
-### 2. Replace Image with Video Element
+Replace the `bouncingOnABlessingStems` array with new `testifyExerciseStems`:
 
 ```typescript
-<motion.video
-  src="/video/RVMTvideo.mp4"
-  autoPlay
-  muted
-  playsInline
-  className="absolute inset-0 w-full h-full object-cover object-top"
-  initial={{ opacity: 0, scale: 1.05 }}
-  animate={{ opacity: 1, scale: 1 }}
-  exit={{ opacity: 0, scale: 1.02 }}
-  transition={{ duration: 0.6, ease: "easeOut" }}
-/>
+// Real song: TESTIFY EXERCISE with actual audio stems
+const testifyExerciseStems: Stem[] = [
+  {
+    id: 'testify-raab-coaching',
+    name: 'RAab Coaching (Master)',
+    type: 'vocal',
+    url: '/audio/testify-exercise/raab-coaching.mp3',
+    color: stemColors.vocal,
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'testify-instrumental',
+    name: 'Instrumental',
+    type: 'instrumental',
+    url: '/audio/testify-exercise/instrumental.mp3',
+    color: stemColors.instrumental,
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'testify-piano',
+    name: 'Piano',
+    type: 'keys',
+    url: '/audio/testify-exercise/piano.mp3',
+    color: stemColors.keys,
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'testify-guitar',
+    name: 'Guitar',
+    type: 'instrumental',
+    url: '/audio/testify-exercise/guitar.mp3',
+    color: '#f97316', // orange for second instrumental
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'testify-raab-exercise',
+    name: 'RAab Exercise (Lead)',
+    type: 'vocal',
+    url: '/audio/testify-exercise/raab-exercise.mp3',
+    color: '#22d3ee', // cyan for lead vocal
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'testify-jlevy-exercise',
+    name: 'JLevy Exercise 1',
+    type: 'vocal',
+    url: '/audio/testify-exercise/jlevy-exercise-1.mp3',
+    color: '#06b6d4', // teal variant
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'testify-raab-harmony-2',
+    name: 'RAab Harmony 2',
+    type: 'harmony',
+    url: '/audio/testify-exercise/raab-harmony-2.mp3',
+    color: stemColors.harmony,
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'testify-jlevy-harmony-2',
+    name: 'JLevy Harmony 2',
+    type: 'harmony',
+    url: '/audio/testify-exercise/jlevy-harmony-2.mp3',
+    color: '#c084fc', // purple variant
+    waveformData: generateMockWaveform(200),
+  },
+  {
+    id: 'testify-raab-harmony-3',
+    name: 'RAab Harmony 3',
+    type: 'harmony',
+    url: '/audio/testify-exercise/raab-harmony-3.mp3',
+    color: '#e879f9', // pink-purple for harmony 3
+    waveformData: generateMockWaveform(200),
+  },
+];
 ```
 
-### 3. Key Video Properties
+### Step 4: Update Song Entry
 
-| Property | Value | Purpose |
-|----------|-------|---------|
-| `autoPlay` | true | Start playing immediately |
-| `muted` | true | Required for autoplay on mobile |
-| `playsInline` | true | Prevent iOS fullscreen takeover |
-| `loop` | false | Play once during splash duration |
-| `preload` | "auto" | Start loading video early |
+Replace the first song in `mockSongs` array:
+
+```typescript
+{
+  id: 'testify-exercise',
+  title: 'TESTIFY EXERCISE',
+  artist: 'RVMT',
+  coverArt: covers.gospel, // Keep existing gospel cover image
+  duration: 180, // Will be updated by Howler
+  bpm: 90,
+  key: 'G Major',
+  fullMixUrl: '',
+  stems: testifyExerciseStems,
+  difficulty: 'beginner',
+  genre: 'Gospel',
+  isPremium: false,
+},
+```
 
 ---
 
-## File Changes
+## Color Coding Strategy
+
+To visually distinguish similar stem types:
+
+| Stem Category | Color | Hex |
+|---------------|-------|-----|
+| RAab Coaching (Master) | Teal | #14b8a6 |
+| Instrumental | Amber | #f59e0b |
+| Piano | Green | #10b981 |
+| Guitar | Orange | #f97316 |
+| RAab Exercise (Lead) | Cyan | #22d3ee |
+| JLevy Exercise 1 | Teal variant | #06b6d4 |
+| RAab Harmony 2 | Purple | #a855f7 |
+| JLevy Harmony 2 | Light purple | #c084fc |
+| RAab Harmony 3 | Pink-purple | #e879f9 |
+
+---
+
+## Files to Modify
 
 | File | Action |
 |------|--------|
-| `public/video/RVMTvideo.mp4` | Copy uploaded video here |
-| `src/pages/Splash.tsx` | Replace `<img>` with `<video>` element |
+| `public/audio/testify-exercise/*.mp3` | Copy 9 audio files |
+| `src/data/mockSongs.ts` | Replace Bouncing on a Blessing with TESTIFY EXERCISE |
 
 ---
 
-## Technical Details
+## Optional: Delete Old Audio
 
-### Video Element vs Image
-- Replace `motion.img` with `motion.video`
-- Remove the ES module import (videos load via URL)
-- Add video-specific attributes for mobile compatibility
-
-### Timing Adjustments
-- May need to sync splash duration with video length
-- Keep minimum 2.5s display time
-- Video continues playing until fade-out begins
-
-### Mobile Optimizations
-- `playsInline` prevents iOS from hijacking to fullscreen
-- `muted` is mandatory for autoplay to work on all browsers
-- Keep `object-cover` and `object-top` for proper framing
-
-### Fallback Strategy
-- Keep the image as a poster/fallback if video fails to load
-- Add `onLoadedData` event to ensure smooth transition
-
----
-
-## Updated Component Structure
-
-```typescript
-export default function Splash({ onComplete }: SplashProps) {
-  const [isExiting, setIsExiting] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [videoLoaded, setVideoLoaded] = useState(false);
-
-  // ... existing timing logic
-
-  return (
-    <AnimatePresence mode="wait">
-      {!isExiting && (
-        <motion.div className="fixed inset-0 z-50 bg-black" style={{ height: "100dvh" }}>
-          
-          {/* Full-screen video */}
-          <motion.video
-            src="/video/RVMTvideo.mp4"
-            autoPlay
-            muted
-            playsInline
-            poster={splashImage} // Fallback image
-            onLoadedData={() => setVideoLoaded(true)}
-            className="absolute inset-0 w-full h-full object-cover object-top"
-            initial={{ opacity: 0, scale: 1.05 }}
-            animate={{ opacity: videoLoaded ? 1 : 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.02 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-          />
-
-          {/* Dark overlay gradients - keep existing */}
-          {/* Vignette effect - keep existing */}
-          {/* Loading bar - keep existing */}
-          {/* Safe area padding - keep existing */}
-          
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-```
+The old `public/audio/bouncing-on-a-blessing/` folder can be deleted to clean up, or kept for reference.
 
 ---
 
 ## Expected Result
 
-A premium, dynamic video splash screen that:
-- Opens from black with the video fading in smoothly
-- Plays the RMVT promo video automatically
-- Works seamlessly on mobile (muted autoplay)
-- Maintains the dark overlay aesthetic for depth
-- Fades out elegantly to the main app
-- Falls back to static image if video fails
+- First song in the library becomes "TESTIFY EXERCISE"
+- 9 properly ordered stems in the training mode
+- Same gospel cover image maintained
+- All audio files play correctly in order:
+  1. RAab Coaching (Master)
+  2. Instrumental
+  3. Piano
+  4. Guitar
+  5. RAab Exercise (Lead)
+  6. JLevy Exercise 1
+  7. RAab Harmony 2
+  8. JLevy Harmony 2
+  9. RAab Harmony 3
 
