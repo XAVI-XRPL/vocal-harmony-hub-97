@@ -593,6 +593,67 @@
       0 0 20px hsl(200 85% 45% / 0.2),
       0 0 40px hsl(200 80% 50% / 0.1);
   }
+
+  /* ========== Frosted Glass Button ========== */
+  .glass-button-frosted {
+    background: linear-gradient(
+      135deg,
+      hsl(200 50% 60% / 0.15) 0%,
+      hsl(210 50% 50% / 0.08) 100%
+    );
+    backdrop-filter: blur(40px) saturate(160%);
+    -webkit-backdrop-filter: blur(40px) saturate(160%);
+    border: 1px solid hsl(200 70% 70% / 0.25);
+    box-shadow: 
+      0 8px 32px hsl(200 90% 55% / 0.25),
+      0 4px 16px hsl(210 80% 50% / 0.15),
+      inset 0 1px 0 hsl(0 0% 100% / 0.15),
+      inset 0 -1px 0 hsl(200 50% 50% / 0.1);
+  }
+
+  .light .glass-button-frosted {
+    background: linear-gradient(
+      135deg,
+      hsl(200 50% 50% / 0.12) 0%,
+      hsl(210 50% 60% / 0.06) 100%
+    );
+    border: 1px solid hsl(200 60% 50% / 0.3);
+    box-shadow: 
+      0 8px 32px hsl(200 85% 45% / 0.2),
+      0 4px 16px hsl(210 75% 50% / 0.12),
+      inset 0 1px 0 hsl(0 0% 100% / 0.5);
+  }
+
+  /* Animated shimmer overlay for button */
+  .glass-button-shimmer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsl(0 0% 100% / 0.12) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%);
+    animation: buttonShimmer 3s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .light .glass-button-shimmer::before {
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsl(0 0% 100% / 0.4) 50%,
+      transparent 100%
+    );
+  }
+
+  /* Pulsing glow animation for button */
+  .glass-button-glow {
+    animation: glowPulse 2.5s ease-in-out infinite;
+  }
 }
 
 /* Keyframe Animations */
@@ -646,6 +707,30 @@
   }
   50% {
     box-shadow: 0 0 40px hsl(var(--gradient-mid) / 0.5);
+  }
+}
+
+/* Button shimmer animation */
+@keyframes buttonShimmer {
+  0% { 
+    transform: translateX(-100%); 
+  }
+  100% { 
+    transform: translateX(100%); 
+  }
+}
+
+/* Button glow pulse animation */
+@keyframes glowPulse {
+  0%, 100% { 
+    box-shadow: 
+      0 8px 32px hsl(200 90% 55% / 0.25),
+      0 0 40px hsl(200 90% 55% / 0.15);
+  }
+  50% { 
+    box-shadow: 
+      0 8px 32px hsl(200 90% 55% / 0.4),
+      0 0 60px hsl(200 90% 55% / 0.25);
   }
 }
 
