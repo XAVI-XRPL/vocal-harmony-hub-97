@@ -1,62 +1,104 @@
 
-# Fix Navigation Flow - Direct to Training & Back to Home
+
+# Enhanced Vocal Progress Chart
 
 ## Overview
 
-Two changes needed to streamline the navigation:
-1. The TrainingMode back button currently goes to the SongDetail page - change it to go to Home
-2. Keep the `/song/:id` route but it's no longer in the main user flow
+Redesign the VocalProgressDiagram to be more visually dynamic with distinct colors for each skill and a separated Level badge that doesn't overlap the chart.
 
 ---
 
-## Current vs New Navigation
+## Visual Changes
 
 ```text
-CURRENT BACK BUTTON FLOW:
-Training Mode → Back → SongDetail Page (/song/:id)
+CURRENT LAYOUT:
+┌─────────────────────────┐
+│       Pitch             │
+│    ┌─────────┐          │
+│ Rhythm │ LV.2 │ Breath  │  ← Badge overlaps chart
+│    └─────────┘          │
+│       Range             │
+│                         │
+│     67% Complete        │
+│   Sessions    Streak    │
+└─────────────────────────┘
 
-NEW BACK BUTTON FLOW:
-Training Mode → Back → Home Page (/)
+NEW LAYOUT:
+┌─────────────────────────┐
+│       Pitch (cyan)      │
+│         •               │
+│    /───────\            │
+│ Rhythm     Breath       │  ← Chart fills the space
+│ (orange)  (green)       │
+│    \───────/            │
+│         •               │
+│      Range (purple)     │
+│                         │
+│    ┌───────────────┐    │
+│    │ 🏆 LV.2       │    │  ← Badge below chart
+│    │ Intermediate  │    │
+│    └───────────────┘    │
+│                         │
+│     67% Complete        │
+│   Sessions    Streak    │
+└─────────────────────────┘
 ```
 
 ---
 
-## Changes Required
+## Color Scheme for Skills
 
-### File: `src/pages/TrainingMode.tsx`
-
-Update the back button onClick handler on line 198:
-
-**Before:**
-```typescript
-onClick={() => navigate(`/song/${song.id}`)}
-```
-
-**After:**
-```typescript
-onClick={() => navigate("/")}
-```
+| Skill | Color | HSL Value |
+|-------|-------|-----------|
+| **Pitch** | Cyan-Blue | `hsl(190, 90%, 55%)` |
+| **Breath** | Emerald Green | `hsl(160, 84%, 45%)` |
+| **Range** | Purple | `hsl(270, 85%, 65%)` |
+| **Rhythm** | Orange-Amber | `hsl(32, 95%, 55%)` |
 
 ---
 
-## Summary
+## Implementation Details
 
-| File | Line | Change |
-|------|------|--------|
-| `src/pages/TrainingMode.tsx` | 198 | Change `navigate(`/song/${song.id}`)` to `navigate("/")` |
+### 1. Add Skill Color Configuration
+
+Create a color mapping for each skill with both fill and glow colors.
+
+### 2. Custom Tick Labels with Colors
+
+Update `PolarAngleAxis` tick renderer to color-code each skill label with its corresponding color and add a glowing dot indicator.
+
+### 3. Enhanced Radar with Multi-color Dots
+
+Each data point on the radar will have its own skill-specific color with animated glow effects.
+
+### 4. Separate Level Badge Section
+
+Move the Level badge below the chart in its own styled section with:
+- Horizontal layout with trophy icon
+- Gradient background matching the skill colors
+- Animated entrance
+
+### 5. Add Dynamic Animations
+
+- Staggered entrance for skill labels
+- Pulsing glow on the radar shape
+- Subtle rotating gradient effect on the level badge
 
 ---
 
-## Notes
+## Files Modified
 
-- The `/song/:id` route remains in App.tsx as a fallback (users can still access it via direct URL)
-- SongCard already navigates directly to `/training/:id` (updated in previous change)
-- This makes the back button consistent with the streamlined flow
+| File | Change |
+|------|--------|
+| `src/components/home/VocalProgressDiagram.tsx` | Complete redesign with new color system, separated level badge, and enhanced animations |
 
 ---
 
 ## Expected Result
 
-- Clicking back from Training Mode returns to the Home page
-- No more intermediate SongDetail page in the normal user flow
-- Faster, cleaner navigation experience
+- Each skill (Pitch, Breath, Range, Rhythm) has a unique, vibrant color
+- Skill labels show their color with a glowing dot indicator
+- Level badge is clearly visible below the chart, not overlapping
+- More dynamic feel with gradient effects and subtle animations
+- Premium, polished appearance matching the stadium theme
+
