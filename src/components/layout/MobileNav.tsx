@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Library, BarChart3, Mic2, User } from "lucide-react";
+import { Home, Library, BarChart3, Mic2, ListMusic } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -11,10 +11,10 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { icon: Library, label: "Library", path: "/library" },
-  { icon: BarChart3, label: "Progress", path: "/progress" },
+  { icon: ListMusic, label: "Playlists", path: "/playlists" },
   { icon: Home, label: "Home", path: "/" },
   { icon: Mic2, label: "Train", path: "/training" },
-  { icon: User, label: "Profile", path: "/profile" },
+  { icon: BarChart3, label: "Progress", path: "/progress" },
 ];
 
 interface MobileNavProps {
