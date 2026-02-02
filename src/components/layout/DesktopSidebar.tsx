@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Library, BarChart3, Mic2, User, Crown, ChevronLeft, ChevronRight } from "lucide-react";
+import { Home, Library, BarChart3, Mic2, User, Crown, ChevronLeft, ChevronRight, ListMusic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RMVTLogo } from "@/components/ui/RMVTLogo";
 import {
@@ -28,6 +28,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { icon: Home, label: "Home", path: "/" },
   { icon: Library, label: "Library", path: "/library" },
+  { icon: ListMusic, label: "Playlists", path: "/playlists" },
   { icon: BarChart3, label: "Progress", path: "/progress" },
   { icon: Mic2, label: "Train", path: "/training" },
   { icon: User, label: "Profile", path: "/profile" },

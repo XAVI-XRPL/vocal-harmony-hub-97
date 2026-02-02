@@ -11,6 +11,8 @@ import Splash from "./pages/Splash";
 import Onboarding from "./pages/Onboarding";
 import Home from "./pages/Home";
 import Library from "./pages/Library";
+import Playlists from "./pages/Playlists";
+import PlaylistDetail from "./pages/PlaylistDetail";
 import SongDetail from "./pages/SongDetail";
 import TrainingSelect from "./pages/TrainingSelect";
 import TrainingMode from "./pages/TrainingMode";
@@ -70,6 +72,8 @@ function AppContent() {
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/library" element={<Library />} />
+                  <Route path="/playlists" element={<Playlists />} />
+                  <Route path="/playlist/:id" element={<PlaylistDetail />} />
                   <Route path="/progress" element={<Progress />} />
                   <Route path="/song/:id" element={<SongDetail />} />
                   <Route path="/training-select" element={<TrainingSelect />} />
