@@ -137,9 +137,9 @@ export default function Home() {
               >
                 <Sparkles className="w-7 h-7 text-primary mx-auto mb-2" />
               </motion.div>
-              <h3 className="text-base font-semibold mb-1">Unlock All Songs</h3>
+              <h3 className="text-base font-semibold mb-1">Unlock All Exercises</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Get access to 100+ premium tracks and advanced features.
+                Get access to more premium tracks and exercises.
               </p>
               <GlassButton onClick={() => navigate("/subscription")} size="sm">
                 View Plans
