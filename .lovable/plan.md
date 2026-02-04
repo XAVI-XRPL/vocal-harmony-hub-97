@@ -1,166 +1,179 @@
 
-# Complete Implementation Plan: TESTIFY V2 Final Tracks + Hub/Store Background + Debugging
+# Interactive USA State Map for Vocal Health Directory
 
 ## Overview
-This plan covers:
-1. Adding the remaining 4 tracks to "12. TESTIFY (VERSION 2)" (positions 10-13)
-2. Adding a new "Vocal Notes Desk" background image for Hub and Vocal Rider Store pages
-3. Comprehensive debugging pass for player sync, A-B loop, and UI/UX polish
+This plan replaces the current simplified city-marker-based USA map with a full interactive inline SVG map featuring all 48 contiguous US states + Hawaii + DC (50 entries total). The new map follows the Stadium Blue glassmorphism design system and enables state-based doctor/provider filtering.
 
----
+## Current State Analysis
 
-## Part 1: Add Remaining 4 Tracks to TESTIFY V2
+### What Exists Now
+- **`USAMap.tsx`**: A simplified outline with city dot markers (using a basic viewBox of `0 0 100 62`)
+- **`CityMarker.tsx`**: Individual city dots that can be selected
+- **`mockCities.ts`**: 13 major cities with coordinates for the current simplified map
+- **`VocalHealth.tsx`**: Page using city-based filtering with `mockDoctors` and `mockVenues`
+- **`useMedicalProviders.ts`**: Hook querying by `cityId` from database
 
-### 1.1 Copy Audio Files
-Copy the 4 uploaded tracks to `public/audio/testify-v2/`:
+### What the Prompt Specifies
+- Full inline SVG with all 50 state paths (Albers USA projection, `viewBox="0 0 960 620"`)
+- State-based selection instead of city-based
+- Stadium Blue color scheme: `#5BA3D9` default, `#4FC3F7` hover, `#14b8a6` selected, `#f59e0b` search match
+- Search functionality to highlight matching states by name/abbreviation/region
+- Floating tooltip on hover showing state name and region
+- State abbreviation labels centered on each state
 
-| Source File | Destination | Stem Name |
-|-------------|-------------|-----------|
-| `12.-TESTIFY-011526-v3-mix-RAab-1.mp3` | `raab-first.mp3` | RAab First |
-| `12.-TESTIFY-011526-v3-mix-RAab-Second-2.mp3` | `raab-second-2.mp3` | RAab Second (Alt) |
-| `12.-TESTIFY-011526-v3-mix-RAab-Third.mp3` | `raab-third.mp3` | RAab Third |
-| `12.-TESTIFY-011526-v3-mix-INSTR.mp3` | `instrumental.mp3` | Instrumental |
+## Implementation Strategy
 
-### 1.2 Database Migration
-Insert the 4 new stems with positions 10-13:
+### Phase 1: Create State Data File
 
-```sql
-INSERT INTO public.stems (id, song_id, name, type, audio_path, color, position) VALUES
-  ('testify-v2-raab-first', 'testify-v2', 'RAab First', 'vocal', '/audio/testify-v2/raab-first.mp3', '#ec4899', 10),
-  ('testify-v2-raab-second-alt', 'testify-v2', 'RAab Second (Alt)', 'harmony', '/audio/testify-v2/raab-second-2.mp3', '#f472b6', 11),
-  ('testify-v2-raab-third', 'testify-v2', 'RAab Third', 'harmony', '/audio/testify-v2/raab-third.mp3', '#fb7185', 12),
-  ('testify-v2-instrumental', 'testify-v2', 'Instrumental', 'instrumental', '/audio/testify-v2/instrumental.mp3', '#f59e0b', 13);
+Create `src/data/usStateData.ts` with all 50 state entries:
+
+```text
+Structure per state:
++---------------+------------------------------------------+
+| Field         | Description                              |
++---------------+------------------------------------------+
+| id            | FIPS code (2-digit, e.g., "01" = AL)     |
+| name          | Full state name                          |
+| abbr          | 2-letter abbreviation                    |
+| region        | Geographic region (Southeast, etc.)      |
+| cx, cy        | Label position (SVG coordinates)         |
+| d             | SVG path data (Albers USA projection)    |
++---------------+------------------------------------------+
 ```
 
----
+All 50 entries are provided in the uploaded prompt document. This includes:
+- 48 contiguous states
+- Hawaii (inset positioned)
+- District of Columbia
+- NO Alaska (excluded per spec)
 
-## Part 2: Add "Vocal Notes Desk" Background
+### Phase 2: Create New Map Component
 
-### 2.1 Copy Background Image
-Copy the uploaded background image to `src/assets/`:
-- Source: `user-uploads://image-14.png`
-- Destination: `src/assets/vocal-notes-desk.png`
+Replace `src/components/medical/USAMap.tsx` with a state-based interactive map:
 
-### 2.2 Create Background Component
-Create a new reusable component: `src/components/layout/VocalNotesDeskBackground.tsx`
+**Features:**
+1. **State paths**: Render all 50 state `<path>` elements
+2. **Hover effects**: Lighter blue fill (`#4FC3F7`) on mouse enter
+3. **Selection**: Teal fill (`#14b8a6`) with subtle glow on click
+4. **Search highlighting**: Amber fill (`#f59e0b`) for states matching search query
+5. **State labels**: 2-letter abbreviations centered on each state
+6. **Floating tooltip**: Shows full state name + region on hover
+7. **Small state handling**: Smaller font for tiny states (CT, DE, DC, MA, MD, NH, NJ, RI, VT)
 
+**Props interface:**
 ```typescript
-import React from "react";
-import vocalNotesDeskBg from "@/assets/vocal-notes-desk.png";
-
-export const VocalNotesDeskBackground = React.forwardRef<HTMLDivElement>(
-  function VocalNotesDeskBackground(_props, ref) {
-    return (
-      <div ref={ref} className="fixed inset-0 -z-10 overflow-hidden">
-        {/* Desk image with slow zoom animation */}
-        <img
-          src={vocalNotesDeskBg}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover animate-slow-zoom"
-        />
-        
-        {/* Dark overlay for card readability */}
-        <div className="absolute inset-0 bg-background/50" />
-        
-        {/* Gradient overlay for color blending - warm tones to match store aesthetic */}
-        <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background/70" />
-      </div>
-    );
-  }
-);
+interface USAMapProps {
+  selectedState: StateData | null;
+  onStateSelect: (state: StateData) => void;
+  searchQuery?: string;
+}
 ```
 
-### 2.3 Update Hub Page
-Modify `src/pages/Hub.tsx`:
-- Replace `StadiumBackground` import with `VocalNotesDeskBackground`
-- Apply the new background component
+### Phase 3: Update VocalHealth.tsx
 
-### 2.4 Update Vocal Rider Store Page
-Modify `src/pages/VocalRiderStore.tsx`:
-- Replace the CSS `dressing-room-bg` background with the new `VocalNotesDeskBackground` component
-- This provides a consistent, premium look across both pages
+Modify the page to use state-based selection:
 
----
+| Change | Before | After |
+|--------|--------|-------|
+| Selection type | City object | State object (FIPS code) |
+| Filter key | `cityId` | `state_fips` |
+| Search bar | Not functional | Filters states by name/abbr/region |
+| Empty state | "Select a city..." | "Select a state..." |
 
-## Part 3: Audio Player Debugging & Sync Improvements
+**Updated flow:**
+1. User searches or taps a state on the map
+2. Selected state turns teal with glow
+3. Page shows state header card with name, region, clear button
+4. Doctor cards filter by `state_fips` matching the FIPS code
+5. Loading shimmer while fetching providers
 
-### 3.1 Sync Tolerance for 14-Stem Songs
-Update `src/hooks/useAudioPlayer.ts`:
-- Adjust `getSyncTolerance()` to handle 14+ stems:
-  ```typescript
-  const getSyncTolerance = (stemCount: number): number => {
-    if (stemCount > 12) return 0.12; // 14 stems
-    if (stemCount > 10) return 0.10;
-    if (stemCount > 6) return 0.08;
-    return 0.06;
-  };
-  ```
+### Phase 4: Database Schema Consideration
 
-### 3.2 A-B Loop Improvements
-Current implementation in `useAudioPlayer.ts` already has:
-- Pause-seek-resume cycle at loop boundary
-- Master clock reset to prevent drift accumulation
-- `LOOP_END_BUFFER_SEC` (0.05s) to prevent overshoot
+The current `medical_providers` table uses `city_id`. The prompt suggests `state_fips` for state-based filtering.
 
-Verify and test:
-- No additional code changes required if testing confirms smooth looping
-- The existing implementation should handle 14 stems correctly
+**Options:**
+- **Option A**: Add `state_fips` column to existing table (allows both city and state filtering)
+- **Option B**: Keep existing structure, derive state from city relationship
 
-### 3.3 Preload Store Update
-Update `src/stores/audioPreloadStore.ts` to increase cache for larger songs:
-- Change `maxCachedSongs` from 3 to 4 (to accommodate larger stem counts)
-- Update concurrent requests from 2 to 3 for faster preloading
+I recommend **Option A** for future flexibility. Migration will add:
+```sql
+ALTER TABLE medical_providers ADD COLUMN state_fips TEXT;
+CREATE INDEX idx_medical_providers_state ON medical_providers(state_fips);
+```
 
----
+### Phase 5: Add CSS Variables for Map Colors
 
-## Part 4: UI/UX Polish & Improvements
-
-### 4.1 Loading State Enhancement
-In `src/pages/TrainingMode.tsx`:
-- Add stem count indicator during loading: "Loading 14 stems..."
-- Show preload status if song was pre-cached
-
-### 4.2 Reset Button Visual Feedback
-Add a subtle animation when Reset is clicked:
-- Quick rotation of the RotateCcw icon
-- Toast notification confirming reset
-
-### 4.3 Stem Track Visual Improvements
-In `src/components/audio/StemTrack.tsx`:
-- Add subtle hover state for better interactivity feedback
-- Ensure consistent height across all stem types
-
-### 4.4 Hub/Store Page Polish
-- Ensure consistent gradient overlays on the new background
-- Add subtle parallax or depth effect on scroll (optional)
-
----
+Add to `src/index.css`:
+```css
+/* Map-specific colors */
+--map-fill: 201 68% 59%;           /* #5BA3D9 */
+--map-fill-hover: 197 93% 63%;     /* #4FC3F7 */
+--map-fill-selected: 168 76% 39%;  /* #14b8a6 */
+--map-fill-search: 38 92% 50%;     /* #f59e0b */
+--map-stroke: 0 0% 100% / 0.65;
+--map-stroke-hover: 0 0% 100% / 0.9;
+```
 
 ## File Changes Summary
 
-| File | Action |
-|------|--------|
-| `public/audio/testify-v2/raab-first.mp3` | Create (copy) |
-| `public/audio/testify-v2/raab-second-2.mp3` | Create (copy) |
-| `public/audio/testify-v2/raab-third.mp3` | Create (copy) |
-| `public/audio/testify-v2/instrumental.mp3` | Create (copy) |
-| `src/assets/vocal-notes-desk.png` | Create (copy) |
-| `src/components/layout/VocalNotesDeskBackground.tsx` | Create |
-| `src/pages/Hub.tsx` | Modify - use new background |
-| `src/pages/VocalRiderStore.tsx` | Modify - use new background |
-| `src/hooks/useAudioPlayer.ts` | Modify - sync tolerance for 14 stems |
-| `src/stores/audioPreloadStore.ts` | Modify - increase cache limit |
-| `src/pages/TrainingMode.tsx` | Modify - loading/reset improvements |
-| Database migration | Insert 4 new stems |
+| File | Action | Description |
+|------|--------|-------------|
+| `src/data/usStateData.ts` | Create | 50 state entries with SVG path data |
+| `src/components/medical/USAMap.tsx` | Replace | Full interactive state map component |
+| `src/pages/VocalHealth.tsx` | Modify | State-based selection, search bar |
+| `src/index.css` | Modify | Add map color variables |
+| `src/types/index.ts` | Modify | Add StateData interface or import |
+| Database migration | Create | Add state_fips column (optional) |
 
----
+## Visual Design Spec
+
+```text
++--------------------------------------------------+
+|  Vocal Health                                    |
+|  Find ENT & Vocal Specialists Near You           |
++--------------------------------------------------+
+|  [Search by state, abbreviation, or region...]   |
++--------------------------------------------------+
+|                                                  |
+|       +----------------------------------+       |
+|       |                                  |       |
+|       |     [Interactive USA Map]        |       |
+|       |     - States filled blue         |       |
+|       |     - White borders              |       |
+|       |     - State abbreviations        |       |
+|       |     - Hover: lighter blue        |       |
+|       |     - Selected: teal glow        |       |
+|       |                                  |       |
+|       +----------------------------------+       |
+|                                                  |
+|  [Selected State Card - California, West]        |
++--------------------------------------------------+
+|  Vocal Specialists (3)                           |
+|  +----------------------------------------------+|
+|  | Dr. Sarah Chen, MD                    ★ 4.9  ||
+|  | Laryngologist / ENT                          ||
+|  | Downtown Medical Center · Los Angeles        ||
+|  | [Call] [Book]                                ||
+|  +----------------------------------------------+|
++--------------------------------------------------+
+```
+
+## Preserved Functionality
+
+- **EMT Badge** in header stays
+- **Medical gradient background** (`medical-bg` class) stays
+- **Doctor cards** keep existing styling with medical red left border
+- **Glassmorphism cards** maintain current aesthetic
+- **Mobile responsive** with touch-friendly tap targets
 
 ## Testing Checklist
-1. Play TESTIFY V2 - verify all 14 stems load
-2. Skip around the track - verify stems stay in sync
-3. Set A-B loop - verify clean looping without glitches
-4. Test Reset button - verify it resets position, tempo, loop, and mixer
-5. Navigate to Hub page - verify new background displays correctly
-6. Navigate to Vocal Rider Store - verify new background displays correctly
-7. Test on mobile viewport - verify backgrounds scale properly
 
+1. Verify all 50 states render correctly with proper paths
+2. Test hover state changes color to lighter blue
+3. Test click selects state and turns teal with glow
+4. Test search filters states by name, abbreviation, or region (amber highlight)
+5. Verify state labels are readable on all states
+6. Test clear selection button resets map
+7. Verify doctor list filters by selected state
+8. Test on mobile viewport for touch interactions
+9. Verify dark/light mode compatibility
