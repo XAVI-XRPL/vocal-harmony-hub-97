@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { AppShell } from "@/components/layout/AppShell";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { useDemoMode } from "@/hooks/useDemoMode";
 import Splash from "./pages/Splash";
 import Onboarding from "./pages/Onboarding";
 import Home from "./pages/Home";
@@ -66,7 +67,8 @@ function AppRoutes({ onAppReady }: { onAppReady: () => void }) {
 }
 
 function AppContent() {
-  const { isComplete, isLoading, completeOnboarding } = useOnboarding();
+  const { isComplete, isLoading: onboardingLoading, completeOnboarding } = useOnboarding();
+  const { enableDemoMode, isLoading: demoLoading } = useDemoMode();
   const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [showApp, setShowApp] = useState(false);
@@ -82,7 +84,10 @@ function AppContent() {
     }
   };
 
-  const handleOnboardingComplete = () => {
+  const handleOnboardingComplete = (mode: "auth" | "demo") => {
+    if (mode === "demo") {
+      enableDemoMode();
+    }
     completeOnboarding();
     setShowOnboarding(false);
     setShowApp(true);
@@ -92,8 +97,8 @@ function AppContent() {
     // App has navigated to home and is ready
   };
 
-  // Wait for onboarding state to load
-  if (isLoading) {
+  // Wait for onboarding and demo mode state to load
+  if (onboardingLoading || demoLoading) {
     return null;
   }
 

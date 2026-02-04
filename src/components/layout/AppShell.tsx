@@ -3,9 +3,11 @@ import { useLocation } from "react-router-dom";
 import { MobileNav } from "./MobileNav";
 import { DesktopSidebar } from "./DesktopSidebar";
 import { StadiumBackground } from "./StadiumBackground";
+import { DemoModeBanner } from "./DemoModeBanner";
 import { MiniPlayer } from "@/components/audio/MiniPlayer";
 import { useAudioStore } from "@/stores/audioStore";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useDemoMode } from "@/hooks/useDemoMode";
 import { cn } from "@/lib/utils";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 
@@ -17,6 +19,7 @@ export function AppShell({ children }: AppShellProps) {
   const location = useLocation();
   const currentSong = useAudioStore((state) => state.currentSong);
   const isMobile = useIsMobile();
+  const { isDemoMode } = useDemoMode();
 
   // Don't show nav on training mode or auth pages
   const hideNav = location.pathname.startsWith("/training/") || 
@@ -30,6 +33,10 @@ export function AppShell({ children }: AppShellProps) {
     return (
       <div className="min-h-screen bg-background relative overflow-hidden">
         <StadiumBackground />
+        
+        {/* Demo Mode Banner */}
+        {isDemoMode && !hideNav && <DemoModeBanner />}
+        
         <main
           className={cn(
             "relative z-10 min-h-screen",
@@ -70,6 +77,9 @@ export function AppShell({ children }: AppShellProps) {
 
         {/* Main Content */}
         <SidebarInset className="flex-1 relative z-10">
+          {/* Demo Mode Banner */}
+          {isDemoMode && !hideNav && <DemoModeBanner />}
+          
           <main
             className={cn(
               "min-h-screen",
