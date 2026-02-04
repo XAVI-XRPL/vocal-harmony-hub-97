@@ -1,119 +1,147 @@
 
 
-# Fix Multi-Stem Audio Synchronization During Seeking
+# Desktop Splash Screen & Track Mute Buttons
 
-## Problem Analysis
+## Overview
 
-When users seek to a different position in the audio, the stem tracks fall out of sync. This happens because:
-
-1. **Asynchronous HTML5 Seeking** - Each Howl instance with `html5: true` processes seek commands independently with varying delays
-2. **No Synchronization Barrier** - Stems resume playback individually after seeking rather than waiting for all to be ready
-3. **Continuous Playback During Seek** - Seeking while playing doesn't pause first, causing stems to drift
+Two improvements to enhance the user experience:
+1. Adjust the splash screen video scaling for desktop so the entire video is visible
+2. Ensure mute controls are prominently visible on audio tracks
 
 ---
 
-## Solution Overview
+## Issue 1: Splash Screen Desktop Sizing
 
-Implement a synchronized seek mechanism that:
-1. Pauses all stems before seeking
-2. Seeks all stems to the target position
-3. Waits for all stems to complete the seek operation
-4. Resumes playback only after all stems are synchronized
+### Current Behavior
 
----
+The splash video uses `object-cover` which crops the video to fill the screen. On mobile (portrait), `object-top` keeps the important content visible. However, on desktop (landscape), this crops out portions of the video.
 
-## Technical Implementation
+### Solution
 
-### Modified: `src/hooks/useAudioPlayer.ts`
+Use responsive object-fit classes:
+- **Mobile** (`< md`): Keep `object-cover object-top` to fill the screen and show the important top portion
+- **Desktop** (`≥ md`): Switch to `object-contain` to show the entire video without cropping, with a black letterbox if needed
 
-Update the `seekTo` function to implement synchronized seeking:
+### Implementation
+
+**File: `src/pages/Splash.tsx`**
+
+Update the video element's className:
 
 ```text
-Current Flow:
-  Click Seek → forEach(seek) → Update Time → Continue Playing
-
-Fixed Flow:
-  Click Seek → Pause All → forEach(seek) → Wait for Ready → Resume All
+Current:  "object-cover object-top"
+New:      "object-cover object-top md:object-contain"
 ```
 
-**Key Changes:**
-
-1. **Track Seeking State** - Add an `isSeeking` ref to prevent race conditions during seek operations
-
-2. **Synchronized Seek Function** - New implementation:
-   - Pause all stems immediately
-   - Store the "was playing" state
-   - Seek all stems to the target time
-   - Use `setTimeout` with a small delay to allow HTML5 audio to complete seek
-   - Resume playback only if was playing before
-
-3. **Seek Verification** - After seeking, verify all stems are at approximately the same position before resuming
-
-4. **Optional: Web Audio API Mode** - For tighter sync, consider using Web Audio API (html5: false) for smaller audio files, which offers sample-accurate synchronization
+This ensures:
+- Mobile: Full-bleed cinematic video (current behavior preserved)
+- Desktop: Entire video visible, centered with optional letterboxing
 
 ---
 
-## Implementation Details
+## Issue 2: Track Mute Buttons
 
-### Changes to `useAudioPlayer.ts`
+### Current State
 
-| Section | Change |
-|---------|--------|
-| Add ref | `isSeekingRef = useRef(false)` to track seek state |
-| Update seekTo | Implement pause-seek-resume pattern |
-| Add sync verification | Check all stems are within tolerance before resume |
-| Handle edge cases | Prevent double-seeks and race conditions |
+Looking at the code, mute buttons already exist on each `StemTrack`:
+- Each track has a Mute button (toggles between `Volume2` and `VolumeX` icons)
+- Each track has a Solo button ("S" toggle)
+- There's a volume slider per track
 
-### Synchronization Strategy
+However, there's **no Master Mute** button for quickly muting all tracks at once.
 
-```text
-seekTo(time):
-  1. Set isSeeking = true
-  2. wasPlaying = check if currently playing
-  3. Pause all Howl instances immediately
-  4. Cancel animation frame
-  5. Update store currentTime
-  6. For each stem: howl.seek(time)
-  7. Wait ~50ms for HTML5 audio buffers
-  8. If wasPlaying: resume all stems together
-  9. Set isSeeking = false
-```
+### Solution
 
-### Tolerance-Based Verification
+Add a **Master Mute** toggle button to the Master waveform section in TrainingMode. This will allow users to quickly mute/unmute all stems with one tap.
 
-After seeking, verify sync by checking that all stems report positions within ~100ms of each other. If not in sync, re-seek the outliers.
+### Implementation
 
----
+**File: `src/pages/TrainingMode.tsx`**
 
-## Additional Improvements
+Add a master mute toggle button in the Master header row (lines 245-276):
 
-### Improve Time Tracking
+| Addition | Description |
+|----------|-------------|
+| Master Mute Button | IconButton with `VolumeX`/`Volume2` that toggles all stems mute state |
+| Visual Feedback | Button highlights when all tracks are muted |
 
-Currently the animation frame reads time from only the first stem. Update to:
-- Read position from multiple stems
-- Use median or consensus position
-- Detect and correct drift during playback
+**File: `src/stores/audioStore.ts`**
 
-### Loop Boundary Handling
+Add a helper action to mute/unmute all stems:
 
-Ensure loop point seeking also uses the synchronized method to prevent drift when looping.
+| Function | Purpose |
+|----------|---------|
+| `muteAllStems()` | Set isMuted=true on all stems |
+| `unmuteAllStems()` | Set isMuted=false on all stems |
+| `toggleMasterMute()` | Toggle between mute all / unmute all |
 
 ---
 
-## Files to Modify
+## Summary of Changes
+
+### Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/hooks/useAudioPlayer.ts` | Implement synchronized seeking with pause-seek-resume pattern |
-| `src/stores/audioStore.ts` | Add optional `isSeeking` state if UI feedback needed |
+| `src/pages/Splash.tsx` | Add responsive `md:object-contain` to video element |
+| `src/pages/TrainingMode.tsx` | Add Master Mute button to Master header section |
+| `src/stores/audioStore.ts` | Add `toggleMasterMute()` action |
+
+### Expected Result
+
+1. **Splash Screen**: On desktop, the entire video is visible (no cropping). On mobile, it continues to fill the screen with top-aligned content.
+
+2. **Master Mute**: Users can quickly mute all tracks with a single button tap on the Master section, in addition to the existing per-track mute controls.
 
 ---
 
-## Expected Outcome
+## Technical Details
 
-- All stems remain perfectly synchronized when seeking to any position
-- Seeking is smooth with no audible glitches or drift
-- Loop points work correctly with synchronized seeking
-- Skip forward/back buttons maintain sync
-- Waveform clicking maintains sync
+### Splash Video Responsive Classes
+
+```tsx
+// Before
+className="absolute inset-0 w-full h-full object-cover object-top"
+
+// After  
+className="absolute inset-0 w-full h-full object-cover object-top md:object-contain"
+```
+
+### Master Mute Store Action
+
+```typescript
+toggleMasterMute: () =>
+  set((state) => {
+    const allMuted = state.stemStates.every(s => s.isMuted);
+    return {
+      stemStates: state.stemStates.map(s => ({
+        ...s,
+        isMuted: !allMuted
+      }))
+    };
+  }),
+```
+
+### Master Mute Button (TrainingMode)
+
+Add next to the volume indicator in the Master section:
+
+```tsx
+<motion.button
+  whileTap={{ scale: 0.9 }}
+  onClick={toggleMasterMute}
+  className={cn(
+    "w-8 h-8 rounded-lg border flex items-center justify-center",
+    allMuted
+      ? "bg-destructive/30 border-destructive/60"
+      : "bg-glass border-glass-border hover:border-glass-border-hover"
+  )}
+>
+  {allMuted ? (
+    <VolumeX className="w-4 h-4 text-destructive" />
+  ) : (
+    <Volume2 className="w-4 h-4 text-muted-foreground" />
+  )}
+</motion.button>
+```
 
