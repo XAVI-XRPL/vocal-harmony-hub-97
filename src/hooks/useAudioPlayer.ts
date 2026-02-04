@@ -264,21 +264,18 @@ export function useAudioPlayer() {
             const medianIndex = Math.floor(positions.length / 2);
             const time = positions[medianIndex];
             
-            // Handle looping with synchronized seek
+            // Handle looping with immediate seek (no pause/resume for smoother loops)
             if (isLooping && loopEnd > loopStart) {
               if (time >= loopEnd) {
-                // Use synchronized seek for loop boundary
+                // Immediate seek without pause cycle - all stems jump to loop start
                 stemHowlsRef.current.forEach(({ howl }) => {
-                  howl.pause();
+                  howl.seek(loopStart);
                 });
-                reSeekAllStems(loopStart);
-                setTimeout(() => {
-                  if (useAudioStore.getState().isPlaying) {
-                    stemHowlsRef.current.forEach(({ howl }) => {
-                      howl.play();
-                    });
-                  }
-                }, SEEK_SYNC_DELAY_MS);
+                
+                // Reset master clock to prevent drift accumulation
+                playbackStartTimeRef.current = Date.now();
+                playbackStartPositionRef.current = loopStart;
+                
                 updateCurrentTime(loopStart);
               } else {
                 updateCurrentTime(time);
