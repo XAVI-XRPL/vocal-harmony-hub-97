@@ -39,6 +39,7 @@ export function PlaylistCard({ playlist, onEdit, onDelete, className }: Playlist
       onClick={handleClick}
       className={cn("overflow-hidden group cursor-pointer", className)}
       padding="none"
+      depth="floating"
       glow
     >
       {/* Cover art grid */}
@@ -100,7 +101,7 @@ export function PlaylistCard({ playlist, onEdit, onDelete, className }: Playlist
                 <MoreVertical className="w-4 h-4 text-white" />
               </motion.button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="glass-card border-white/10">
+            <DropdownMenuContent align="end" className="bg-popover/95 backdrop-blur-xl border border-white/20 shadow-xl z-50">
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onEdit?.(playlist); }}>
                 <Edit className="w-4 h-4 mr-2" />
                 Edit
@@ -118,8 +119,8 @@ export function PlaylistCard({ playlist, onEdit, onDelete, className }: Playlist
       </div>
 
       {/* Content */}
-      <div className="p-4">
-        <p className="font-medium text-foreground truncate">{playlist.name}</p>
+      <div className="p-4 bg-background/30 backdrop-blur-sm">
+        <p className="font-semibold text-foreground truncate drop-shadow-sm">{playlist.name}</p>
         <p className="text-sm text-muted-foreground">
           {songCount} {songCount === 1 ? 'exercise' : 'exercises'}
         </p>
