@@ -8,6 +8,7 @@ import { ProductGrid } from "@/components/store/ProductGrid";
 import { useProducts } from "@/hooks/useProducts";
 import { ProductCategory } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { VocalNotesDeskBackground } from "@/components/layout/VocalNotesDeskBackground";
 
 export default function VocalRiderStore() {
   const navigate = useNavigate();
@@ -20,11 +21,8 @@ export default function VocalRiderStore() {
 
   return (
     <div className="relative min-h-screen">
-      {/* Dressing Room Background */}
-      <div className="fixed inset-0 dressing-room-bg" />
-      
-      {/* Warm Overlay */}
-      <div className="fixed inset-0 bg-gradient-to-b from-background/40 via-background/60 to-background/90" />
+      {/* Vocal Notes Desk Background */}
+      <VocalNotesDeskBackground />
 
       {/* Content */}
       <div className="relative z-10">

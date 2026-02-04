@@ -28,6 +28,7 @@ const LOOP_RESET_DELAY_MS = 20;
 
 // Get sync tolerance based on stem count (more stems = slightly looser to avoid overcorrection)
 const getSyncTolerance = (stemCount: number): number => {
+  if (stemCount > 12) return 0.12; // 14 stems
   if (stemCount > 10) return 0.10;
   if (stemCount > 6) return 0.08;
   return 0.06;
