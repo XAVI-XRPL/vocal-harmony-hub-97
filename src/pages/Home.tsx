@@ -67,7 +67,7 @@ export default function Home() {
               variant="frosted"
               size="lg"
               icon={<Play className="w-6 h-6 fill-white" />}
-              onClick={() => navigate("/training-select")}
+              onClick={() => navigate("/library")}
               className="w-full max-w-sm mx-auto text-lg py-7 shadow-2xl shadow-primary/30"
             >
               Start Training

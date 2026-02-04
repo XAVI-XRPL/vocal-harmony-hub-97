@@ -14,7 +14,6 @@ import Library from "./pages/Library";
 import Playlists from "./pages/Playlists";
 import PlaylistDetail from "./pages/PlaylistDetail";
 import SongDetail from "./pages/SongDetail";
-import TrainingSelect from "./pages/TrainingSelect";
 import TrainingMode from "./pages/TrainingMode";
 import Profile from "./pages/Profile";
 import Progress from "./pages/Progress";
@@ -76,7 +75,6 @@ function AppContent() {
                   <Route path="/playlist/:id" element={<PlaylistDetail />} />
                   <Route path="/progress" element={<Progress />} />
                   <Route path="/song/:id" element={<SongDetail />} />
-                  <Route path="/training-select" element={<TrainingSelect />} />
                   <Route path="/training/:id" element={<TrainingMode />} />
                   <Route path="/training" element={<Library />} />
                   <Route path="/profile" element={<Profile />} />
