@@ -7,6 +7,7 @@ import { Song } from "@/types";
 import { useAudioStore } from "@/stores/audioStore";
 import { useUserStore } from "@/stores/userStore";
 import { usePlaylists } from "@/hooks/usePlaylists";
+import { useAudioPreload } from "@/hooks/useAudioPreload";
 import { AddToPlaylistDialog } from "@/components/playlist/AddToPlaylistDialog";
 import { cn } from "@/lib/utils";
 
@@ -28,9 +29,28 @@ export function SongCard({ song, variant = "default", className, showAddToPlayli
   const { setCurrentSong } = useAudioStore();
   const canAccessPremium = useUserStore((state) => state.canAccessPremiumContent());
   const { playlists, addSongToPlaylist, createPlaylist } = usePlaylists();
+  const { preloadOnHover, cancelPreload } = useAudioPreload();
   const [showPlaylistDialog, setShowPlaylistDialog] = useState(false);
 
   const isLocked = song.isPremium && !canAccessPremium;
+
+  // Preload handlers
+  const handleMouseEnter = () => {
+    if (!isLocked) {
+      preloadOnHover(song, 300); // 300ms debounce
+    }
+  };
+
+  const handleMouseLeave = () => {
+    cancelPreload(song.id);
+  };
+
+  const handleTouchStart = () => {
+    if (!isLocked) {
+      preloadOnHover(song, 150); // Shorter debounce for touch
+    }
+  };
+
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -65,6 +85,9 @@ export function SongCard({ song, variant = "default", className, showAddToPlayli
     return (
       <GlassCard
         onClick={handleClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
         className={cn("flex items-center gap-3 p-3", className)}
         padding="none"
       >
@@ -113,6 +136,9 @@ export function SongCard({ song, variant = "default", className, showAddToPlayli
       <>
         <GlassCard
           onClick={handleClick}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          onTouchStart={handleTouchStart}
           className={cn("relative overflow-hidden min-w-[280px]", className)}
           padding="none"
           glow
@@ -193,6 +219,9 @@ export function SongCard({ song, variant = "default", className, showAddToPlayli
     <>
       <GlassCard
         onClick={handleClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
         className={cn("overflow-hidden group", className)}
         padding="none"
         glow

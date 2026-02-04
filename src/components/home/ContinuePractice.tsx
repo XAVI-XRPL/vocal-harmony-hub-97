@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Play, Clock, ChevronRight, Loader2 } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { useSongs } from "@/hooks/useSongs";
+import { useAutoPreload, useAudioPreload } from "@/hooks/useAudioPreload";
 import { cn } from "@/lib/utils";
 
 interface ContinuePracticeProps {
@@ -12,9 +13,13 @@ interface ContinuePracticeProps {
 export function ContinuePractice({ className }: ContinuePracticeProps) {
   const navigate = useNavigate();
   const { data: songs, isLoading } = useSongs();
+  const { preloadOnHover, cancelPreload } = useAudioPreload();
   
   // Get first 2 songs as "recent" practice
   const recentSongs = songs?.slice(0, 2) ?? [];
+  
+  // Auto-preload the first 2 songs when component mounts
+  useAutoPreload(songs, 2);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -75,6 +80,9 @@ export function ContinuePractice({ className }: ContinuePracticeProps) {
               padding="sm"
               className="flex items-center gap-3"
               onClick={() => navigate(`/training/${song.id}`)}
+              onMouseEnter={() => preloadOnHover(song, 200)}
+              onMouseLeave={() => cancelPreload(song.id)}
+              onTouchStart={() => preloadOnHover(song, 100)}
             >
               {/* Cover art */}
               <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">

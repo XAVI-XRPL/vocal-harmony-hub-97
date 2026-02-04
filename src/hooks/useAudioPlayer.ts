@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { Howl } from 'howler';
 import { useAudioStore } from '@/stores/audioStore';
+import { useAudioPreloadStore } from '@/stores/audioPreloadStore';
 import { Song, Stem } from '@/types';
 
 interface StemHowl {
@@ -196,12 +197,25 @@ export function useAudioPlayer() {
       return;
     }
 
+    // Check if stems are preloaded in cache
+    const preloadStore = useAudioPreloadStore.getState();
+    const cachedStems = preloadStore.getCachedStems(song.id);
+    const isPreloaded = cachedStems && cachedStems.length > 0;
+    
+    if (isPreloaded) {
+      console.log(`⚡ Using preloaded cache for "${song.title}"`);
+    }
+
     let loadedCount = 0;
     const totalStems = stemsWithAudio.length;
 
     stemsWithAudio.forEach((stem) => {
+      // Use blob URL from cache if available, otherwise use original URL
+      const cachedStem = cachedStems?.find(c => c.stemId === stem.id);
+      const audioUrl = cachedStem?.blobUrl ?? stem.url;
+      
       const howl = new Howl({
-        src: [stem.url],
+        src: [audioUrl],
         html5: true, // Use HTML5 for better streaming
         preload: true,
         volume: 0.8,
@@ -219,7 +233,11 @@ export function useAudioPlayer() {
           
           if (loadedCount === totalStems) {
             setIsLoaded(true);
-            console.log('All stems loaded!');
+            if (isPreloaded) {
+              console.log('⚡ All stems loaded from cache!');
+            } else {
+              console.log('All stems loaded!');
+            }
           }
         },
         onloaderror: (id, error) => {

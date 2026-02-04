@@ -6,6 +6,7 @@ import { SongCard } from "@/components/song/SongCard";
 import { LibrarySkeleton } from "@/components/ui/loading-shimmer";
 import { IconButton } from "@/components/ui/icon-button";
 import { useSongs } from "@/hooks/useSongs";
+import { useAutoPreload } from "@/hooks/useAudioPreload";
 import { useUIStore } from "@/stores/uiStore";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,9 @@ export default function Library() {
   
   // Fetch songs from database
   const { data: songs, isLoading, error } = useSongs();
+  
+  // Auto-preload the first 2 songs when library loads
+  useAutoPreload(songs, 2);
 
   // Filter songs
   const filteredSongs = useMemo(() => {
