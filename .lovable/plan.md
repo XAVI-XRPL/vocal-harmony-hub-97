@@ -1,108 +1,86 @@
 
 
-# Add Studio Background to Training Pages
+# Enhance Studio Background with Reduced Opacity and Subtle Animation
 
 ## Overview
 
-Add the uploaded studio image (professional vocal recording studio with blue tones) as the background for all training mode pages, with adjusted opacity so the glass UI cards sit cleanly on top of it.
+Reduce the dark overlay opacity to let more of the studio image show through, and add a subtle slow zoom animation to create depth and visual interest.
 
 ---
 
 ## Current State
 
-The `TrainingMode.tsx` page uses a solid `bg-background` color with no background image. The other pages use the `StadiumBackground` component with animated particles and gradient effects.
+The `StudioBackground` component has:
+- Dark overlay at `bg-background/60` (60% opacity)
+- Gradient overlay from `from-background/40` to `to-background/80`
+- Static image with no animation
 
 ---
 
-## Implementation Approach
+## Changes
 
-### 1. Copy Image to Project
+### 1. Reduce Overlay Opacity
 
-Copy the uploaded studio image to the project assets folder:
+**File: `src/components/layout/StudioBackground.tsx`**
 
+| Element | Current | New |
+|---------|---------|-----|
+| Dark overlay | `bg-background/60` | `bg-background/40` |
+| Top gradient | `from-background/40` | `from-background/30` |
+| Bottom gradient | `to-background/80` | `to-background/60` |
+
+This will make the studio image more visible while still maintaining readability for glass cards.
+
+### 2. Add Slow Zoom Animation
+
+**File: `tailwind.config.ts`**
+
+Add a new keyframe animation for subtle zoom effect:
+
+```typescript
+keyframes: {
+  "slow-zoom": {
+    "0%": { transform: "scale(1)" },
+    "100%": { transform: "scale(1.1)" },
+  },
+}
+
+animation: {
+  "slow-zoom": "slow-zoom 30s ease-in-out infinite alternate",
+}
 ```
-user-uploads://image-10.png → src/assets/studio-background.png
-```
 
-### 2. Create a Dedicated Studio Background Component
+This creates a very slow, subtle zoom in and out (scale 1.0 to 1.1 over 30 seconds) that loops infinitely, giving the background a sense of depth without being distracting.
 
-**New File: `src/components/layout/StudioBackground.tsx`**
+### 3. Apply Animation to Background Image
 
-Create a dedicated background component for training pages that:
-- Displays the studio image as a full-screen background
-- Applies a dark overlay with adjustable opacity (around 40-50%) to ensure glass cards are readable
-- Includes a subtle gradient overlay to blend the image with the app's color scheme
-- Uses `object-cover` to ensure the image scales properly on all screen sizes
+**File: `src/components/layout/StudioBackground.tsx`**
 
-| Property | Value |
-|----------|-------|
-| Position | Fixed, full viewport coverage |
-| Image fit | `object-cover` (fills container, crops if needed) |
-| Overlay opacity | ~50% dark overlay for card readability |
-| Z-index | `-10` (behind all content) |
-
-### 3. Update Training Mode Page
-
-**File: `src/pages/TrainingMode.tsx`**
-
-| Change | Details |
-|--------|---------|
-| Import | Add import for `StudioBackground` component |
-| Add component | Place `<StudioBackground />` at the start of the container |
-| Adjust styling | Make container background transparent to show the studio image |
-
----
-
-## Technical Implementation
-
-### StudioBackground Component Structure
+Add the `animate-slow-zoom` class to the image element:
 
 ```tsx
-// Conceptual structure
-<div className="fixed inset-0 -z-10 overflow-hidden">
-  {/* Studio image */}
-  <img 
-    src={studioBackground}
-    className="absolute inset-0 w-full h-full object-cover"
-  />
-  
-  {/* Dark overlay for card readability */}
-  <div className="absolute inset-0 bg-background/60" />
-  
-  {/* Optional: gradient overlay for color blending */}
-  <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-transparent to-background/80" />
-</div>
+<img
+  src={studioBackground}
+  alt=""
+  className="absolute inset-0 w-full h-full object-cover animate-slow-zoom"
+/>
 ```
-
-### Opacity Adjustments
-
-The overlay opacity values are chosen to:
-- Keep the studio atmosphere visible (you can see the microphone, acoustic panels, couch)
-- Ensure glass cards with `backdrop-blur` remain readable
-- Maintain sufficient contrast for text and controls
-
-| Element | Opacity |
-|---------|---------|
-| Main dark overlay | 50-60% |
-| Top gradient fade | 40% |
-| Bottom gradient fade | 80% (fades to solid for transport controls) |
 
 ---
 
-## Files to Create/Modify
+## Files to Modify
 
-| File | Action |
-|------|--------|
-| `src/assets/studio-background.png` | Copy from user upload |
-| `src/components/layout/StudioBackground.tsx` | Create new component |
-| `src/pages/TrainingMode.tsx` | Add StudioBackground, adjust container styling |
+| File | Changes |
+|------|---------|
+| `tailwind.config.ts` | Add `slow-zoom` keyframe and animation |
+| `src/components/layout/StudioBackground.tsx` | Reduce overlay opacity values, add zoom animation to image |
 
 ---
 
 ## Visual Result
 
-- The studio atmosphere (microphone, acoustic panels, music stand, blue ambient lighting) will be visible behind the training interface
-- Glass cards will have a "frosted" effect over the studio image
-- The professional recording studio vibe will enhance the training experience
-- Works for all songs in training mode (Testify Exercise, Throwback Exercise, etc.)
+- More of the studio atmosphere will be visible (microphone, acoustic panels, blue lighting)
+- The image will slowly, subtly zoom in and out creating a cinematic depth effect
+- Glass cards will still be readable but with a richer background presence
+- Animation is slow enough (30s cycle) to not be distracting during training sessions
 
