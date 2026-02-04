@@ -1,151 +1,250 @@
 
-# Vocal Rider Store: Kimad Products Integration
+# Phase 7: Database Migration & Pull-to-Refresh Implementation
 
 ## Overview
-Replace the current mock products with real products from Kimad Productions Store (kimadstore.com). These are curated vocal health products used by professional vocalists, including throat care items, hydration tools, essential oils, and supplements.
-
-## Products to Implement
-
-Based on the Kimad Store content, here are the products to add:
-
-### Throat Care & Lozenges
-1. **Grether's Pastilles Variety Pack** - Blackcurrant flavor, professional throat lozenges
-2. **Grether's Pastilles Elderflower** - Premium Swiss throat pastilles
-3. **Traditional Medicinals Throat Coat Lozenges** - Echinacea formula
-4. **ACT Dry Mouth Lozenges** - Soothing moisturizing lozenges
-5. **doTERRA On Guard Throat Drops** - Essential oil throat drops
-
-### Hydration & Nebulizers
-6. **VocalMist Portable Nebulizer** - Professional vocal hydration device
-7. **VocalMist Carrying Case** - Protective case for nebulizer
-8. **VocalMist Hydration Formula Refill Pack** - Saline refills
-9. **Voice Straw H2O** - Vocal exercise straw (Coming Soon placeholder)
-
-### Essential Oils (doTERRA)
-10. **doTERRA On Guard Softgels** - Immune support blend
-11. **doTERRA Breathe Essential Oil** - Respiratory support blend
-12. **doTERRA Lavender Essential Oil** - Relaxation and wellness
-13. **doTERRA Deep Blue Rub** - Muscle relief for performers
-14. **doTERRA On Guard Chewable Tablets** - Immune chewables
-
-### Teas & Honey
-15. **Traditional Medicinals Throat Coat Tea** - Classic herbal throat tea
-16. **Throat Coat Eucalyptus Tea** - Eucalyptus variant
-17. **Yogi Tea Throat Comfort** - Licorice-based soothing tea
-18. **Manuka Health Honey MGO 573+** - Premium NZ manuka honey
-19. **Wedderspoon Manuka Honey Drops** - Honey lozenges variety
-
-### Nasal & Sinus Care
-20. **Ponaris Nasal Emollient** - Nasal moisturizer
-21. **Alkalol Nasal Wash** - Nasal rinse solution
-
-### Allergy & Wellness
-22. **Zyrtec Allergy Tablets** - Antihistamine
-23. **Allegra 24HR Non-Drowsy** - Allergy relief
-24. **Claritin Non-Drowsy** - Allergy medicine
-25. **Mucinex Chest Congestion** - Expectorant
-26. **TUMS Antacid Chewables** - Acid reflux relief
-
-### Recovery
-27. **BEMER Therapy** - Professional recovery device (featured)
+This plan migrates the remaining mock data to the database and adds pull-to-refresh functionality to the Home page. The database already has several tables seeded (partner_brands, cities, venues), but products, gear_products, medical_providers, and checklist_items still need to be populated.
 
 ---
 
-## Implementation Details
+## Part 1: Database Schema Updates
 
-### 1. Update Product Categories
-Expand the `ProductCategory` type to include new categories:
-- `throat-care` - Lozenges, sprays, pastilles
-- `hydration` - Nebulizers, steamers, straws
-- `essential-oils` - doTERRA and similar products
-- `tea-honey` - Teas and honey products
-- `nasal-sinus` - Nasal care products
-- `allergy-wellness` - OTC medications
-- `accessories` - Cases, travel items
+### 1.1 Update Product Category Enum
+The current `product_category` enum supports: `throat-care`, `hydration`, `vitamins`, `accessories`, `apparel`
 
-### 2. New Mock Products Data
-Replace `src/data/mockProducts.ts` with Kimad store products:
-- Include real Amazon affiliate links from the site
-- Use product-appropriate placeholder images
-- Include VocalMist and Voice Straw affiliate links with discount codes
-- Mark key products as featured
+The Kimad products require: `throat-care`, `hydration`, `essential-oils`, `tea-honey`, `nasal-sinus`, `allergy-wellness`, `accessories`
 
-### 3. Update Category Filter
-Modify `CategoryFilter.tsx` to include the new categories with appropriate icons.
+**Action:** Add missing enum values via migration:
+```sql
+ALTER TYPE product_category ADD VALUE 'essential-oils';
+ALTER TYPE product_category ADD VALUE 'tea-honey';
+ALTER TYPE product_category ADD VALUE 'nasal-sinus';
+ALTER TYPE product_category ADD VALUE 'allergy-wellness';
+```
 
-### 4. Enhanced Product Card
-Update `ProductCard.tsx` to:
-- Show discount codes when available (e.g., "Use Code RAAB10")
-- Display "Coming Soon" badge for unreleased products
-- Add partner brand indicator for VocalMist/doTERRA products
+### 1.2 Add Missing Columns to Products Table
+The mock data includes fields not present in the database:
+- `discount_code` (text, nullable)
+- `is_coming_soon` (boolean, default false)
+- `is_partner_brand` (boolean, default false)
 
-### 5. Store Hero Update
-Update `DressingRoomHero.tsx` to reference Kimad Productions branding subtly while maintaining the RVMT aesthetic.
-
-### 6. Home Preview Update
-Update `VocalRiderPicks.tsx` to showcase featured Kimad products.
+**Action:** Add columns via migration:
+```sql
+ALTER TABLE products ADD COLUMN discount_code text;
+ALTER TABLE products ADD COLUMN is_coming_soon boolean DEFAULT false;
+ALTER TABLE products ADD COLUMN is_partner_brand boolean DEFAULT false;
+```
 
 ---
 
-## File Changes
+## Part 2: Seed Database Tables
 
-| File | Action | Description |
-|------|--------|-------------|
-| `src/types/index.ts` | Modify | Add new product categories |
-| `src/data/mockProducts.ts` | Replace | New Kimad products data |
-| `src/components/store/CategoryFilter.tsx` | Modify | Add new category tabs |
-| `src/components/store/ProductCard.tsx` | Modify | Add discount code display |
-| `src/components/home/VocalRiderPicks.tsx` | Modify | Update featured products display |
+### 2.1 Seed Products Table (27 Kimad Products)
+Insert all products from `mockProducts.ts` into the `products` table with proper category mapping.
+
+### 2.2 Seed Gear Products Table (12 Products)
+Insert all gear products from `mockBrands.ts` into `gear_products` table.
+
+### 2.3 Seed Medical Providers Table (15 Doctors)
+Insert all doctors from `mockDoctors.ts` into `medical_providers` table.
+
+### 2.4 Seed Checklist Items Table (8 Items)
+Insert all checklist items from `mockChecklist.ts` into `checklist_items` table.
+
+---
+
+## Part 3: Create Data Fetching Hooks
+
+### 3.1 Create `useProducts` Hook
+New file: `src/hooks/useProducts.ts`
+
+```text
+Hook structure:
+- Fetch products from Supabase with filtering support
+- Transform database snake_case to camelCase
+- Support category filtering
+- Include featured products helper
+```
+
+### 3.2 Create `useGearProducts` Hook
+New file: `src/hooks/useGearProducts.ts`
+
+```text
+Hook structure:
+- Fetch gear products from Supabase
+- Join with partner_brands for brand info
+- Support category filtering
+```
+
+### 3.3 Create `useMedicalProviders` Hook
+New file: `src/hooks/useMedicalProviders.ts`
+
+```text
+Hook structure:
+- Fetch medical providers by city
+- Join with cities table for location info
+```
+
+### 3.4 Create `useChecklistItems` Hook
+New file: `src/hooks/useChecklistItems.ts`
+
+```text
+Hook structure:
+- Fetch checklist items from Supabase
+- Include user progress tracking (if authenticated)
+```
+
+### 3.5 Create `useCities` Hook
+New file: `src/hooks/useCities.ts`
+
+```text
+Hook structure:
+- Fetch cities with venue/doctor counts
+- Used for map markers and filtering
+```
+
+---
+
+## Part 4: Update Components to Use Database
+
+### 4.1 Update VocalRiderStore Page
+**File:** `src/pages/VocalRiderStore.tsx`
+
+Changes:
+- Import and use `useProducts` hook instead of `mockProducts`
+- Add loading state with shimmer
+- Handle empty state
+
+### 4.2 Update VocalRiderPicks Component
+**File:** `src/components/home/VocalRiderPicks.tsx`
+
+Changes:
+- Use `useProducts` hook instead of importing `mockProducts`
+- Add loading shimmer state
+
+### 4.3 Update StagePrep Page
+**File:** `src/pages/StagePrep.tsx`
+
+Changes:
+- Use `useGearProducts` hook instead of `mockGearProducts`
+- Use `usePartnerBrands` hook instead of `mockBrands`
+- Use `useChecklistItems` hook instead of `mockChecklist`
+
+### 4.4 Update FeaturedGearPreview Component
+**File:** `src/components/home/FeaturedGearPreview.tsx`
+
+Changes:
+- Use hooks for real-time data fetching
+
+### 4.5 Update VocalHealth Page
+**File:** `src/pages/VocalHealth.tsx`
+
+Changes:
+- Use `useMedicalProviders` and `useCities` hooks
+- Replace mock data imports
+
+---
+
+## Part 5: Pull-to-Refresh Implementation
+
+### 5.1 Create usePullToRefresh Hook
+New file: `src/hooks/usePullToRefresh.ts`
+
+```text
+Features:
+- Track touch/drag position
+- Trigger refresh callback when pulled past threshold
+- Animate pull indicator
+- Disable during active refresh
+```
+
+### 5.2 Create PullToRefresh Component
+New file: `src/components/ui/pull-to-refresh.tsx`
+
+```text
+UI features:
+- Animated spinner/arrow indicator
+- Progress bar during pull
+- Smooth spring animations via framer-motion
+- Haptic feedback on mobile (if available)
+```
+
+### 5.3 Integrate into Home Page
+**File:** `src/pages/Home.tsx`
+
+Changes:
+- Wrap content with PullToRefresh component
+- Invalidate React Query cache on refresh
+- Refetch songs, products, and user stats
+- Show toast notification on successful refresh
+
+---
+
+## Part 6: Create Partner Brands Hook
+
+### 6.1 Create `usePartnerBrands` Hook
+New file: `src/hooks/usePartnerBrands.ts`
+
+```text
+Hook structure:
+- Fetch partner brands from Supabase
+- Data already seeded in database
+```
+
+---
+
+## File Changes Summary
+
+| File | Action | Purpose |
+|------|--------|---------|
+| `src/hooks/useProducts.ts` | Create | Fetch products from DB |
+| `src/hooks/useGearProducts.ts` | Create | Fetch gear products from DB |
+| `src/hooks/useMedicalProviders.ts` | Create | Fetch doctors from DB |
+| `src/hooks/useChecklistItems.ts` | Create | Fetch checklist from DB |
+| `src/hooks/useCities.ts` | Create | Fetch cities from DB |
+| `src/hooks/usePartnerBrands.ts` | Create | Fetch partner brands from DB |
+| `src/hooks/usePullToRefresh.ts` | Create | Pull-to-refresh logic |
+| `src/components/ui/pull-to-refresh.tsx` | Create | PTR UI component |
+| `src/pages/Home.tsx` | Modify | Add pull-to-refresh |
+| `src/pages/VocalRiderStore.tsx` | Modify | Use hooks instead of mock |
+| `src/pages/StagePrep.tsx` | Modify | Use hooks instead of mock |
+| `src/components/home/VocalRiderPicks.tsx` | Modify | Use hooks |
+| `src/components/home/FeaturedGearPreview.tsx` | Modify | Use hooks |
+
+---
+
+## Database Operations Required
+
+### Migrations (Schema Changes)
+1. Add new enum values to `product_category`
+2. Add columns to `products` table
+
+### Data Inserts
+1. 27 products into `products` table
+2. 12 gear products into `gear_products` table  
+3. 15 medical providers into `medical_providers` table
+4. 8 checklist items into `checklist_items` table
 
 ---
 
 ## Technical Notes
 
-### Affiliate Links
-- VocalMist: `https://myvocalmist.com/?sca_ref=922`
-- Voice Straw: `https://voicestraw.com/` (Code: RAAB10)
-- doTERRA: `https://referral.doterra.me/6111833` (25% off)
-- Amazon products: Direct Amazon links with product ASINs
+### React Query Cache Invalidation
+The pull-to-refresh will invalidate these query keys:
+- `['songs']`
+- `['products']`
+- `['gear-products']`
+- `['partner-brands']`
 
-### Image Strategy
-Since we cannot scrape actual product images, we will use:
-- High-quality stock photos from Unsplash matching product types
-- Consistent image dimensions (300x300)
-- Product category-appropriate imagery
+### Touch Event Handling
+The PullToRefresh component will:
+- Use `onTouchStart`, `onTouchMove`, `onTouchEnd` events
+- Calculate pull distance from touch delta
+- Apply resistance curve for natural feel
+- Threshold: 80px pull distance to trigger
 
-### Discount Codes to Display
-- **RAAB10** - Voice Straw products
-- **RVMT15** - Partner discount (if applicable)
-- **doTERRA 25% OFF** - First year discount
+### Loading States
+All components will show:
+- Skeleton shimmer during initial load
+- Spinner during refresh
+- Graceful empty states if no data
 
----
-
-## UI Enhancements
-
-### Discount Badge Component
-```text
-+---------------------------+
-|  [Featured]               |
-|  [Product Image]          |
-|                           |
-|  VocalMist                |
-|  Portable Nebulizer       |
-|  ★ 4.9 (234)              |
-|  $149.99                  |
-|  [Use Code: RAAB10] ←NEW  |
-+---------------------------+
-```
-
-### Category Pills (Updated)
-```text
-[All] [Throat Care] [Hydration] [Essential Oils] [Tea & Honey] [Nasal Care] [Allergy]
-```
-
----
-
-## Next Steps After Approval
-1. Update types with new categories
-2. Create comprehensive product data file
-3. Update UI components for discount codes
-4. Test all affiliate links work correctly
-5. Verify responsive layout with new product count
