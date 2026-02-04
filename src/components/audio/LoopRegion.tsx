@@ -31,6 +31,8 @@ export function LoopRegion({
   const containerRef = useRef<HTMLDivElement>(null);
   const [draggingMarker, setDraggingMarker] = useState<'start' | 'end' | null>(null);
   const lastTapTimeRef = useRef<{ start: number; end: number; region: number }>({ start: 0, end: 0, region: 0 });
+  const throttleRef = useRef<number>(0);
+  const THROTTLE_MS = 50;
 
   const startPercent = duration > 0 ? (loopStart / duration) * 100 : 0;
   const endPercent = duration > 0 ? (loopEnd / duration) * 100 : 0;
@@ -86,9 +88,14 @@ export function LoopRegion({
     setDraggingMarker(marker);
   }, [handleMarkerDoubleTap]);
 
-  // Handle marker drag move
+  // Handle marker drag move with throttling to prevent React queue corruption
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!draggingMarker) return;
+    
+    // Throttle updates to prevent high-frequency state changes
+    const now = Date.now();
+    if (now - throttleRef.current < THROTTLE_MS) return;
+    throttleRef.current = now;
     
     const time = getTimeFromEvent(e);
     
