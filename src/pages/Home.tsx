@@ -4,7 +4,6 @@ import { Play, TrendingUp, Clock, Sparkles } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassCard } from "@/components/ui/glass-card";
-import { VocalProgressDiagram } from "@/components/home/VocalProgressDiagram";
 import { ContinuePractice } from "@/components/home/ContinuePractice";
 import { useUserStore } from "@/stores/userStore";
 import stadiumBg from "@/assets/stadium-background.png";
@@ -29,20 +28,6 @@ export default function Home() {
   const navigate = useNavigate();
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
 
-  // Mock progress data (would come from user store/API in real app)
-  const progressData = {
-    overallProgress: 67,
-    level: "intermediate" as const,
-    skills: {
-      pitch: 75,
-      breath: 60,
-      range: 45,
-      rhythm: 80,
-    },
-    streak: 7,
-    sessions: 12,
-  };
-
   return (
     <div className="min-h-screen relative">
       {/* Stadium Background Image */}
@@ -63,32 +48,31 @@ export default function Home() {
         animate="visible"
         className="relative z-10 px-4 pb-8"
       >
-        {/* Hero Section - Clean without icon */}
-        <motion.section variants={itemVariants} className="py-6 text-center">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2">
+        {/* Hero Section with prominent CTA */}
+        <motion.section variants={itemVariants} className="py-8 text-center">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-3">
             Master Your <span className="gradient-text">Voice</span>
           </h1>
-          <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+          <p className="text-muted-foreground text-sm max-w-xs mx-auto mb-8">
             Train with isolated stems. Control every element of the mix.
           </p>
-        </motion.section>
-
-        {/* Vocal Progress Diagram */}
-        <motion.section variants={itemVariants} className="mb-6">
-          <VocalProgressDiagram {...progressData} />
-        </motion.section>
-
-        {/* Start Training CTA */}
-        <motion.section variants={itemVariants} className="mb-6">
-          <GlassButton
-            variant="frosted"
-            size="lg"
-            icon={<Play className="w-5 h-5 fill-white" />}
-            onClick={() => navigate("/training-select")}
-            className="w-full text-base py-6"
+          
+          {/* Main Start Training Button - Hero CTA */}
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
           >
-            Start Training
-          </GlassButton>
+            <GlassButton
+              variant="frosted"
+              size="lg"
+              icon={<Play className="w-6 h-6 fill-white" />}
+              onClick={() => navigate("/training-select")}
+              className="w-full max-w-sm mx-auto text-lg py-7 shadow-2xl shadow-primary/30"
+            >
+              Start Training
+            </GlassButton>
+          </motion.div>
         </motion.section>
 
         {/* Quick Stats */}
