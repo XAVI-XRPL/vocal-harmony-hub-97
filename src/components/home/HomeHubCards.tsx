@@ -1,29 +1,26 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ShoppingBag, Stethoscope, Headphones, ChevronRight } from "lucide-react";
+import { Mic, Stethoscope, Headphones } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const hubModules = [
   {
-    title: "Vocal Rider Store",
-    description: "Curated products for vocal health",
-    icon: ShoppingBag,
+    title: "Store",
+    icon: Mic,
     path: "/store",
-    accentClass: "hub-accent-store",
+    color: "#22c55e", // green
   },
   {
     title: "Vocal Health",
-    description: "Find ENT doctors & specialists",
     icon: Stethoscope,
     path: "/vocal-health",
-    accentClass: "hub-accent-health",
+    color: "#ef4444", // red
   },
   {
     title: "Stage Prep",
-    description: "IEMs, gear & pre-show checklists",
     icon: Headphones,
     path: "/stage-prep",
-    accentClass: "hub-accent-stage",
+    color: "#14b8a6", // teal
   },
 ];
 
@@ -32,14 +29,23 @@ const containerVariants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.08,
+      staggerChildren: 0.1,
     },
   },
 };
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0 },
+  hidden: { opacity: 0, scale: 0.8, y: 20 },
+  visible: { 
+    opacity: 1, 
+    scale: 1, 
+    y: 0,
+    transition: {
+      type: "spring" as const,
+      stiffness: 300,
+      damping: 20,
+    }
+  },
 };
 
 export function HomeHubCards() {
@@ -50,7 +56,7 @@ export function HomeHubCards() {
       variants={containerVariants}
       initial="hidden"
       animate="visible"
-      className="flex flex-col gap-3"
+      className="grid grid-cols-3 gap-3"
     >
       {hubModules.map((module) => (
         <motion.button
@@ -58,52 +64,62 @@ export function HomeHubCards() {
           variants={cardVariants}
           onClick={() => navigate(module.path)}
           className={cn(
-            "w-full relative overflow-hidden",
+            "relative overflow-hidden",
             "glass-card p-4 rounded-2xl",
-            "flex items-center gap-4",
-            "text-left transition-all duration-300",
-            "group",
-            module.accentClass
+            "flex flex-col items-center justify-center gap-2",
+            "text-center transition-all duration-300",
+            "group aspect-square"
           )}
-          whileHover={{ scale: 1.02, y: -2 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ 
+            y: -4, 
+            scale: 1.02,
+            boxShadow: `0 8px 30px ${module.color}40`,
+          }}
+          whileTap={{ scale: 0.95 }}
+          style={{
+            ["--card-accent" as string]: module.color,
+          }}
         >
-          {/* Accent Glow Background */}
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 hub-card-glow" />
-
-          {/* Icon Container */}
-          <div className={cn(
-            "relative z-10 flex-shrink-0",
-            "w-12 h-12 rounded-xl",
-            "flex items-center justify-center",
-            "hub-icon-bg transition-all duration-300",
-            "group-hover:scale-105"
-          )}>
-            <module.icon className="w-6 h-6 hub-icon-color" strokeWidth={1.5} />
-          </div>
-
-          {/* Content */}
-          <div className="relative z-10 flex-1 min-w-0">
-            <h3 className="text-base font-semibold text-foreground mb-0.5 truncate">
-              {module.title}
-            </h3>
-            <p className="text-sm text-muted-foreground line-clamp-1">
-              {module.description}
-            </p>
-          </div>
-
-          {/* Arrow */}
-          <ChevronRight 
-            className={cn(
-              "relative z-10 w-5 h-5 text-muted-foreground",
-              "transition-all duration-300",
-              "group-hover:translate-x-1 group-hover:text-foreground"
-            )} 
+          {/* Glow Background on Hover */}
+          <motion.div 
+            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"
+            style={{
+              background: `radial-gradient(circle at center, ${module.color}20 0%, transparent 70%)`,
+            }}
           />
+
+          {/* Icon Container with Pulse */}
+          <motion.div
+            className={cn(
+              "relative z-10",
+              "w-12 h-12 rounded-xl",
+              "flex items-center justify-center",
+              "bg-white/10 backdrop-blur-sm",
+              "transition-all duration-300",
+              "group-hover:scale-110"
+            )}
+            style={{
+              boxShadow: `0 0 0 1px ${module.color}30`,
+            }}
+            whileHover={{
+              boxShadow: `0 0 20px ${module.color}50`,
+            }}
+          >
+            <module.icon 
+              className="w-6 h-6 transition-all duration-300"
+              style={{ color: module.color }}
+              strokeWidth={1.5} 
+            />
+          </motion.div>
+
+          {/* Title */}
+          <span className="relative z-10 text-sm font-medium text-foreground truncate w-full">
+            {module.title}
+          </span>
 
           {/* Shimmer Effect */}
           <motion.div
-            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent"
+            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent rounded-2xl"
             initial={{ x: "-100%" }}
             whileHover={{ x: "100%" }}
             transition={{ duration: 0.6 }}
