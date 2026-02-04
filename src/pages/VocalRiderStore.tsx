@@ -5,18 +5,18 @@ import { useNavigate } from "react-router-dom";
 import { DressingRoomHero } from "@/components/store/DressingRoomHero";
 import { CategoryFilter } from "@/components/store/CategoryFilter";
 import { ProductGrid } from "@/components/store/ProductGrid";
-import { mockProducts } from "@/data/mockProducts";
+import { useProducts } from "@/hooks/useProducts";
 import { ProductCategory } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function VocalRiderStore() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<ProductCategory | "all">("all");
+  
+  const { data: products, isLoading } = useProducts({ category: selectedCategory });
+  const { data: allProducts } = useProducts();
 
-  const filteredProducts = selectedCategory === "all"
-    ? mockProducts
-    : mockProducts.filter((p) => p.category === selectedCategory);
-
-  const featuredProducts = mockProducts.filter((p) => p.isFeatured);
+  const featuredProducts = (allProducts || []).filter((p) => p.isFeatured);
 
   return (
     <div className="relative min-h-screen">
@@ -61,7 +61,19 @@ export default function VocalRiderStore() {
 
         {/* Product Grid */}
         <div className="px-4 pb-32">
-          <ProductGrid products={filteredProducts} />
+          {isLoading ? (
+            <div className="grid grid-cols-2 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="aspect-square rounded-xl" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <ProductGrid products={products || []} />
+          )}
         </div>
       </div>
     </div>

@@ -1,11 +1,39 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Headphones, ChevronRight } from "lucide-react";
-import { mockGearProducts, mockBrands } from "@/data/mockBrands";
+import { useGearProducts } from "@/hooks/useGearProducts";
+import { usePartnerBrands } from "@/hooks/usePartnerBrands";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function FeaturedGearPreview() {
   const navigate = useNavigate();
-  const featuredGear = mockGearProducts.filter((g) => g.isFeatured && g.category === "iem").slice(0, 3);
+  const { data: gearProducts, isLoading: isLoadingGear } = useGearProducts({ featured: true });
+  const { data: brands, isLoading: isLoadingBrands } = usePartnerBrands();
+  
+  const featuredGear = (gearProducts || []).filter((g) => g.category === "iem").slice(0, 3);
+  const isLoading = isLoadingGear || isLoadingBrands;
+
+  if (isLoading) {
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-accent-stage/20">
+              <Headphones className="w-4 h-4 text-accent-stage" />
+            </div>
+            <h2 className="text-base font-semibold text-foreground">Prep for the Stage</h2>
+          </div>
+        </div>
+        <div className="overflow-x-auto hide-scrollbar -mx-4 px-4">
+          <div className="flex gap-3 pb-2">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="flex-shrink-0 w-40 aspect-square rounded-xl" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -28,7 +56,7 @@ export function FeaturedGearPreview() {
       <div className="overflow-x-auto hide-scrollbar -mx-4 px-4">
         <div className="flex gap-3 pb-2">
           {featuredGear.map((product, index) => {
-            const brand = mockBrands.find((b) => b.id === product.brandId);
+            const brand = (brands || []).find((b) => b.id === product.brandId);
             return (
               <motion.div
                 key={product.id}
