@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { PlaylistCard } from "@/components/playlist/PlaylistCard";
 import { CreatePlaylistDialog } from "@/components/playlist/CreatePlaylistDialog";
+import { RecordsWallBackground } from "@/components/layout/RecordsWallBackground";
 import { usePlaylists } from "@/hooks/usePlaylists";
 import { Playlist } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,11 +85,13 @@ export default function Playlists() {
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="p-4 md:p-6 space-y-6"
-    >
+    <>
+      <RecordsWallBackground />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="p-4 md:p-6 space-y-6"
+      >
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -167,6 +170,7 @@ export default function Playlists() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </motion.div>
+      </motion.div>
+    </>
   );
 }
