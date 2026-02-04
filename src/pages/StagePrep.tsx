@@ -6,19 +6,22 @@ import { PartnerBrandCarousel } from "@/components/stageprep/PartnerBrandCarouse
 import { GearGrid } from "@/components/stageprep/GearGrid";
 import { PreShowChecklist } from "@/components/stageprep/PreShowChecklist";
 import { GearCategoryFilter } from "@/components/stageprep/GearCategoryFilter";
-import { mockBrands, mockGearProducts } from "@/data/mockBrands";
-import { mockChecklist } from "@/data/mockChecklist";
+import { useGearProducts } from "@/hooks/useGearProducts";
+import { usePartnerBrands } from "@/hooks/usePartnerBrands";
+import { useChecklistItems } from "@/hooks/useChecklistItems";
 import { GearCategory } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function StagePrep() {
   const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<GearCategory | "all">("all");
 
-  const filteredGear = selectedCategory === "all"
-    ? mockGearProducts
-    : mockGearProducts.filter((g) => g.category === selectedCategory);
+  const { data: gearProducts, isLoading: isLoadingGear } = useGearProducts({ category: selectedCategory });
+  const { data: allGear } = useGearProducts();
+  const { data: brands, isLoading: isLoadingBrands } = usePartnerBrands();
+  const { data: checklistItems, isLoading: isLoadingChecklist } = useChecklistItems();
 
-  const featuredGear = mockGearProducts.filter((g) => g.isFeatured);
+  const featuredGear = (allGear || []).filter((g) => g.isFeatured);
 
   return (
     <div className="relative min-h-screen">
@@ -61,7 +64,15 @@ export default function StagePrep() {
             <h2 className="text-lg font-semibold text-foreground">Partner Discounts</h2>
             <p className="text-xs text-muted-foreground mt-1">Exclusive deals for RVMT members</p>
           </div>
-          <PartnerBrandCarousel brands={mockBrands} />
+          {isLoadingBrands ? (
+            <div className="flex gap-3 px-4 overflow-hidden">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="flex-shrink-0 w-48 h-24 rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <PartnerBrandCarousel brands={brands || []} />
+          )}
         </section>
 
         {/* Featured IEMs Hero */}
@@ -111,7 +122,19 @@ export default function StagePrep() {
           <h2 className="text-lg font-semibold text-foreground mb-3">
             {selectedCategory === "all" ? "All Gear" : selectedCategory.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}
           </h2>
-          <GearGrid products={filteredGear} brands={mockBrands} />
+          {isLoadingGear ? (
+            <div className="grid grid-cols-2 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="aspect-square rounded-xl" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <GearGrid products={gearProducts || []} brands={brands || []} />
+          )}
         </section>
 
         {/* Pre-Show Checklist Section */}
@@ -120,7 +143,15 @@ export default function StagePrep() {
             <CheckCircle2 className="w-5 h-5 text-accent-stage" />
             <h2 className="text-lg font-semibold text-foreground">Pre-Show Checklist</h2>
           </div>
-          <PreShowChecklist items={mockChecklist} />
+          {isLoadingChecklist ? (
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-16 rounded-xl" />
+              ))}
+            </div>
+          ) : (
+            <PreShowChecklist items={checklistItems || []} />
+          )}
         </section>
       </div>
     </div>

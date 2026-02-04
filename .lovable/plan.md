@@ -1,83 +1,59 @@
+# Phase 7: Database Migration & Pull-to-Refresh - COMPLETED ✅
 
-
-# Add DELETE Policies for User Data Tables
-
-## Overview
-Add Row-Level Security DELETE policies to allow users to delete their own practice data. This addresses a data rights gap where users can create and view their data but cannot remove it.
-
-## Security Finding Resolution
-
-### Accepted Risk: Medical Providers Public Access
-The `medical_providers` table has been marked as an accepted security risk. This is a public doctor directory feature (similar to Yelp/ZocDoc) where healthcare providers intentionally want their professional contact information publicly accessible.
+## Summary
+Successfully migrated mock data to database and implemented pull-to-refresh functionality.
 
 ---
 
-## Database Migration
+## Completed Tasks
 
-### Tables Affected
-| Table | Current Policies | Missing Policy |
-|-------|------------------|----------------|
-| `practice_sessions` | SELECT, INSERT, UPDATE | DELETE |
-| `user_song_progress` | SELECT, INSERT, UPDATE | DELETE |
+### ✅ Database Schema Updates
+- Added new product category enum values: `essential-oils`, `tea-honey`, `nasal-sinus`, `allergy-wellness`
+- Added new columns to products table: `discount_code`, `is_coming_soon`, `is_partner_brand`
 
-### SQL Migration
+### ✅ Database Seeding
+| Table | Records Inserted |
+|-------|------------------|
+| products | 27 |
+| gear_products | 12 |
+| medical_providers | 15 |
+| checklist_items | 8 |
 
-```sql
--- Add DELETE policy for practice_sessions
--- Allows users to delete their own practice session records
-CREATE POLICY "Users can delete their own practice sessions"
-  ON public.practice_sessions
-  FOR DELETE
-  TO authenticated
-  USING (auth.uid() = user_id);
+### ✅ Data Fetching Hooks Created
+- `src/hooks/useProducts.ts` - Products with filtering
+- `src/hooks/useGearProducts.ts` - Gear products with filtering
+- `src/hooks/usePartnerBrands.ts` - Partner brands
+- `src/hooks/useMedicalProviders.ts` - Medical providers by city
+- `src/hooks/useChecklistItems.ts` - Checklist items
+- `src/hooks/useCities.ts` - Cities with counts
 
--- Add DELETE policy for user_song_progress
--- Allows users to delete their own song progress records
-CREATE POLICY "Users can delete their own song progress"
-  ON public.user_song_progress
-  FOR DELETE
-  TO authenticated
-  USING (auth.uid() = user_id);
-```
+### ✅ Pull-to-Refresh Implementation
+- `src/hooks/usePullToRefresh.ts` - Core PTR logic with touch handling
+- `src/components/ui/pull-to-refresh.tsx` - Animated UI component
 
----
-
-## Policy Details
-
-### practice_sessions DELETE Policy
-- **Name**: "Users can delete their own practice sessions"
-- **Command**: DELETE
-- **Role**: authenticated
-- **Using Expression**: `auth.uid() = user_id`
-- **Purpose**: Allow users to remove individual practice session records
-
-### user_song_progress DELETE Policy
-- **Name**: "Users can delete their own song progress"
-- **Command**: DELETE
-- **Role**: authenticated
-- **Using Expression**: `auth.uid() = user_id`
-- **Purpose**: Allow users to clear their progress on specific songs
-
----
-
-## Security Verification
-
-After applying these policies, both tables will have complete CRUD coverage:
-
-| Operation | practice_sessions | user_song_progress |
-|-----------|-------------------|-------------------|
-| SELECT | `auth.uid() = user_id` | `auth.uid() = user_id` |
-| INSERT | `auth.uid() = user_id` | `auth.uid() = user_id` |
-| UPDATE | `auth.uid() = user_id` | `auth.uid() = user_id` |
-| DELETE | `auth.uid() = user_id` | `auth.uid() = user_id` |
-
-All policies consistently use the same security check, ensuring users can only manage their own data.
+### ✅ Components Updated
+- `src/pages/Home.tsx` - Pull-to-refresh integrated
+- `src/pages/VocalRiderStore.tsx` - Uses useProducts hook
+- `src/pages/StagePrep.tsx` - Uses gear, brands, checklist hooks
+- `src/components/home/VocalRiderPicks.tsx` - Database-backed
+- `src/components/home/FeaturedGearPreview.tsx` - Database-backed
 
 ---
 
 ## Technical Notes
 
-- The `TO authenticated` clause ensures only logged-in users can delete records
-- The `USING` clause validates ownership before allowing deletion
-- No cascading delete concerns as these are leaf tables without dependent data
+### React Query Keys
+- `["songs"]`
+- `["products"]`
+- `["gear-products"]`
+- `["partner-brands"]`
+- `["medical-providers"]`
+- `["checklist-items"]`
+- `["cities"]`
 
+### Pull-to-Refresh Features
+- Touch event handling with resistance curve
+- 80px threshold to trigger
+- Animated spinner with framer-motion
+- Toast notification on successful refresh
+- Invalidates all home-related queries

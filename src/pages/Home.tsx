@@ -1,9 +1,13 @@
+import { useCallback } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Play, TrendingUp, Clock, Sparkles } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Header } from "@/components/layout/Header";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassCard } from "@/components/ui/glass-card";
+import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { ContinuePractice } from "@/components/home/ContinuePractice";
 import { FeaturedGearPreview } from "@/components/home/FeaturedGearPreview";
 import { VocalRiderPicks } from "@/components/home/VocalRiderPicks";
@@ -29,7 +33,19 @@ const itemVariants = {
 
 export default function Home() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
+
+  const handleRefresh = useCallback(async () => {
+    // Invalidate and refetch all relevant queries
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["songs"] }),
+      queryClient.invalidateQueries({ queryKey: ["products"] }),
+      queryClient.invalidateQueries({ queryKey: ["gear-products"] }),
+      queryClient.invalidateQueries({ queryKey: ["partner-brands"] }),
+    ]);
+    toast.success("Content refreshed!");
+  }, [queryClient]);
 
   return (
     <div className="min-h-screen relative">
@@ -45,122 +61,124 @@ export default function Home() {
 
       <Header showSearch={false} />
 
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="relative z-10 px-4 pb-8"
-      >
-        {/* Hero Section with prominent CTA */}
-        <motion.section variants={itemVariants} className="py-8 text-center">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-3">
-            Master Your <span className="gradient-text">Voice</span>
-          </h1>
-          <p className="text-muted-foreground text-sm max-w-xs mx-auto mb-8">
-            Train with isolated stems. Control every element of the mix.
-          </p>
-          
-          {/* Main Start Training Button - Hero CTA */}
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-          >
-            <GlassButton
-              variant="frosted"
-              size="lg"
-              icon={<Play className="w-6 h-6 fill-white" />}
-              onClick={() => navigate("/library")}
-              className="w-full max-w-sm mx-auto text-lg py-7 shadow-2xl shadow-primary/30"
+      <PullToRefresh onRefresh={handleRefresh} className="relative z-10">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="px-4 pb-8"
+        >
+          {/* Hero Section with prominent CTA */}
+          <motion.section variants={itemVariants} className="py-8 text-center">
+            <h1 className="text-3xl sm:text-4xl font-bold mb-3">
+              Master Your <span className="gradient-text">Voice</span>
+            </h1>
+            <p className="text-muted-foreground text-sm max-w-xs mx-auto mb-8">
+              Train with isolated stems. Control every element of the mix.
+            </p>
+            
+            {/* Main Start Training Button - Hero CTA */}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
             >
-              Start Training
-            </GlassButton>
-          </motion.div>
-        </motion.section>
-
-        {/* Quick Stats */}
-        <motion.section variants={itemVariants} className="mb-6">
-          <div className="grid grid-cols-2 gap-3">
-            <GlassCard padding="md" hover={false} depth="raised" shine>
-              <div className="flex items-center gap-3">
-                <motion.div
-                  className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center"
-                  whileHover={{ scale: 1.1 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                >
-                  <TrendingUp className="w-5 h-5 text-primary" />
-                </motion.div>
-                <div>
-                  <p className="text-2xl font-bold">12</p>
-                  <p className="text-xs text-muted-foreground">Songs Practiced</p>
-                </div>
-              </div>
-            </GlassCard>
-            <GlassCard padding="md" hover={false} depth="raised" shine>
-              <div className="flex items-center gap-3">
-                <motion.div
-                  className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center"
-                  whileHover={{ scale: 1.1 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                >
-                  <Clock className="w-5 h-5 text-accent" />
-                </motion.div>
-                <div>
-                  <p className="text-2xl font-bold">3.5h</p>
-                  <p className="text-xs text-muted-foreground">Training Time</p>
-                </div>
-              </div>
-            </GlassCard>
-          </div>
-        </motion.section>
-
-        {/* Continue Practice */}
-        <motion.section variants={itemVariants} className="mb-6">
-          <ContinuePractice />
-        </motion.section>
-
-        {/* Featured Gear Preview - Stage Prep */}
-        <motion.section variants={itemVariants} className="mb-6">
-          <FeaturedGearPreview />
-        </motion.section>
-
-        {/* Vocal Rider Store Picks */}
-        <motion.section variants={itemVariants} className="mb-6">
-          <VocalRiderPicks />
-        </motion.section>
-
-        {/* Vocal Health CTA */}
-        <motion.section variants={itemVariants} className="mb-6">
-          <VocalHealthCTA />
-        </motion.section>
-
-        {/* CTA for non-authenticated users */}
-        {!isAuthenticated && (
-          <motion.section variants={itemVariants}>
-            <GlassCard
-              padding="lg"
-              className="text-center border-primary/30"
-              glow
-              glowColor="primary"
-              hover={false}
-            >
-              <motion.div
-                animate={{ y: [0, -4, 0] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              <GlassButton
+                variant="frosted"
+                size="lg"
+                icon={<Play className="w-6 h-6 fill-white" />}
+                onClick={() => navigate("/library")}
+                className="w-full max-w-sm mx-auto text-lg py-7 shadow-2xl shadow-primary/30"
               >
-                <Sparkles className="w-7 h-7 text-primary mx-auto mb-2" />
-              </motion.div>
-              <h3 className="text-base font-semibold mb-1">Unlock All Exercises</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Get access to more premium tracks and exercises.
-              </p>
-              <GlassButton onClick={() => navigate("/subscription")} size="sm">
-                View Plans
+                Start Training
               </GlassButton>
-            </GlassCard>
+            </motion.div>
           </motion.section>
-        )}
-      </motion.div>
+
+          {/* Quick Stats */}
+          <motion.section variants={itemVariants} className="mb-6">
+            <div className="grid grid-cols-2 gap-3">
+              <GlassCard padding="md" hover={false} depth="raised" shine>
+                <div className="flex items-center gap-3">
+                  <motion.div
+                    className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center"
+                    whileHover={{ scale: 1.1 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  >
+                    <TrendingUp className="w-5 h-5 text-primary" />
+                  </motion.div>
+                  <div>
+                    <p className="text-2xl font-bold">12</p>
+                    <p className="text-xs text-muted-foreground">Songs Practiced</p>
+                  </div>
+                </div>
+              </GlassCard>
+              <GlassCard padding="md" hover={false} depth="raised" shine>
+                <div className="flex items-center gap-3">
+                  <motion.div
+                    className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center"
+                    whileHover={{ scale: 1.1 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                  >
+                    <Clock className="w-5 h-5 text-accent" />
+                  </motion.div>
+                  <div>
+                    <p className="text-2xl font-bold">3.5h</p>
+                    <p className="text-xs text-muted-foreground">Training Time</p>
+                  </div>
+                </div>
+              </GlassCard>
+            </div>
+          </motion.section>
+
+          {/* Continue Practice */}
+          <motion.section variants={itemVariants} className="mb-6">
+            <ContinuePractice />
+          </motion.section>
+
+          {/* Featured Gear Preview - Stage Prep */}
+          <motion.section variants={itemVariants} className="mb-6">
+            <FeaturedGearPreview />
+          </motion.section>
+
+          {/* Vocal Rider Store Picks */}
+          <motion.section variants={itemVariants} className="mb-6">
+            <VocalRiderPicks />
+          </motion.section>
+
+          {/* Vocal Health CTA */}
+          <motion.section variants={itemVariants} className="mb-6">
+            <VocalHealthCTA />
+          </motion.section>
+
+          {/* CTA for non-authenticated users */}
+          {!isAuthenticated && (
+            <motion.section variants={itemVariants}>
+              <GlassCard
+                padding="lg"
+                className="text-center border-primary/30"
+                glow
+                glowColor="primary"
+                hover={false}
+              >
+                <motion.div
+                  animate={{ y: [0, -4, 0] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <Sparkles className="w-7 h-7 text-primary mx-auto mb-2" />
+                </motion.div>
+                <h3 className="text-base font-semibold mb-1">Unlock All Exercises</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Get access to more premium tracks and exercises.
+                </p>
+                <GlassButton onClick={() => navigate("/subscription")} size="sm">
+                  View Plans
+                </GlassButton>
+              </GlassCard>
+            </motion.section>
+          )}
+        </motion.div>
+      </PullToRefresh>
     </div>
   );
 }
