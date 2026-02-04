@@ -1121,3 +1121,77 @@
 .border-accent-store {
   border-color: hsl(var(--accent-store));
 }
+
+/* ========== Vocal Health - Medical Theme ========== */
+
+/* Medical Background */
+.medical-bg {
+  background: linear-gradient(
+    135deg,
+    hsl(0 20% 6%) 0%,
+    hsl(350 15% 5%) 50%,
+    hsl(340 10% 4%) 100%
+  );
+}
+
+.light .medical-bg {
+  background: linear-gradient(
+    135deg,
+    hsl(0 20% 97%) 0%,
+    hsl(350 15% 95%) 50%,
+    hsl(340 10% 93%) 100%
+  );
+}
+
+/* Medical Card */
+.medical-card {
+  background: linear-gradient(
+    135deg,
+    hsl(0 30% 50% / 0.06) 0%,
+    hsl(350 20% 40% / 0.03) 100%
+  );
+  backdrop-filter: blur(40px) saturate(150%);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
+  border: 1px solid hsl(0 50% 60% / 0.12);
+  box-shadow: 
+    0 4px 24px -1px rgba(60, 20, 20, 0.2),
+    0 0 1px 0 rgba(200, 100, 100, 0.1) inset;
+}
+
+.light .medical-card {
+  background: linear-gradient(
+    135deg,
+    hsl(0 20% 100% / 0.9) 0%,
+    hsl(350 15% 98% / 0.7) 100%
+  );
+  border: 1px solid hsl(0 20% 85%);
+  box-shadow: 
+    0 4px 24px -1px rgba(60, 20, 20, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+}
+
+/* Medical Gradient Text */
+.medical-gradient-text {
+  background: linear-gradient(
+    135deg, 
+    hsl(0 70% 65%) 0%, 
+    hsl(350 60% 55%) 50%, 
+    hsl(340 50% 50%) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Accent Medical Color Utilities */
+.text-accent-medical {
+  color: hsl(var(--accent-medical));
+}
+
+.bg-accent-medical {
+  background-color: hsl(var(--accent-medical));
+}
+
+.border-accent-medical {
+  border-color: hsl(var(--accent-medical));
+}

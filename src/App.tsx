@@ -13,6 +13,7 @@ import Onboarding from "./pages/Onboarding";
 import Home from "./pages/Home";
 import Hub from "./pages/Hub";
 import VocalRiderStore from "./pages/VocalRiderStore";
+import VocalHealth from "./pages/VocalHealth";
 import Library from "./pages/Library";
 import Playlists from "./pages/Playlists";
 import PlaylistDetail from "./pages/PlaylistDetail";
@@ -62,7 +63,7 @@ function AppRoutes({ onAppReady }: { onAppReady: () => void }) {
             <Route path="/subscription" element={<Subscription />} />
             {/* Toolkit routes */}
             <Route path="/store" element={<VocalRiderStore />} />
-            <Route path="/vocal-health" element={<Hub />} />
+            <Route path="/vocal-health" element={<VocalHealth />} />
             <Route path="/stage-prep" element={<Hub />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
