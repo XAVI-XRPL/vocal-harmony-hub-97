@@ -1,130 +1,100 @@
 
+# Add Records Wall Background to Playlists Page
 
-# Unify Loop Controls to Show on All Tracks
+## Overview
 
-## Problem
-
-The A-B loop currently only shows on the Master waveform, making it unclear that the loop controls the entire song. Users see separate stem waveforms without loop markers, which creates confusion about what's being looped.
-
-## Solution
-
-Display the loop region overlay on ALL tracks (Master and each individual stem) to make it visually clear that the loop controls the entire song as one unified track.
+Add the uploaded gold and platinum records wall image as a cinematic background specifically for the Playlists page, creating a prestigious "trophy room" atmosphere that fits perfectly with the concept of showcasing a user's curated playlist collection.
 
 ---
 
-## Current State
+## Implementation
 
-| Component | Loop Region Shown |
-|-----------|------------------|
-| Master waveform | Yes - with A/B markers |
-| Stem tracks | No - no visual indication |
+### 1. Copy the Image to Assets
 
-This creates visual "overlap" confusion - the Master shows a loop but stems don't.
+Copy the uploaded image to the project assets folder for proper bundling and optimization.
+
+**Action:** Copy `user-uploads://image-11.png` to `src/assets/records-wall-background.png`
 
 ---
 
-## Changes
+### 2. Create RecordsWallBackground Component
 
-### 1. Add Loop Region Props to StemTrack
+**New File: `src/components/layout/RecordsWallBackground.tsx`**
 
-**File: `src/components/audio/StemTrack.tsx`**
+Create a dedicated background component following the same pattern as `StudioBackground`:
 
-Pass loop state to each stem track so it can display the loop region overlay:
-
-| New Prop | Type | Purpose |
-|----------|------|---------|
-| `loopStart` | `number` | Loop start time |
-| `loopEnd` | `number` | Loop end time |
-| `isLooping` | `boolean` | Whether loop is active |
-
-### 2. Show Loop Region Overlay on Stem Waveforms
-
-**File: `src/components/audio/WaveformDisplay.tsx`**
-
-Add a subtle loop region highlight (not the full A/B markers - just the shaded region) when loop props are provided:
-
-```
-Visual: Light purple/primary overlay showing the loop region
-No A/B markers needed - those stay on Master only
-Just a visual indicator that this section is looped
-```
-
-### 3. Update TrainingMode to Pass Loop State to Stems
-
-**File: `src/pages/TrainingMode.tsx`**
-
-Pass loop state down to each StemTrack:
+| Element | Value | Purpose |
+|---------|-------|---------|
+| Image | `records-wall-background.png` | The gold/platinum records wall |
+| Animation | `animate-slow-zoom` | Subtle 30s zoom for cinematic depth |
+| Dark overlay | `bg-background/40` | Ensure glass cards remain readable |
+| Gradient | `from-background/30` to `to-background/60` | Smooth color blending at edges |
 
 ```tsx
-<StemTrack
-  stem={stem}
-  currentTime={currentTime}
-  duration={duration}
-  onSeek={handleSeek}
-  loopStart={loopStart}
-  loopEnd={loopEnd}
-  isLooping={isLooping}
-/>
+import recordsWallBackground from "@/assets/records-wall-background.png";
+
+export function RecordsWallBackground() {
+  return (
+    <div className="fixed inset-0 -z-10 overflow-hidden">
+      {/* Records wall image with slow zoom animation */}
+      <img
+        src={recordsWallBackground}
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover animate-slow-zoom"
+      />
+
+      {/* Dark overlay for card readability */}
+      <div className="absolute inset-0 bg-background/40" />
+
+      {/* Gradient overlay for color blending */}
+      <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background/60" />
+    </div>
+  );
+}
 ```
 
 ---
 
-## Implementation Details
+### 3. Add Background to Playlists Page
 
-### WaveformDisplay Loop Region Overlay
+**File: `src/pages/Playlists.tsx`**
 
-Add a non-interactive (display-only) loop region when loop is active:
+Import and render the new background component at the top of the page:
 
 ```tsx
-{/* Loop region indicator (display only, non-interactive) */}
-{loopEnd > loopStart && isLooping && (
-  <div
-    className="absolute inset-y-0 bg-primary/20 pointer-events-none z-5"
-    style={{
-      left: `${(loopStart / duration) * 100}%`,
-      width: `${((loopEnd - loopStart) / duration) * 100}%`,
-    }}
-  />
-)}
+import { RecordsWallBackground } from "@/components/layout/RecordsWallBackground";
+
+// Inside the component, render before other content:
+return (
+  <>
+    <RecordsWallBackground />
+    <motion.div ...>
+      {/* existing content */}
+    </motion.div>
+  </>
+);
 ```
 
-### Visual Hierarchy
-
-| Track | Loop Display |
-|-------|--------------|
-| Master | Full A/B markers with labels + highlighted region |
-| Stems | Subtle shaded region only (no markers) |
-
-This creates a clear visual that:
-- The Master track is the "control" for the loop
-- All stems are affected by the same loop region
-- The loop spans the entire song as one unit
+**Note:** The RecordsWallBackground uses `fixed` positioning with `-z-10`, so it will layer behind the content but above the global StadiumBackground, creating a page-specific atmosphere.
 
 ---
 
-## Files to Modify
+## Files to Create/Modify
 
-| File | Changes |
-|------|---------|
-| `src/components/audio/WaveformDisplay.tsx` | Add loop region overlay display when props provided |
-| `src/components/audio/StemTrack.tsx` | Accept and pass loop props to WaveformDisplay |
-| `src/pages/TrainingMode.tsx` | Pass loop state to each StemTrack |
+| File | Action |
+|------|--------|
+| `src/assets/records-wall-background.png` | Copy from user upload |
+| `src/components/layout/RecordsWallBackground.tsx` | Create new component |
+| `src/pages/Playlists.tsx` | Import and add background |
 
 ---
 
 ## Visual Result
 
-```
-┌─────────────────────────────────────────────┐
-│ MASTER [A]========LOOP REGION==========[B]  │  ← Interactive markers
-├─────────────────────────────────────────────┤
-│ Lead Vocals    ════════SHADED════════       │  ← Display only
-├─────────────────────────────────────────────┤
-│ Piano          ════════SHADED════════       │  ← Display only
-├─────────────────────────────────────────────┤
-│ Guitar         ════════SHADED════════       │  ← Display only
-└─────────────────────────────────────────────┘
-```
+The Playlists page will feature a prestigious, cinematic backdrop of gold and platinum record awards:
 
-All tracks show the same loop region, making it clear they loop together as one song.
-
+- The dark blue wall with spotlights creates an elegant, professional atmosphere
+- The gold and silver records reinforce the theme of music achievement
+- The slow zoom animation adds subtle depth and movement
+- Dark overlays ensure all glass cards and text remain readable
+- Creates a distinct visual identity for the Playlists section vs other pages
