@@ -1,147 +1,95 @@
 
 
-# Desktop Splash Screen & Track Mute Buttons
+# Add Stadium Image Background to Home Page
 
 ## Overview
 
-Two improvements to enhance the user experience:
-1. Adjust the splash screen video scaling for desktop so the entire video is visible
-2. Ensure mute controls are prominently visible on audio tracks
+Add the uploaded stadium image as a background specifically for the Home page, while keeping the existing animated `StadiumBackground` effects layered on top to maintain the cinematic atmosphere.
 
 ---
 
-## Issue 1: Splash Screen Desktop Sizing
+## Implementation Approach
 
-### Current Behavior
+The stadium image shows a dramatic concert venue with rows of seats, stage lights at the top, and atmospheric fog - perfectly matching the app's vocal training theme. I'll add this as a background image layer on the Home page.
 
-The splash video uses `object-cover` which crops the video to fill the screen. On mobile (portrait), `object-top` keeps the important content visible. However, on desktop (landscape), this crops out portions of the video.
+---
 
-### Solution
+## Technical Implementation
 
-Use responsive object-fit classes:
-- **Mobile** (`< md`): Keep `object-cover object-top` to fill the screen and show the important top portion
-- **Desktop** (`≥ md`): Switch to `object-contain` to show the entire video without cropping, with a black letterbox if needed
+### Step 1: Copy Image to Project
 
-### Implementation
+Copy the uploaded image to the assets folder:
+- **Source**: `user-uploads://image-9.png`
+- **Destination**: `src/assets/stadium-background.png`
 
-**File: `src/pages/Splash.tsx`**
+### Step 2: Update Home Page
 
-Update the video element's className:
+**File: `src/pages/Home.tsx`**
+
+| Change | Details |
+|--------|---------|
+| Import image | Add `import stadiumBg from "@/assets/stadium-background.png"` |
+| Add background layer | Add an absolute-positioned image behind the content |
+| Add overlay gradient | Add a dark overlay for text readability |
+
+### Structure
 
 ```text
-Current:  "object-cover object-top"
-New:      "object-cover object-top md:object-contain"
+<div className="min-h-screen relative">
+  {/* Stadium Background Image */}
+  <div className="absolute inset-0 z-0">
+    <img src={stadiumBg} className="w-full h-full object-cover" />
+    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
+  </div>
+  
+  {/* Existing Content (with z-10 for layering) */}
+  <Header />
+  <motion.div className="relative z-10 ...">
+    ...existing content...
+  </motion.div>
+</div>
 ```
 
-This ensures:
-- Mobile: Full-bleed cinematic video (current behavior preserved)
-- Desktop: Entire video visible, centered with optional letterboxing
+---
+
+## Design Considerations
+
+### Overlay Gradient
+
+A gradient overlay ensures:
+- Text remains readable against the detailed image
+- The glass-morphism cards maintain their visual impact
+- Smooth transition with the existing UI elements
+
+### Layering Order
+
+```text
+z-0   : Stadium image + overlay
+z-10  : Main content (Header, cards, buttons)
+```
+
+### Responsive Behavior
+
+- **Mobile**: Image fills screen with `object-cover` for full-bleed effect
+- **Desktop**: Same behavior, ensuring the atmospheric lights and stadium depth are visible
 
 ---
 
-## Issue 2: Track Mute Buttons
-
-### Current State
-
-Looking at the code, mute buttons already exist on each `StemTrack`:
-- Each track has a Mute button (toggles between `Volume2` and `VolumeX` icons)
-- Each track has a Solo button ("S" toggle)
-- There's a volume slider per track
-
-However, there's **no Master Mute** button for quickly muting all tracks at once.
-
-### Solution
-
-Add a **Master Mute** toggle button to the Master waveform section in TrainingMode. This will allow users to quickly mute/unmute all stems with one tap.
-
-### Implementation
-
-**File: `src/pages/TrainingMode.tsx`**
-
-Add a master mute toggle button in the Master header row (lines 245-276):
-
-| Addition | Description |
-|----------|-------------|
-| Master Mute Button | IconButton with `VolumeX`/`Volume2` that toggles all stems mute state |
-| Visual Feedback | Button highlights when all tracks are muted |
-
-**File: `src/stores/audioStore.ts`**
-
-Add a helper action to mute/unmute all stems:
-
-| Function | Purpose |
-|----------|---------|
-| `muteAllStems()` | Set isMuted=true on all stems |
-| `unmuteAllStems()` | Set isMuted=false on all stems |
-| `toggleMasterMute()` | Toggle between mute all / unmute all |
-
----
-
-## Summary of Changes
-
-### Files to Modify
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/Splash.tsx` | Add responsive `md:object-contain` to video element |
-| `src/pages/TrainingMode.tsx` | Add Master Mute button to Master header section |
-| `src/stores/audioStore.ts` | Add `toggleMasterMute()` action |
-
-### Expected Result
-
-1. **Splash Screen**: On desktop, the entire video is visible (no cropping). On mobile, it continues to fill the screen with top-aligned content.
-
-2. **Master Mute**: Users can quickly mute all tracks with a single button tap on the Master section, in addition to the existing per-track mute controls.
+| `src/assets/stadium-background.png` | Copy uploaded image here |
+| `src/pages/Home.tsx` | Import image and add background layer with overlay |
 
 ---
 
-## Technical Details
+## Expected Result
 
-### Splash Video Responsive Classes
-
-```tsx
-// Before
-className="absolute inset-0 w-full h-full object-cover object-top"
-
-// After  
-className="absolute inset-0 w-full h-full object-cover object-top md:object-contain"
-```
-
-### Master Mute Store Action
-
-```typescript
-toggleMasterMute: () =>
-  set((state) => {
-    const allMuted = state.stemStates.every(s => s.isMuted);
-    return {
-      stemStates: state.stemStates.map(s => ({
-        ...s,
-        isMuted: !allMuted
-      }))
-    };
-  }),
-```
-
-### Master Mute Button (TrainingMode)
-
-Add next to the volume indicator in the Master section:
-
-```tsx
-<motion.button
-  whileTap={{ scale: 0.9 }}
-  onClick={toggleMasterMute}
-  className={cn(
-    "w-8 h-8 rounded-lg border flex items-center justify-center",
-    allMuted
-      ? "bg-destructive/30 border-destructive/60"
-      : "bg-glass border-glass-border hover:border-glass-border-hover"
-  )}
->
-  {allMuted ? (
-    <VolumeX className="w-4 h-4 text-destructive" />
-  ) : (
-    <Volume2 className="w-4 h-4 text-muted-foreground" />
-  )}
-</motion.button>
-```
+The Home page will feature the dramatic stadium image as its background, with:
+- Atmospheric concert lighting visible at the top
+- Stadium seating adding depth and context
+- Fog effects matching the existing animated particles
+- Dark gradient overlay maintaining text readability
+- All existing UI elements (cards, buttons, progress diagram) remaining fully visible and functional
 
