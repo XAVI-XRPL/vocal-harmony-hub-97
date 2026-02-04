@@ -24,7 +24,8 @@ import { TempoControl } from "@/components/audio/TempoControl";
 import { LoopControls } from "@/components/audio/LoopControls";
 import { LoopRegion } from "@/components/audio/LoopRegion";
 import { StudioBackground } from "@/components/layout/StudioBackground";
-import { getSongById, generateMockWaveform } from "@/data/mockSongs";
+import { useSong } from "@/hooks/useSongs";
+import { generateMockWaveform } from "@/data/mockSongs";
 import { useAudioStore } from "@/stores/audioStore";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { usePracticeSession } from "@/hooks/usePracticeSession";
@@ -57,7 +58,10 @@ const itemVariants = {
 export default function TrainingMode() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const song = getSongById(id || "");
+  
+  // Fetch song from database
+  const { data: song, isLoading: songLoading, error: songError } = useSong(id || "");
+  
   const intervalRef = useRef<number | null>(null);
   const [showControls, setShowControls] = React.useState(false);
 
@@ -130,12 +134,41 @@ export default function TrainingMode() {
     };
   }, [isPlaying, hasRealAudio]);
 
-  // Redirect if song not found
+  // Redirect if song not found after loading
   useEffect(() => {
-    if (!song) {
+    if (!songLoading && !song && !songError) {
       navigate("/library");
     }
-  }, [song, navigate]);
+  }, [song, songLoading, songError, navigate]);
+
+  // Show loading state
+  if (songLoading) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center">
+        <StudioBackground />
+        <div className="z-10 flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading song...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (songError) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center">
+        <StudioBackground />
+        <div className="z-10 flex flex-col items-center gap-4 text-center px-4">
+          <p className="text-destructive">Failed to load song</p>
+          <p className="text-sm text-muted-foreground">{(songError as Error).message}</p>
+          <GlassButton onClick={() => navigate("/library")}>
+            Back to Library
+          </GlassButton>
+        </div>
+      </div>
+    );
+  }
 
   if (!song) return null;
 
@@ -498,28 +531,21 @@ export default function TrainingMode() {
               {isLooping && loopEnd > loopStart && (
                 <motion.div
                   className="absolute -inset-1 rounded-full border-2 border-primary"
-                  initial={{ opacity: 0 }}
                   animate={{
-                    opacity: [0.6, 1, 0.6],
-                    rotate: [0, 360],
+                    opacity: [0.3, 0.7, 0.3],
                   }}
                   transition={{
-                    opacity: { duration: 2, repeat: Infinity, ease: "easeInOut" },
-                    rotate: { duration: 8, repeat: Infinity, ease: "linear" },
-                  }}
-                  style={{
-                    borderStyle: "dashed",
-                    borderWidth: 2,
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
                   }}
                 />
               )}
 
-              {songHasRealAudio && !isLoaded ? (
-                <Loader2 className="w-6 h-6 text-primary-foreground animate-spin" />
-              ) : isPlaying ? (
-                <Pause className="w-6 h-6 text-primary-foreground fill-primary-foreground" />
+              {isPlaying ? (
+                <Pause className="w-6 h-6 text-white fill-white" />
               ) : (
-                <Play className="w-6 h-6 text-primary-foreground fill-primary-foreground ml-0.5" />
+                <Play className="w-6 h-6 text-white fill-white ml-1" />
               )}
             </motion.button>
 

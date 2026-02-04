@@ -1,15 +1,15 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Search, Filter, X, Music } from "lucide-react";
+import { Search, Filter, X, Music, Loader2 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { SongCard } from "@/components/song/SongCard";
 import { LibrarySkeleton } from "@/components/ui/loading-shimmer";
 import { IconButton } from "@/components/ui/icon-button";
-import { mockSongs } from "@/data/mockSongs";
+import { useSongs } from "@/hooks/useSongs";
 import { useUIStore } from "@/stores/uiStore";
 import { cn } from "@/lib/utils";
 
-const genres = ["All", "Pop", "Soul", "R&B", "Jazz", "Rock", "Acoustic", "Electronic", "Classical"];
+const genres = ["All", "Pop", "Soul", "R&B", "Jazz", "Rock", "Acoustic", "Electronic", "Classical", "Gospel"];
 const difficulties = ["All", "Beginner", "Intermediate", "Advanced"];
 
 const containerVariants = {
@@ -30,12 +30,16 @@ const itemVariants = {
 
 export default function Library() {
   const { searchQuery, setSearchQuery, activeFilters, setFilter, clearFilters } = useUIStore();
-  const [isLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Fetch songs from database
+  const { data: songs, isLoading, error } = useSongs();
 
   // Filter songs
   const filteredSongs = useMemo(() => {
-    return mockSongs.filter((song) => {
+    if (!songs) return [];
+    
+    return songs.filter((song) => {
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -58,7 +62,7 @@ export default function Library() {
 
       return true;
     });
-  }, [searchQuery, activeFilters]);
+  }, [songs, searchQuery, activeFilters]);
 
   const hasActiveFilters = activeFilters.genre || activeFilters.difficulty;
 
@@ -177,14 +181,33 @@ export default function Library() {
         {/* Results count */}
         <div className="mt-4 mb-3">
           <p className="text-sm text-muted-foreground">
-            {filteredSongs.length} {filteredSongs.length === 1 ? "song" : "songs"} found
+            {isLoading ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading songs...
+              </span>
+            ) : (
+              `${filteredSongs.length} ${filteredSongs.length === 1 ? "song" : "songs"} found`
+            )}
           </p>
         </div>
+
+        {/* Error state */}
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-16"
+          >
+            <p className="text-destructive mb-2">Failed to load songs</p>
+            <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
+          </motion.div>
+        )}
 
         {/* Song Grid */}
         {isLoading ? (
           <LibrarySkeleton count={6} />
-        ) : filteredSongs.length === 0 ? (
+        ) : filteredSongs.length === 0 && !error ? (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
