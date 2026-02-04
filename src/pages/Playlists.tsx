@@ -93,16 +93,20 @@ export default function Playlists() {
         className="p-4 md:p-6 space-y-6"
       >
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">My Playlists</h1>
-          <p className="text-muted-foreground">Organize your favorite exercises</p>
+      <GlassCard className="p-4 md:p-6" depth="floating">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground via-foreground to-primary bg-clip-text text-transparent">
+              My Playlists
+            </h1>
+            <p className="text-muted-foreground mt-1">Organize your favorite exercises</p>
+          </div>
+          <Button onClick={() => setShowCreate(true)} className="gradient-bg gap-2 shadow-lg">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">New Playlist</span>
+          </Button>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="gradient-bg gap-2">
-          <Plus className="w-4 h-4" />
-          <span className="hidden sm:inline">New Playlist</span>
-        </Button>
-      </div>
+      </GlassCard>
 
       {/* Content */}
       {isLoading ? (
@@ -113,19 +117,21 @@ export default function Playlists() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center justify-center py-20"
+          className="flex flex-col items-center justify-center py-16"
         >
-          <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <ListMusic className="w-10 h-10 text-primary" />
-          </div>
-          <h3 className="text-xl font-semibold mb-2">No Playlists Yet</h3>
-          <p className="text-muted-foreground text-center max-w-sm mb-6">
-            Create your first playlist to organize exercises for warm-ups, practice routines, or skill-building.
-          </p>
-          <Button onClick={() => setShowCreate(true)} className="gradient-bg gap-2">
-            <Plus className="w-4 h-4" />
-            Create Your First Playlist
-          </Button>
+          <GlassCard depth="floating" className="max-w-md w-full text-center p-8">
+            <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mb-6 mx-auto shadow-[0_0_30px_rgba(var(--primary-rgb),0.3)]">
+              <ListMusic className="w-10 h-10 text-primary" />
+            </div>
+            <h3 className="text-2xl font-bold mb-3 text-foreground">No Playlists Yet</h3>
+            <p className="text-muted-foreground text-center max-w-sm mb-8">
+              Create your first playlist to organize exercises for warm-ups, practice routines, or skill-building.
+            </p>
+            <Button onClick={() => setShowCreate(true)} className="gradient-bg gap-2 shadow-lg px-6 py-3">
+              <Plus className="w-5 h-5" />
+              Create Your First Playlist
+            </Button>
+          </GlassCard>
         </motion.div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
