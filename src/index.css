@@ -1036,3 +1036,88 @@
 .light .hub-accent-gear .hub-icon-bg {
   background: hsl(187 85% 53% / 0.15);
 }
+
+/* ========== Vocal Rider Store - Dressing Room Theme ========== */
+
+/* Dressing Room Background */
+.dressing-room-bg {
+  background: linear-gradient(
+    135deg,
+    hsl(25 30% 8%) 0%,
+    hsl(20 25% 6%) 50%,
+    hsl(15 20% 5%) 100%
+  );
+}
+
+.light .dressing-room-bg {
+  background: linear-gradient(
+    135deg,
+    hsl(30 20% 95%) 0%,
+    hsl(25 15% 92%) 50%,
+    hsl(20 10% 90%) 100%
+  );
+}
+
+/* Dressing Room Card - Warm tinted glass */
+.dressing-room-card {
+  background: linear-gradient(
+    135deg,
+    hsl(30 40% 50% / 0.08) 0%,
+    hsl(25 30% 40% / 0.04) 100%
+  );
+  backdrop-filter: blur(40px) saturate(150%);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
+  border: 1px solid hsl(30 50% 60% / 0.15);
+  box-shadow: 
+    0 4px 24px -1px rgba(30, 20, 10, 0.25),
+    0 0 1px 0 rgba(200, 160, 100, 0.1) inset,
+    0 1px 0 0 rgba(255, 220, 180, 0.05) inset;
+}
+
+.light .dressing-room-card {
+  background: linear-gradient(
+    135deg,
+    hsl(30 30% 100% / 0.9) 0%,
+    hsl(25 25% 98% / 0.7) 100%
+  );
+  border: 1px solid hsl(30 30% 80%);
+  box-shadow: 
+    0 4px 24px -1px rgba(50, 30, 10, 0.08),
+    0 1px 3px 0 rgba(50, 30, 10, 0.04),
+    0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+}
+
+/* Store Gradient Text */
+.store-gradient-text {
+  background: linear-gradient(
+    135deg, 
+    hsl(35 70% 65%) 0%, 
+    hsl(30 60% 55%) 50%, 
+    hsl(25 50% 50%) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Store Pill Background */
+.store-pill-bg {
+  background: linear-gradient(
+    135deg,
+    hsl(var(--accent-store)) 0%,
+    hsl(25 55% 60%) 100%
+  );
+}
+
+/* Accent Store Color Utility */
+.text-accent-store {
+  color: hsl(var(--accent-store));
+}
+
+.bg-accent-store {
+  background-color: hsl(var(--accent-store));
+}
+
+.border-accent-store {
+  border-color: hsl(var(--accent-store));
+}

@@ -12,6 +12,7 @@ import Splash from "./pages/Splash";
 import Onboarding from "./pages/Onboarding";
 import Home from "./pages/Home";
 import Hub from "./pages/Hub";
+import VocalRiderStore from "./pages/VocalRiderStore";
 import Library from "./pages/Library";
 import Playlists from "./pages/Playlists";
 import PlaylistDetail from "./pages/PlaylistDetail";
@@ -59,8 +60,8 @@ function AppRoutes({ onAppReady }: { onAppReady: () => void }) {
             <Route path="/training" element={<Library />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/subscription" element={<Subscription />} />
-            {/* Toolkit routes - placeholder for future pages */}
-            <Route path="/store" element={<Hub />} />
+            {/* Toolkit routes */}
+            <Route path="/store" element={<VocalRiderStore />} />
             <Route path="/vocal-health" element={<Hub />} />
             <Route path="/stage-prep" element={<Hub />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
