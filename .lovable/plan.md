@@ -1,100 +1,121 @@
 
-# Performance and Reset Button Fixes for Training Mode
+
+# Stem Pre-Buffer System for Faster Playback Start
 
 ## Overview
-Fix the waveform animation freeze when skipping in "3. DONT LEAVE EXERCISE" (12 stems) and ensure the Reset button properly resets the song to the beginning across all songs.
+Implement a stem preloading system that pre-buffers audio files before users navigate to the Training Mode, resulting in near-instant playback start. This system will work for all current songs and automatically apply to any future songs added to the database.
 
-## Root Cause Analysis
+## Current State
+- Audio stems are loaded on-demand when users enter Training Mode (`useAudioPlayer.ts`)
+- Each song has 6-12 stems (6-12 individual MP3 files to load)
+- Loading happens sequentially with a progress indicator showing 0-100%
+- Users must wait for all stems to load before playback is responsive
 
-### Problem 1: Waveform Animation Freeze
-With 12 stems, the player renders:
-- 12 StemTrack components, each with a WaveformDisplay
-- Each WaveformDisplay has ~80 animated bars (top + bottom for mirrored view)
-- Total: **1,920 individually animated elements** with `repeat: Infinity`
+## Proposed Architecture
 
-Framer Motion's continuous opacity animations on this many elements overwhelms the browser's animation thread, causing stuttering when the audio player is also processing seeks/syncs.
+```text
++--------------------+      +-------------------+      +------------------+
+|   Library / Home   | ---> |  Preload Manager  | ---> |   Audio Cache    |
+|   (hover / tap)    |      |   (Background)    |      |  (Blob URLs)     |
++--------------------+      +-------------------+      +------------------+
+         |                          |                          |
+         v                          v                          v
+   User navigates         Fetches stems in          TrainingMode reads
+   to Training Mode       priority order            from cache instantly
+```
 
-### Problem 2: Reset Button Not Working
-The `resetMixer` function in audioStore only resets stem states (volume/mute/solo). It does NOT:
-- Reset playback position to 0
-- Clear loop settings
-- Reset playback rate
+## Implementation Strategy
 
-### Problem 3: Ref Warning (Minor)
-Components `WaveformDisplay` and `StudioBackground` receive refs but aren't wrapped with `forwardRef`.
+### 1. Create Audio Preload Store (`src/stores/audioPreloadStore.ts`)
+A Zustand store to manage preloaded audio state:
 
----
+| Field | Type | Purpose |
+|-------|------|---------|
+| `preloadedSongs` | `Map<songId, StemCache[]>` | Stores blob URLs per stem |
+| `loadingStates` | `Map<songId, 'idle' | 'loading' | 'ready'>` | Track preload status |
+| `preloadSong(song)` | function | Initiates background preload |
+| `getPreloadedStems(songId)` | function | Returns cached blob URLs |
+| `clearCache(songId?)` | function | Clears memory when needed |
+| `maxCachedSongs` | number | Limit cache to 3 songs (memory management) |
 
-## Technical Implementation
+### 2. Create Preload Hook (`src/hooks/useAudioPreload.ts`)
+A hook that handles the actual preloading logic:
 
-### File 1: `src/components/audio/WaveformDisplay.tsx`
+- Fetches audio files as blobs in the background using `fetch()`
+- Creates blob URLs for instant access
+- Prioritizes stems by type: Master/Coaching first, then Instrumental, then others
+- Implements a queue system to avoid overwhelming the network
+- Reports progress for UI indicators (optional)
 
-**Changes:**
-1. Add `React.forwardRef` wrapper to fix ref warning
-2. Remove continuous `repeat: Infinity` opacity animations from individual bars
-3. Use CSS animations instead of framer-motion for the pulse effect (much lighter)
-4. Add `will-change: transform` CSS hint for GPU acceleration
-5. Memoize the bar rendering to prevent re-renders on time updates
+### 3. Integrate Preloading Triggers
 
-**Key optimization:**
+**Trigger Points:**
+| Location | Event | Action |
+|----------|-------|--------|
+| `SongCard.tsx` | `onMouseEnter` / `onTouchStart` | Start preloading that song |
+| `ContinuePractice.tsx` | Component mount | Preload first 2 songs on home page load |
+| `Library.tsx` | First visible songs | Preload top 2-3 visible songs |
+| `useSongs.ts` | After songs fetch | Optionally preload first song |
+
+### 4. Modify `useAudioPlayer.ts` to Use Cache
+Update the `loadSong` function to:
+1. Check if stems are already preloaded in cache
+2. If cached, use blob URLs directly (instant load)
+3. If not cached, fall back to current streaming behavior
+4. Blend seamlessly so users never notice the difference
+
+### 5. Memory Management
+- Limit cache to 3 songs maximum (most recent/likely to play)
+- Use LRU (Least Recently Used) eviction when limit exceeded
+- Revoke blob URLs when clearing cache to free memory
+- Clear cache on song change if memory constrained
+
+## Technical Details
+
+### Stem Cache Structure
 ```typescript
-// Replace framer-motion infinite animations with CSS classes
-className={cn(
-  "w-full rounded-sm",
-  isPlaying && isPlayed && "animate-bar-pulse"
-)}
-```
-
-### File 2: `src/stores/audioStore.ts`
-
-**Changes:**
-Add a comprehensive `resetAll` function that:
-- Resets playback position to 0
-- Clears loop settings
-- Resets playback rate to 1
-- Resets all stem states
-
-Rename current `resetMixer` behavior or update it to be more complete.
-
-### File 3: `src/pages/TrainingMode.tsx`
-
-**Changes:**
-1. Update Reset button to call the new comprehensive reset function
-2. Also trigger `seekTo(0)` through the audio player hook to sync Howler instances
-
-### File 4: `src/components/layout/StudioBackground.tsx`
-
-**Changes:**
-Wrap with `React.forwardRef` to fix the ref warning.
-
-### File 5: `src/index.css` (optional)
-
-**Changes:**
-Add lightweight CSS animation for bar pulse:
-```css
-@keyframes bar-pulse {
-  0%, 100% { opacity: 0.8; }
-  50% { opacity: 1; }
+interface StemCache {
+  stemId: string;
+  blobUrl: string;
+  duration: number;
 }
-.animate-bar-pulse {
-  animation: bar-pulse 1.5s ease-in-out infinite;
+
+interface PreloadState {
+  preloadedSongs: Map<string, StemCache[]>;
+  loadingStates: Map<string, 'idle' | 'loading' | 'ready' | 'error'>;
+  preloadQueue: string[]; // songIds waiting to preload
 }
 ```
 
----
+### Priority Loading Order
+1. **Coaching/Master vocals** - Most important for practice
+2. **Instrumental** - Core backing track
+3. **Lead vocals** - Key for learning
+4. **Everything else** - Harmonies, individual instruments
 
-## Performance Impact
+### Files to Create/Modify
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src/stores/audioPreloadStore.ts` | Create | Central cache store |
+| `src/hooks/useAudioPreload.ts` | Create | Preload logic hook |
+| `src/hooks/useAudioPlayer.ts` | Modify | Read from cache first |
+| `src/components/song/SongCard.tsx` | Modify | Trigger preload on hover |
+| `src/components/home/ContinuePractice.tsx` | Modify | Preload visible songs |
+| `src/pages/Library.tsx` | Modify | Preload first few visible songs |
+
+## Expected Performance Improvement
 
 | Metric | Before | After |
 |--------|--------|-------|
-| Animated elements | 1,920 | 0 (CSS handles it) |
-| Re-renders per frame | High | Minimal |
-| GPU memory | High | Low |
+| Time to first playback | 3-8 seconds | Near-instant (< 500ms) |
+| Loading indicator visibility | Always shown | Rarely shown |
+| Network efficiency | On-demand | Predictive |
+| Memory usage | Low | Moderate (controlled) |
 
----
+## Compatibility
+- Works with all existing songs (fetches from same URLs)
+- Works with future songs automatically (no code changes needed)
+- Gracefully degrades if preload fails (falls back to streaming)
+- Compatible with current Howler.js implementation (blob URLs work with Howler)
 
-## Expected Results
-1. Smooth waveform animations even with 12 stems
-2. No freeze when skipping or seeking
-3. Reset button works consistently: returns to 0:00, clears loops, resets tempo
-4. No more console warnings about refs
