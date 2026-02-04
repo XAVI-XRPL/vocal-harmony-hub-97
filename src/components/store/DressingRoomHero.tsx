@@ -49,14 +49,14 @@ export function DressingRoomHero({ featuredCount }: DressingRoomHeroProps) {
               className="inline-flex items-center gap-2 mb-4 px-4 py-1.5 rounded-full bg-accent-store/20 border border-accent-store/30"
             >
               <Sparkles className="w-4 h-4 text-accent-store" />
-              <span className="text-sm font-medium text-accent-store">Backstage Essentials</span>
+              <span className="text-sm font-medium text-accent-store">Kimad Essentials</span>
             </motion.div>
 
             <h2 className="text-2xl font-bold text-foreground mb-2">
-              Your Dressing Room
+              Vocal Rider Store
             </h2>
             <p className="text-muted-foreground text-sm mb-6">
-              Products trusted by touring professionals
+              Curated products trusted by touring professionals
             </p>
 
             {/* Featured Badge */}
