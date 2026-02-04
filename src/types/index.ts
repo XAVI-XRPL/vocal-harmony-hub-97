@@ -110,7 +110,14 @@ export interface PlaylistSong {
 // ========== V2.0 Hub Module Types ==========
 
 // Vocal Rider Store
-export type ProductCategory = 'throat-care' | 'hydration' | 'vitamins' | 'accessories' | 'apparel';
+export type ProductCategory = 
+  | 'throat-care' 
+  | 'hydration' 
+  | 'essential-oils' 
+  | 'tea-honey' 
+  | 'nasal-sinus' 
+  | 'allergy-wellness' 
+  | 'accessories';
 
 export interface Product {
   id: string;
@@ -125,6 +132,9 @@ export interface Product {
   reviewCount: number;
   isFeatured: boolean;
   tags: string[];
+  discountCode?: string;
+  isComingSoon?: boolean;
+  isPartnerBrand?: boolean;
 }
 
 // Vocal Health Directory

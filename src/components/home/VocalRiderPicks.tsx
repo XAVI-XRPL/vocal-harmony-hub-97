@@ -1,11 +1,11 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { ShoppingBag, ChevronRight, Star } from "lucide-react";
+import { ShoppingBag, ChevronRight, Star, Tag } from "lucide-react";
 import { mockProducts } from "@/data/mockProducts";
 
 export function VocalRiderPicks() {
   const navigate = useNavigate();
-  const picks = mockProducts.filter((p) => p.isFeatured).slice(0, 4);
+  const picks = mockProducts.filter((p) => p.isFeatured && !p.isComingSoon).slice(0, 4);
 
   return (
     <div>
@@ -14,7 +14,7 @@ export function VocalRiderPicks() {
           <div className="p-1.5 rounded-lg bg-accent-store/20">
             <ShoppingBag className="w-4 h-4 text-accent-store" />
           </div>
-          <h2 className="text-base font-semibold text-foreground">Dressing Room Essentials</h2>
+          <h2 className="text-base font-semibold text-foreground">Kimad Essentials</h2>
         </div>
         <button
           onClick={() => navigate("/store")}
@@ -35,12 +35,18 @@ export function VocalRiderPicks() {
             onClick={() => navigate("/store")}
             className="cursor-pointer group"
           >
-            <div className="aspect-square rounded-xl overflow-hidden glass-card border-transparent hover:border-accent-store/30 transition-all">
+            <div className="aspect-square rounded-xl overflow-hidden glass-card border-transparent hover:border-accent-store/30 transition-all relative">
               <img
                 src={product.imageUrl}
                 alt={product.name}
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               />
+              {product.discountCode && (
+                <div className="absolute bottom-1 left-1 right-1 flex items-center justify-center gap-0.5 px-1 py-0.5 rounded bg-accent-store/90 text-background">
+                  <Tag className="w-2 h-2" />
+                  <span className="text-[7px] font-bold truncate">{product.discountCode}</span>
+                </div>
+              )}
             </div>
             <div className="mt-1.5 px-0.5">
               <p className="text-[10px] font-medium text-foreground line-clamp-1">{product.name}</p>
