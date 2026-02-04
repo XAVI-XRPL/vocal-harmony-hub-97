@@ -1,74 +1,166 @@
-import { motion } from "framer-motion";
-import { City } from "@/types";
-import { CityMarker } from "./CityMarker";
+import React, { useState, useMemo, useCallback } from "react";
+import { US_STATES, type StateData } from "@/data/usStateData";
 
 interface USAMapProps {
-  cities: City[];
-  selectedCity: City | null;
-  onCitySelect: (city: City | null) => void;
+  selectedState: StateData | null;
+  onStateSelect: (state: StateData) => void;
+  searchQuery?: string;
 }
 
-export function USAMap({ cities, selectedCity, onCitySelect }: USAMapProps) {
+// Small NE states: use smaller label font to avoid overlap
+const SMALL_STATES = new Set(["09", "10", "11", "24", "25", "33", "34", "44", "50"]);
+
+export function USAMap({
+  selectedState,
+  onStateSelect,
+  searchQuery = "",
+}: USAMapProps) {
+  const [hoveredState, setHoveredState] = useState<string | null>(null);
+
+  // IDs of states matching current search
+  const matchingIds = useMemo(() => {
+    if (!searchQuery.trim()) return new Set<string>();
+    const q = searchQuery.toLowerCase();
+    return new Set(
+      US_STATES
+        .filter(s =>
+          s.name.toLowerCase().includes(q) ||
+          s.abbr.toLowerCase().includes(q) ||
+          s.region.toLowerCase().includes(q)
+        )
+        .map(s => s.id)
+    );
+  }, [searchQuery]);
+
+  const getFill = useCallback((state: StateData) => {
+    const isSelected = selectedState?.id === state.id;
+    const isHovered = hoveredState === state.id;
+    const isMatch = searchQuery && matchingIds.has(state.id);
+
+    if (isSelected) return "hsl(168 76% 39%)";     // teal - matches --map-fill-selected
+    if (isMatch) return "hsl(38 92% 50%)";         // amber - matches --map-fill-search
+    if (isHovered) return "hsl(197 93% 63%)";      // lighter blue - matches --map-fill-hover
+    return "hsl(201 68% 59%)";                     // default blue - matches --map-fill
+  }, [selectedState, hoveredState, searchQuery, matchingIds]);
+
+  const getStroke = useCallback((state: StateData) => {
+    const isSelected = selectedState?.id === state.id;
+    const isHovered = hoveredState === state.id;
+
+    if (isSelected) return "rgba(255,255,255,0.95)";
+    if (isHovered) return "rgba(255,255,255,0.9)";
+    return "rgba(255,255,255,0.65)";
+  }, [selectedState, hoveredState]);
+
+  const getStrokeWidth = useCallback((state: StateData) => {
+    if (selectedState?.id === state.id) return 2;
+    if (hoveredState === state.id) return 1.5;
+    return 0.8;
+  }, [selectedState, hoveredState]);
+
   return (
-    <div className="relative w-full aspect-[1.6/1] max-w-lg mx-auto">
-      {/* SVG Map */}
+    <div className="relative w-full">
       <svg
-        viewBox="0 0 100 62"
-        className="w-full h-full"
-        preserveAspectRatio="xMidYMid meet"
+        viewBox="0 0 960 620"
+        className="w-full h-auto"
+        role="img"
+        aria-label="Interactive map of the United States"
       >
-        {/* Simplified USA Outline */}
-        <motion.path
-          initial={{ pathLength: 0, opacity: 0 }}
-          animate={{ pathLength: 1, opacity: 1 }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
-          d="M5 20 
-             L8 15 L12 12 L15 10 L20 8 L25 7 L30 8 L35 10 
-             L40 12 L45 11 L50 10 L55 9 L60 10 L65 12 L70 14 
-             L75 16 L80 18 L85 20 L88 22 L90 25 L92 28 
-             L90 32 L88 35 L85 38 L82 42 L80 45 L78 48 
-             L76 52 L74 55 L72 58 L70 60 
-             L65 58 L60 55 L55 52 L50 50 L45 52 L40 55 
-             L35 58 L30 60 L25 58 L20 55 L15 52 L12 48 
-             L10 45 L8 40 L6 35 L5 30 L4 25 Z"
-          fill="none"
-          stroke="hsl(var(--accent-medical) / 0.3)"
-          strokeWidth="0.5"
-          className="drop-shadow-[0_0_8px_hsl(var(--accent-medical)/0.2)]"
-        />
+        <defs>
+          {/* Glow filter for selected state */}
+          <filter id="state-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          {/* Subtle drop shadow for map depth */}
+          <filter id="map-shadow" x="-5%" y="-5%" width="110%" height="110%">
+            <feDropShadow dx="0" dy="2" stdDeviation="6" floodColor="rgba(0,0,0,0.3)" />
+          </filter>
+        </defs>
 
-        {/* Grid Lines for Reference */}
-        <g stroke="hsl(var(--muted-foreground) / 0.1)" strokeWidth="0.1">
-          {[20, 40, 60, 80].map((x) => (
-            <line key={`v-${x}`} x1={x} y1="5" x2={x} y2="60" />
-          ))}
-          {[15, 30, 45].map((y) => (
-            <line key={`h-${y}`} x1="5" y1={y} x2="95" y2={y} />
-          ))}
+        <g filter="url(#map-shadow)">
+          {/* Render all state shapes */}
+          {US_STATES.map((state) => {
+            const isSelected = selectedState?.id === state.id;
+            return (
+              <path
+                key={state.id}
+                d={state.d}
+                fill={getFill(state)}
+                stroke={getStroke(state)}
+                strokeWidth={getStrokeWidth(state)}
+                strokeLinejoin="round"
+                className="cursor-pointer"
+                style={{
+                  transition: "fill 0.2s ease, stroke 0.2s ease, stroke-width 0.15s ease",
+                  filter: isSelected ? "url(#state-glow)" : "none",
+                }}
+                onMouseEnter={() => setHoveredState(state.id)}
+                onMouseLeave={() => setHoveredState(null)}
+                onClick={() => onStateSelect(state)}
+              >
+                <title>{state.name}</title>
+              </path>
+            );
+          })}
+
+          {/* State abbreviation labels (skip Hawaii for now due to small inset) */}
+          {US_STATES.filter(s => s.id !== "15").map((state) => {
+            const isSmall = SMALL_STATES.has(state.id);
+            const isActive = selectedState?.id === state.id || hoveredState === state.id;
+            const fontSize = isSmall ? 7 : 10;
+
+            return (
+              <text
+                key={`lbl-${state.id}`}
+                x={state.cx}
+                y={state.cy}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={fontSize}
+                fontFamily="system-ui, -apple-system, sans-serif"
+                fontWeight={isActive ? 700 : 600}
+                fill={isActive ? "#ffffff" : "rgba(255,255,255,0.85)"}
+                className="pointer-events-none select-none"
+                style={{
+                  textShadow: "0 1px 2px rgba(0,0,0,0.4)",
+                  transition: "fill 0.2s ease",
+                }}
+              >
+                {state.abbr}
+              </text>
+            );
+          })}
         </g>
-
-        {/* City Markers */}
-        {cities.map((city) => (
-          <CityMarker
-            key={city.id}
-            city={city}
-            isSelected={selectedCity?.id === city.id}
-            onSelect={() => onCitySelect(selectedCity?.id === city.id ? null : city)}
-          />
-        ))}
       </svg>
 
-      {/* Legend */}
-      <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-4 text-[10px] text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-accent-medical/60" />
-          <span>City</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-accent-medical animate-pulse" />
-          <span>Selected</span>
-        </div>
-      </div>
+      {/* Floating tooltip on hover */}
+      {hoveredState && (() => {
+        const state = US_STATES.find(s => s.id === hoveredState);
+        if (!state) return null;
+        return (
+          <div
+            className="absolute top-3 left-1/2 -translate-x-1/2 z-10 px-3 py-1.5 rounded-lg text-sm font-semibold pointer-events-none whitespace-nowrap"
+            style={{
+              background: "rgba(2, 8, 16, 0.92)",
+              border: "1px solid hsl(var(--glass-border))",
+              color: "hsl(var(--foreground))",
+              backdropFilter: "blur(12px)",
+              boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+            }}
+          >
+            {state.name}
+            <span className="text-muted-foreground ml-2">
+              {state.region}
+            </span>
+          </div>
+        );
+      })()}
     </div>
   );
 }
+
+export default USAMap;

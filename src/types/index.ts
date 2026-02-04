@@ -149,6 +149,9 @@ export interface City {
   doctorCount: number;
 }
 
+// Re-export StateData for convenience
+export type { StateData } from "@/data/usStateData";
+
 export type DoctorSpecialty = 'ENT' | 'Laryngologist' | 'Voice Therapist' | 'Vocal Coach';
 
 export interface Doctor {
