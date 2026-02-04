@@ -8,18 +8,29 @@ interface StemHowl {
   howl: Howl;
 }
 
-// Delay to allow HTML5 audio buffers to stabilize after seeking
-const SEEK_SYNC_DELAY_MS = 150;
+// Delay to allow HTML5 audio buffers to stabilize after seeking (increased for 12+ stem songs)
+const SEEK_SYNC_DELAY_MS = 200;
 // Maximum acceptable drift between stems (in seconds)
 const SYNC_TOLERANCE_SEC = 0.08;
 // Maximum retry attempts for sync correction
 const MAX_SYNC_RETRIES = 3;
 // Interval for checking drift during playback (ms)
 const DRIFT_CHECK_INTERVAL_MS = 1000;
-// Minimum drift required to trigger correction (prevents overcorrection)
-const DRIFT_CORRECTION_THRESHOLD = 0.15;
+// Minimum drift required to trigger correction (reduced for tighter sync)
+const DRIFT_CORRECTION_THRESHOLD = 0.10;
 // Minimum time between corrections to allow stabilization
 const MIN_CORRECTION_INTERVAL_MS = 2000;
+// Buffer before loop end to prevent overshoot on slower devices
+const LOOP_END_BUFFER_SEC = 0.05;
+// Delay for loop reset sync (ms)
+const LOOP_RESET_DELAY_MS = 20;
+
+// Get sync tolerance based on stem count (more stems = slightly looser to avoid overcorrection)
+const getSyncTolerance = (stemCount: number): number => {
+  if (stemCount > 10) return 0.10;
+  if (stemCount > 6) return 0.08;
+  return 0.06;
+};
 
 export function useAudioPlayer() {
   const stemHowlsRef = useRef<StemHowl[]>([]);
@@ -60,7 +71,7 @@ export function useAudioPlayer() {
     return playbackStartPositionRef.current + (elapsed * state.playbackRate);
   }, []);
 
-  // Helper to verify all stems are synchronized
+  // Helper to verify all stems are synchronized (uses stem-count-aware tolerance)
   const verifyStemSync = useCallback((targetTime: number): boolean => {
     if (stemHowlsRef.current.length === 0) return true;
     
@@ -74,7 +85,9 @@ export function useAudioPlayer() {
     const maxPos = Math.max(...positions);
     const spread = maxPos - minPos;
     
-    return spread <= SYNC_TOLERANCE_SEC;
+    // Use stem-count-aware tolerance for better sync with larger stem counts
+    const tolerance = getSyncTolerance(stemHowlsRef.current.length);
+    return spread <= tolerance;
   }, []);
 
   // Helper to re-seek all stems to a target time
@@ -284,10 +297,16 @@ export function useAudioPlayer() {
             const medianIndex = Math.floor(positions.length / 2);
             const time = positions[medianIndex];
             
-            // Handle looping with immediate seek (no pause/resume for smoother loops)
+            // Handle looping with pause-seek-resume cycle for tight sync
             if (state.isLooping && state.loopEnd > state.loopStart) {
-              if (time >= state.loopEnd) {
-                // Immediate seek without pause cycle - all stems jump to loop start
+              // Add buffer before loop end to prevent overshoot on slower devices
+              if (time >= state.loopEnd - LOOP_END_BUFFER_SEC) {
+                // Force sync on loop reset: pause all stems first
+                stemHowlsRef.current.forEach(({ howl }) => {
+                  howl.pause();
+                });
+                
+                // Seek all stems to loop start
                 stemHowlsRef.current.forEach(({ howl }) => {
                   howl.seek(state.loopStart);
                 });
@@ -297,6 +316,15 @@ export function useAudioPlayer() {
                 playbackStartPositionRef.current = state.loopStart;
                 
                 state.updateCurrentTime(state.loopStart);
+                
+                // Small delay then resume for tighter synchronization
+                setTimeout(() => {
+                  if (useAudioStore.getState().isPlaying) {
+                    stemHowlsRef.current.forEach(({ howl }) => {
+                      howl.play();
+                    });
+                  }
+                }, LOOP_RESET_DELAY_MS);
               } else {
                 state.updateCurrentTime(time);
                 // Keep master clock in sync during playback for accurate position tracking
