@@ -7,6 +7,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { VocalProgressDiagram } from "@/components/home/VocalProgressDiagram";
 import { ContinuePractice } from "@/components/home/ContinuePractice";
 import { useUserStore } from "@/stores/userStore";
+import stadiumBg from "@/assets/stadium-background.png";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -43,14 +44,24 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
+      {/* Stadium Background Image */}
+      <div className="absolute inset-0 z-0">
+        <img 
+          src={stadiumBg} 
+          alt="" 
+          className="w-full h-full object-cover" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
+      </div>
+
       <Header showSearch={false} />
 
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="px-4 pb-8"
+        className="relative z-10 px-4 pb-8"
       >
         {/* Hero Section - Clean without icon */}
         <motion.section variants={itemVariants} className="py-6 text-center">
