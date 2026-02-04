@@ -11,6 +11,7 @@ import { useDemoMode } from "@/hooks/useDemoMode";
 import Splash from "./pages/Splash";
 import Onboarding from "./pages/Onboarding";
 import Home from "./pages/Home";
+import Hub from "./pages/Hub";
 import Library from "./pages/Library";
 import Playlists from "./pages/Playlists";
 import PlaylistDetail from "./pages/PlaylistDetail";
@@ -48,6 +49,7 @@ function AppRoutes({ onAppReady }: { onAppReady: () => void }) {
         <AppShell>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/hub" element={<Hub />} />
             <Route path="/library" element={<Library />} />
             <Route path="/playlists" element={<Playlists />} />
             <Route path="/playlist/:id" element={<PlaylistDetail />} />
@@ -57,6 +59,10 @@ function AppRoutes({ onAppReady }: { onAppReady: () => void }) {
             <Route path="/training" element={<Library />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/subscription" element={<Subscription />} />
+            {/* Toolkit routes - placeholder for future pages */}
+            <Route path="/store" element={<Hub />} />
+            <Route path="/vocal-health" element={<Hub />} />
+            <Route path="/stage-prep" element={<Hub />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

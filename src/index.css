@@ -100,6 +100,11 @@
     --space-lg: 24px;
     --space-xl: 32px;
     --space-2xl: 48px;
+
+    /* Hub Module Accent Colors */
+    --accent-store: 30 55% 70%;      /* Warm Gold */
+    --accent-medical: 0 84% 60%;     /* Medical Red */
+    --accent-gear: 187 85% 53%;      /* Electric Cyan */
   }
 
   /* Light mode - Stadium at Dusk */
@@ -960,4 +965,74 @@
     hsl(var(--primary) / 0.2) 50%,
     transparent 100%
   );
+}
+
+/* ========== Hub Card Accent Styles ========== */
+
+/* Store - Warm Gold */
+.hub-accent-store .hub-icon-bg {
+  background: hsl(var(--accent-store) / 0.15);
+  border: 1px solid hsl(var(--accent-store) / 0.3);
+}
+.hub-accent-store .hub-icon-color {
+  color: hsl(var(--accent-store));
+}
+.hub-accent-store .hub-card-glow {
+  background: radial-gradient(
+    ellipse at center,
+    hsl(var(--accent-store) / 0.1) 0%,
+    transparent 70%
+  );
+}
+.hub-accent-store:hover {
+  border-color: hsl(var(--accent-store) / 0.4);
+}
+
+/* Medical - Red */
+.hub-accent-medical .hub-icon-bg {
+  background: hsl(var(--accent-medical) / 0.15);
+  border: 1px solid hsl(var(--accent-medical) / 0.3);
+}
+.hub-accent-medical .hub-icon-color {
+  color: hsl(var(--accent-medical));
+}
+.hub-accent-medical .hub-card-glow {
+  background: radial-gradient(
+    ellipse at center,
+    hsl(var(--accent-medical) / 0.1) 0%,
+    transparent 70%
+  );
+}
+.hub-accent-medical:hover {
+  border-color: hsl(var(--accent-medical) / 0.4);
+}
+
+/* Gear - Electric Cyan */
+.hub-accent-gear .hub-icon-bg {
+  background: hsl(var(--accent-gear) / 0.15);
+  border: 1px solid hsl(var(--accent-gear) / 0.3);
+}
+.hub-accent-gear .hub-icon-color {
+  color: hsl(var(--accent-gear));
+}
+.hub-accent-gear .hub-card-glow {
+  background: radial-gradient(
+    ellipse at center,
+    hsl(var(--accent-gear) / 0.1) 0%,
+    transparent 70%
+  );
+}
+.hub-accent-gear:hover {
+  border-color: hsl(var(--accent-gear) / 0.4);
+}
+
+/* Light mode adjustments */
+.light .hub-accent-store .hub-icon-bg {
+  background: hsl(30 55% 70% / 0.2);
+}
+.light .hub-accent-medical .hub-icon-bg {
+  background: hsl(0 84% 60% / 0.12);
+}
+.light .hub-accent-gear .hub-icon-bg {
+  background: hsl(187 85% 53% / 0.15);
 }
