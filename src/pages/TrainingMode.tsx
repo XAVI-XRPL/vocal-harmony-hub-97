@@ -23,6 +23,7 @@ import { StemTrack } from "@/components/audio/StemTrack";
 import { TempoControl } from "@/components/audio/TempoControl";
 import { LoopControls } from "@/components/audio/LoopControls";
 import { LoopRegion } from "@/components/audio/LoopRegion";
+import { StudioBackground } from "@/components/layout/StudioBackground";
 import { getSongById, generateMockWaveform } from "@/data/mockSongs";
 import { useAudioStore } from "@/stores/audioStore";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
@@ -187,7 +188,8 @@ export default function TrainingMode() {
   const songHasRealAudio = song.stems.some(stem => stem.url && stem.url.length > 0);
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
+    <div className="fixed inset-0 flex flex-col overflow-hidden">
+      <StudioBackground />
       {/* Header - Compact */}
       <div className="z-40 glass-card rounded-none border-x-0 border-t-0 flex-shrink-0">
         <div className="flex items-center justify-between h-12 px-3 safe-top">
