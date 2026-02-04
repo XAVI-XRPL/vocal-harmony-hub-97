@@ -268,6 +268,9 @@ export function useAudioPlayer() {
           return;
         }
 
+        // Read state directly from store to avoid stale closures and React queue errors
+        const state = useAudioStore.getState();
+
         if (stemHowlsRef.current.length > 0) {
           // Read position from multiple stems and use median for accuracy
           const positions = stemHowlsRef.current
@@ -281,26 +284,26 @@ export function useAudioPlayer() {
             const time = positions[medianIndex];
             
             // Handle looping with immediate seek (no pause/resume for smoother loops)
-            if (isLooping && loopEnd > loopStart) {
-              if (time >= loopEnd) {
+            if (state.isLooping && state.loopEnd > state.loopStart) {
+              if (time >= state.loopEnd) {
                 // Immediate seek without pause cycle - all stems jump to loop start
                 stemHowlsRef.current.forEach(({ howl }) => {
-                  howl.seek(loopStart);
+                  howl.seek(state.loopStart);
                 });
                 
                 // Reset master clock to prevent drift accumulation
                 playbackStartTimeRef.current = Date.now();
-                playbackStartPositionRef.current = loopStart;
+                playbackStartPositionRef.current = state.loopStart;
                 
-                updateCurrentTime(loopStart);
+                state.updateCurrentTime(state.loopStart);
               } else {
-                updateCurrentTime(time);
+                state.updateCurrentTime(time);
                 // Keep master clock in sync during playback for accurate position tracking
                 playbackStartTimeRef.current = Date.now();
                 playbackStartPositionRef.current = time;
               }
             } else {
-              updateCurrentTime(time);
+              state.updateCurrentTime(time);
               // Keep master clock in sync during playback for accurate position tracking
               playbackStartTimeRef.current = Date.now();
               playbackStartPositionRef.current = time;
@@ -308,7 +311,8 @@ export function useAudioPlayer() {
           }
         }
         
-        if (isPlaying) {
+        // Check if still playing from store state
+        if (state.isPlaying) {
           animationFrameRef.current = requestAnimationFrame(updateTime);
         }
       };
