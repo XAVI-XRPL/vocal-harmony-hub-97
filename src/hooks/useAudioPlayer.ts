@@ -30,6 +30,8 @@ export function useAudioPlayer() {
   // Master clock references for accurate position tracking
   const playbackStartTimeRef = useRef<number>(0);
   const playbackStartPositionRef = useRef<number>(0);
+  // Flag to track when playback resumes from a seek (to avoid stale closure issue)
+  const seekResumeRef = useRef(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
@@ -241,8 +243,15 @@ export function useAudioPlayer() {
     if (!isLoaded || stemHowlsRef.current.length === 0) return;
 
     if (isPlaying) {
-      // Start all stems from current position with sync
-      syncPlay(currentTime);
+      // Skip syncPlay if we just resumed from a seek - the seekTo function already
+      // set the correct position and started playback
+      if (seekResumeRef.current) {
+        seekResumeRef.current = false;
+        // Just continue to start the animation frame loop, don't re-seek
+      } else {
+        // Normal play - use master clock position (refs are always current, unlike state)
+        syncPlay(playbackStartPositionRef.current);
+      }
 
       // Start the animation frame loop to update time
       const updateTime = () => {
@@ -410,6 +419,13 @@ export function useAudioPlayer() {
           
           // Resume playback if was playing before seek
           if (wasPlaying) {
+            // Set master clock BEFORE resuming to ensure correct position
+            playbackStartTimeRef.current = Date.now();
+            playbackStartPositionRef.current = time;
+            // Mark that we're resuming from seek - this prevents the isPlaying effect
+            // from calling syncPlay() with a stale currentTime value
+            seekResumeRef.current = true;
+            
             stemHowlsRef.current.forEach(({ howl }) => {
               howl.play();
             });
