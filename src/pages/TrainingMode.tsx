@@ -89,6 +89,7 @@ export default function TrainingMode() {
     clearLoop,
     setPlaybackRate,
     resetMixer,
+    resetAll,
     toggleMasterMute,
     updateCurrentTime,
   } = useAudioStore();
@@ -266,7 +267,12 @@ export default function TrainingMode() {
               size="sm"
               className="h-8 px-2 text-xs"
               icon={<RotateCcw className="w-3.5 h-3.5" />}
-              onClick={resetMixer}
+              onClick={() => {
+                resetAll();
+                if (hasRealAudio) {
+                  seekTo(0);
+                }
+              }}
             >
               Reset
             </GlassButton>

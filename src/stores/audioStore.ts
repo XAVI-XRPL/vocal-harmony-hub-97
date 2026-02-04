@@ -25,6 +25,7 @@ interface AudioStore {
   toggleStemSolo: (stemId: string) => void;
   toggleMasterMute: () => void;
   resetMixer: () => void;
+  resetAll: () => void;
   initializeStemStates: (song: Song) => void;
 
   // Loop
@@ -126,6 +127,21 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
     set((state) => {
       if (!state.currentSong) return state;
       return { stemStates: getDefaultStemStates(state.currentSong.stems) };
+    }),
+
+  // Comprehensive reset: position, loop, tempo, and mixer
+  resetAll: () =>
+    set((state) => {
+      if (!state.currentSong) return state;
+      return {
+        currentTime: 0,
+        isPlaying: false,
+        isLooping: false,
+        loopStart: 0,
+        loopEnd: 0,
+        playbackRate: 1,
+        stemStates: getDefaultStemStates(state.currentSong.stems),
+      };
     }),
 
   // Loop
