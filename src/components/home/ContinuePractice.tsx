@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Play, Clock, ChevronRight, Loader2 } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { useSongs } from "@/hooks/useSongs";
-import { useAutoPreload, useAudioPreload } from "@/hooks/useAudioPreload";
+import { useAudioPreload } from "@/hooks/useAudioPreload";
 import { cn } from "@/lib/utils";
 
 interface ContinuePracticeProps {
@@ -17,9 +17,7 @@ export function ContinuePractice({ className }: ContinuePracticeProps) {
   
   // Get first 2 songs as "recent" practice
   const recentSongs = songs?.slice(0, 2) ?? [];
-  
-  // Auto-preload the first 2 songs when component mounts
-  useAutoPreload(songs, 2);
+  // Note: Preloading is handled centrally in Home.tsx to avoid duplicate calls
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

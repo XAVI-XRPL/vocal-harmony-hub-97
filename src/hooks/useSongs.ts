@@ -110,7 +110,8 @@ export function useSongs() {
 
       return (songs as unknown as DbSong[]).map(transformSong);
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 60 * 1000, // 30 minutes - songs rarely change
+    gcTime: 60 * 60 * 1000, // 1 hour garbage collection
   });
 }
 
