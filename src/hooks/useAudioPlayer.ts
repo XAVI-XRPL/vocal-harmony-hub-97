@@ -219,17 +219,18 @@ export function useAudioPlayer() {
           }
         },
         onend: () => {
-          // Handle song end
-          if (!isLooping) {
-            pause();
-            updateCurrentTime(0);
+          // Handle song end - read fresh state to avoid stale closure
+          const state = useAudioStore.getState();
+          if (!state.isLooping) {
+            state.pause();
+            state.updateCurrentTime(0);
           }
         },
       });
 
       stemHowlsRef.current.push({ stemId: stem.id, howl });
     });
-  }, [cleanup, setDuration, isLooping, pause, updateCurrentTime]);
+  }, [cleanup, setDuration]);
 
   // Load song when it changes
   useEffect(() => {
@@ -349,7 +350,7 @@ export function useAudioPlayer() {
         clearInterval(driftCheckIntervalRef.current);
       }
     };
-  }, [isPlaying, isLoaded, isLooping, loopStart, loopEnd, syncPlay, correctDrift, reSeekAllStems]);
+  }, [isPlaying, isLoaded, syncPlay, correctDrift]);
 
   // Update stem volumes based on stemStates
   useEffect(() => {
