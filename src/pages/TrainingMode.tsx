@@ -84,6 +84,7 @@ export default function TrainingMode() {
     clearLoop,
     setPlaybackRate,
     resetMixer,
+    toggleMasterMute,
     updateCurrentTime,
   } = useAudioStore();
 
@@ -254,13 +255,27 @@ export default function TrainingMode() {
                 )}
               </div>
 
+              {/* Master Mute Button */}
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                onClick={toggleMasterMute}
+                className={cn(
+                  "w-7 h-7 rounded-lg border flex items-center justify-center transition-all",
+                  allMuted
+                    ? "bg-destructive/20 border-destructive/40 hover:bg-destructive/30"
+                    : "bg-muted/20 border-border hover:bg-muted/40"
+                )}
+                aria-label={allMuted ? "Unmute all tracks" : "Mute all tracks"}
+              >
+                {allMuted ? (
+                  <VolumeX className="w-3.5 h-3.5 text-destructive" />
+                ) : (
+                  <Volume2 className="w-3.5 h-3.5 text-muted-foreground" />
+                )}
+              </motion.button>
+
               {/* Volume indicator */}
               <div className="flex-1 min-w-0 flex items-center gap-2">
-                {allMuted ? (
-                  <VolumeX className="w-3.5 h-3.5 text-destructive shrink-0" />
-                ) : (
-                  <Volume2 className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-                )}
                 <div className="flex-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
                   <div 
                     className="h-full gradient-bg transition-all duration-200"

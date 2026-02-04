@@ -23,6 +23,7 @@ interface AudioStore {
   setStemVolume: (stemId: string, volume: number) => void;
   toggleStemMute: (stemId: string) => void;
   toggleStemSolo: (stemId: string) => void;
+  toggleMasterMute: () => void;
   resetMixer: () => void;
   initializeStemStates: (song: Song) => void;
 
@@ -107,6 +108,17 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
         stemStates: state.stemStates.map((s) =>
           s.stemId === stemId ? { ...s, isSolo: true } : s
         ),
+      };
+    }),
+
+  toggleMasterMute: () =>
+    set((state) => {
+      const allMuted = state.stemStates.every((s) => s.isMuted);
+      return {
+        stemStates: state.stemStates.map((s) => ({
+          ...s,
+          isMuted: !allMuted,
+        })),
       };
     }),
 
