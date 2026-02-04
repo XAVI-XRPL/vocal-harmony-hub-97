@@ -1,231 +1,347 @@
 
-# Simple Onboarding Flow with Stadium Background & Demo Mode
 
-## Summary
+# RVMT v2.0 Implementation Plan
+## Complete Vocalist Lifestyle Ecosystem
 
-Create a streamlined, visually stunning onboarding experience using the existing stadium background with animated light orbs and particles. The flow will be simple (3 slides max) and include a "Try Demo" option that allows users to explore the app without creating an account.
-
----
-
-## Current State Analysis
-
-- **Onboarding (`src/pages/Onboarding.tsx`)**: 3-slide carousel with custom gradient backgrounds, icons, and animations
-- **Stadium Background (`src/components/layout/StadiumBackground.tsx`)**: Animated particle system with light orbs, sweeping beams, and fog effects
-- **App Flow (`src/App.tsx`)**: Splash -> Onboarding (if first time) -> Home
-- **Auth**: Uses Supabase auth with email/password login/signup
-- **User Store**: Tracks `isAuthenticated`, user profile, subscription tier
+This plan outlines the phased implementation of the comprehensive v2.0 features from your master prompt document. The implementation is organized into 6 phases to ensure each feature module is built incrementally with proper testing between phases.
 
 ---
 
-## Design Approach
+## Current State vs. Target State
 
-### Visual Design
-- Replace the current plain gradient background with the cinematic StadiumBackground
-- Add a dark overlay for text readability
-- Keep the glassmorphism aesthetic consistent with the rest of the app
-- Use the frosted GlassButton for CTAs
-
-### Onboarding Slides (Simplified to 3)
-1. **Welcome** - "Master Your Voice" with RVMT branding
-2. **How It Works** - Show stem separation concept visually
-3. **Get Started** - Options: "Create Account", "Sign In", or "Try Demo"
-
-### Demo Mode
-- Allow users to explore the app without authentication
-- Demo users can access free songs only (RLS already enforces this)
-- Show subtle prompts to sign up when accessing limited features
-- Store demo mode state in localStorage
+| Component | Current | Target v2.0 |
+|-----------|---------|-------------|
+| Pages | 13 pages | 19 pages (+6 new) |
+| Navigation tabs | 5 (Library, Playlists, Home, Train, Progress) | 5 (Library, Playlists, Home, **Hub**, Progress) |
+| Mock data files | 1 (mockSongs) | 7 (+6 new) |
+| Zustand stores | 3 (audio, user, ui) | 4 (+storeCartStore) |
+| Database tables | 7 tables | 13 tables (+6 new) |
+| Component directories | Standard | +5 new (store/, medical/, stage-prep/, hub/, home/) |
 
 ---
 
-## Technical Implementation
+## Phase 1: Foundation & Navigation Updates
+**Estimated effort: 1 session**
 
-### Phase 1: Create Demo Mode Hook
+### 1.1 Copy Reference Document
+- Save `RVMT_Lovable_Prompt_v2.md` to project docs folder for persistent reference
 
-**File: `src/hooks/useDemoMode.ts`**
+### 1.2 Update Navigation
+- **MobileNav.tsx**: Replace "Train" tab (Mic2 icon) with "Hub" tab (LayoutGrid or diamond icon)
+- **DesktopSidebar.tsx**: Add "TOOLKIT" section below existing nav with 3 new items:
+  - Vocal Rider Store
+  - Vocal Health
+  - Stage Prep
 
-```typescript
-import { useState, useEffect } from "react";
+### 1.3 Create Hub Gateway Page
+- **New file: `src/pages/Hub.tsx`**
+- 3 large tappable glass cards with module-specific accent colors:
+  - Vocal Rider Store (Warm Gold #D4A574)
+  - Vocal Health (Medical Red #EF4444)
+  - Stage Prep (Electric Cyan #22D3EE)
+- Framer Motion `whileTap={{ scale: 0.97 }}` animations
 
-const DEMO_MODE_KEY = "rvmt_demo_mode";
+### 1.4 Add Hub Component
+- **New file: `src/components/hub/HubCard.tsx`**
+- Reusable gateway card with icon, title, description, and colored glow
 
-export function useDemoMode() {
-  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState(true);
+### 1.5 Update App Routes
+- Add `/hub` route to App.tsx
+- Update Training nav to point to Library (training route already exists)
 
-  useEffect(() => {
-    const stored = localStorage.getItem(DEMO_MODE_KEY);
-    setIsDemoMode(stored === "true");
-    setIsLoading(false);
-  }, []);
+### Files to create:
+- `src/pages/Hub.tsx`
+- `src/components/hub/HubCard.tsx`
 
-  const enableDemoMode = () => {
-    localStorage.setItem(DEMO_MODE_KEY, "true");
-    setIsDemoMode(true);
-  };
+### Files to modify:
+- `src/App.tsx` (add Hub route)
+- `src/components/layout/MobileNav.tsx` (replace Train with Hub)
+- `src/components/layout/DesktopSidebar.tsx` (add TOOLKIT section)
 
-  const disableDemoMode = () => {
-    localStorage.removeItem(DEMO_MODE_KEY);
-    setIsDemoMode(false);
-  };
+---
 
-  return { isDemoMode, isLoading, enableDemoMode, disableDemoMode };
+## Phase 2: Mock Data & Type Definitions
+**Estimated effort: 1 session**
+
+### 2.1 Extend Type Definitions
+Add to `src/types/index.ts`:
+- `Product` interface (store products)
+- `Doctor` interface (medical providers)
+- `City` interface (map cities)
+- `Venue` interface (stadiums/arenas)
+- `PartnerBrand` interface
+- `GearProduct` interface
+- `ChecklistItem` interface
+
+### 2.2 Create Mock Data Files
+- `src/data/mockCities.ts` - 13 major US cities with SVG coordinates
+- `src/data/mockDoctors.ts` - 15 medical providers across cities
+- `src/data/mockVenues.ts` - 30+ stadiums/arenas
+- `src/data/mockProducts.ts` - 14 vocal care products
+- `src/data/mockBrands.ts` - 7 partner brands + gear products
+- `src/data/mockChecklist.ts` - 8 pre-show checklist items
+
+### Files to create:
+- `src/data/mockCities.ts`
+- `src/data/mockDoctors.ts`
+- `src/data/mockVenues.ts`
+- `src/data/mockProducts.ts`
+- `src/data/mockBrands.ts`
+- `src/data/mockChecklist.ts`
+
+### Files to modify:
+- `src/types/index.ts`
+
+---
+
+## Phase 3: Vocal Rider Store
+**Estimated effort: 2 sessions**
+
+### 3.1 Create Store Components
+- `src/components/store/ProductCard.tsx` - Warm gold glass card with category badge, price
+- `src/components/store/ProductGrid.tsx` - Responsive 2-column grid
+- `src/components/store/DressingRoomHero.tsx` - CSS/SVG illustrated vanity mirror scene
+- `src/components/store/CategoryFilter.tsx` - Horizontal pill filter (All, Throat Care, Hydration, etc.)
+
+### 3.2 Add Dressing Room Theme Styles
+Update `src/index.css`:
+```css
+.dressing-room-bg { /* warm dark wood gradient */ }
+.dressing-room-card { /* warm tinted glass */ }
+```
+
+### 3.3 Create Store Pages
+- `src/pages/VocalRiderStore.tsx` - Full store with hero, filters, product grid
+- `src/pages/ProductDetail.tsx` - Individual product view (optional, can use affiliate links)
+
+### 3.4 Add Store Routes
+Update App.tsx with:
+- `/store`
+- `/store/:productId`
+
+### Files to create:
+- `src/pages/VocalRiderStore.tsx`
+- `src/pages/ProductDetail.tsx`
+- `src/components/store/ProductCard.tsx`
+- `src/components/store/ProductGrid.tsx`
+- `src/components/store/DressingRoomHero.tsx`
+- `src/components/store/CategoryFilter.tsx`
+
+### Files to modify:
+- `src/App.tsx`
+- `src/index.css`
+
+---
+
+## Phase 4: Vocal Health Directory
+**Estimated effort: 2 sessions**
+
+### 4.1 Create Medical Components
+- `src/components/medical/USAMap.tsx` - Inline SVG map with tappable city dots
+- `src/components/medical/CityMarker.tsx` - Animated glowing dot component
+- `src/components/medical/DoctorCard.tsx` - Provider card with red accent border
+- `src/components/medical/DoctorList.tsx` - Scrollable list of filtered doctors
+- `src/components/medical/VenueCard.tsx` - Stadium/venue card
+- `src/components/medical/VenueList.tsx` - Horizontal venue scroll
+- `src/components/medical/EMTBadge.tsx` - Red cross medical icon (sm/md/lg sizes)
+- `src/components/medical/CityDrawer.tsx` - Content section for selected city
+
+### 4.2 Create Medical Pages
+- `src/pages/VocalHealth.tsx` - Interactive map + doctor/venue lists
+- `src/pages/DoctorProfile.tsx` - Individual doctor profile
+
+### 4.3 Add Routes
+- `/vocal-health`
+- `/vocal-health/doctor/:doctorId`
+
+### Technical: USA Map SVG
+Use a simplified continental US outline as a single `<path>` element with city markers positioned at approximate coordinates. No external library needed.
+
+### Files to create:
+- `src/pages/VocalHealth.tsx`
+- `src/pages/DoctorProfile.tsx`
+- `src/components/medical/USAMap.tsx`
+- `src/components/medical/CityMarker.tsx`
+- `src/components/medical/DoctorCard.tsx`
+- `src/components/medical/DoctorList.tsx`
+- `src/components/medical/VenueCard.tsx`
+- `src/components/medical/VenueList.tsx`
+- `src/components/medical/EMTBadge.tsx`
+- `src/components/medical/CityDrawer.tsx`
+
+---
+
+## Phase 5: Stage Prep Module
+**Estimated effort: 2 sessions**
+
+### 5.1 Create Stage Prep Components
+- `src/components/stage-prep/IEMShowcase.tsx` - Large swipeable IEM product cards
+- `src/components/stage-prep/GearCard.tsx` - Equipment card with partner badge
+- `src/components/stage-prep/GearGrid.tsx` - Grid of gear products
+- `src/components/stage-prep/PartnerBadge.tsx` - "X% OFF" ribbon badge
+- `src/components/stage-prep/DiscountReveal.tsx` - Tap-to-reveal discount code
+- `src/components/stage-prep/PrepChecklist.tsx` - Interactive checklist with animations
+- `src/components/stage-prep/PrepChecklistItem.tsx` - Single item with checkbox animation
+
+### 5.2 Create Checklist Persistence Hook
+- `src/hooks/usePrepChecklist.ts` - LocalStorage for demo mode, Supabase for auth users
+
+### 5.3 Create Stage Prep Page
+- `src/pages/StagePrep.tsx` - IEM showcase, gear grid, pre-show checklist
+
+### 5.4 Add Route
+- `/stage-prep`
+
+### Files to create:
+- `src/pages/StagePrep.tsx`
+- `src/components/stage-prep/IEMShowcase.tsx`
+- `src/components/stage-prep/GearCard.tsx`
+- `src/components/stage-prep/GearGrid.tsx`
+- `src/components/stage-prep/PartnerBadge.tsx`
+- `src/components/stage-prep/DiscountReveal.tsx`
+- `src/components/stage-prep/PrepChecklist.tsx`
+- `src/components/stage-prep/PrepChecklistItem.tsx`
+- `src/hooks/usePrepChecklist.ts`
+
+---
+
+## Phase 6: Home Page Updates & Integration
+**Estimated effort: 1 session**
+
+### 6.1 Create Home Preview Components
+- `src/components/home/FeaturedGearPreview.tsx` - Horizontal scroll of 2-3 IEM products
+- `src/components/home/VocalRiderPicks.tsx` - 3-4 store product thumbnails
+- `src/components/home/VocalHealthCTA.tsx` - Single glass CTA card with EMT cross
+
+### 6.2 Update Home Page Layout
+Modify `src/pages/Home.tsx` to add below "Continue Practice":
+1. "Prep for the Stage" - FeaturedGearPreview
+2. "Dressing Room Essentials" - VocalRiderPicks
+3. "Vocal Health" - VocalHealthCTA
+
+### 6.3 Horizontal Scroll Styling
+Add to index.css:
+```css
+.horizontal-scroll {
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+}
+.horizontal-scroll > * {
+  scroll-snap-align: start;
 }
 ```
 
-### Phase 2: Redesign Onboarding with Stadium Background
+### Files to create:
+- `src/components/home/FeaturedGearPreview.tsx`
+- `src/components/home/VocalRiderPicks.tsx`
+- `src/components/home/VocalHealthCTA.tsx`
 
-**File: `src/pages/Onboarding.tsx`** (Complete rewrite)
+### Files to modify:
+- `src/pages/Home.tsx`
+- `src/index.css`
 
-Key changes:
-- Import and use `StadiumBackground` component
-- Add dark overlay for readability (`bg-gradient-to-b from-black/50 via-black/30 to-black/70`)
-- Simplify to 3 focused slides
-- Add final slide with auth options:
-  - "Create Account" -> Navigate to `/auth?signup=true`
-  - "Sign In" -> Navigate to `/auth`
-  - "Try Demo" -> Enable demo mode and proceed to home
+---
+
+## Phase 7 (Future): Database Tables & React Query Hooks
+**Estimated effort: 2 sessions**
+
+When ready to move from mock data to real database:
+
+### 7.1 Create Database Tables
+- `products` - Store products with RLS (public read)
+- `medical_providers` - Doctors with RLS (public read)
+- `cities` - City coordinates (public read)
+- `venues` - Stadiums/arenas (public read)
+- `partner_brands` - Gear brands (public read)
+- `gear_products` - IEMs/mics (public read)
+- `prep_checklists` - User checklists with RLS (user-owned)
+
+### 7.2 Create React Query Hooks
+- `src/hooks/useProducts.ts`
+- `src/hooks/useDoctors.ts`
+- `src/hooks/useVenues.ts`
+- `src/hooks/useCities.ts`
+- `src/hooks/useGear.ts`
+- `src/hooks/usePartnerBrands.ts`
+
+### 7.3 Seed Database
+Migrate mock data to Supabase tables
+
+---
+
+## Design System Extensions
+
+### New Module Accent Colors
+| Module | Accent | Hex | CSS Variable |
+|--------|--------|-----|--------------|
+| Vocal Rider Store | Warm Gold | #D4A574 | `--accent-store` |
+| Vocal Health | Medical Red | #EF4444 | `--accent-medical` |
+| Stage Prep | Electric Cyan | #22D3EE | `--accent-gear` |
+
+### New CSS Classes to Add
+```css
+/* Store dressing room theme */
+.dressing-room-bg { ... }
+.dressing-room-card { ... }
+
+/* Medical directory */
+.medical-card { border-left: 3px solid var(--accent-medical); }
+.emt-badge { ... }
+
+/* Stage prep */
+.partner-badge { ... }
+.discount-reveal { ... }
+```
+
+---
+
+## Implementation Order Summary
 
 ```text
-Slide Structure:
-
-[Slide 1: Welcome]
-- Large animated RVMT logo
-- "Master Your Voice"
-- "Professional stem-based vocal training"
-
-[Slide 2: How It Works]  
-- Visual stem bars animation
-- "Control Every Layer"
-- "Isolate vocals, harmonies, and instruments"
-
-[Slide 3: Get Started]
-- "Ready to Train?"
-- [Create Account] (Primary frosted button)
-- [Sign In] (Secondary glass button)
-- [Try Demo] (Ghost link button)
-```
-
-### Phase 3: Update App Flow to Support Demo Mode
-
-**File: `src/App.tsx`**
-
-Modify `AppContent` to check for demo mode:
-- If demo mode is enabled and onboarding complete, show the app
-- Demo users skip auth but can still access free content
-
-```typescript
-const { isDemoMode, enableDemoMode } = useDemoMode();
-
-// After splash completes:
-if (isComplete) {
-  // Already onboarded - show app (auth or demo)
-  setShowApp(true);
-} else {
-  // First time - show onboarding
-  setShowOnboarding(true);
-}
-
-const handleOnboardingComplete = (mode: 'auth' | 'demo') => {
-  if (mode === 'demo') {
-    enableDemoMode();
-  }
-  completeOnboarding();
-  setShowOnboarding(false);
-  setShowApp(true);
-};
-```
-
-### Phase 4: Add Demo Mode Indicator & Upgrade Prompts
-
-**File: `src/components/layout/DemoModeBanner.tsx`** (New)
-
-A subtle top banner for demo mode users:
-```typescript
-<motion.div className="bg-primary/20 border-b border-primary/30 px-4 py-2 text-center">
-  <p className="text-sm">
-    <span className="text-muted-foreground">Exploring in demo mode.</span>
-    <button onClick={() => navigate('/auth')} className="text-primary ml-2">
-      Create account to save progress
-    </button>
-  </p>
-</motion.div>
-```
-
-Update `AppShell.tsx` to show the banner when in demo mode.
-
----
-
-## File Changes Summary
-
-| File | Action | Description |
-|------|--------|-------------|
-| `src/hooks/useDemoMode.ts` | Create | Demo mode state management |
-| `src/pages/Onboarding.tsx` | Rewrite | Stadium background, simplified slides, auth options |
-| `src/App.tsx` | Modify | Support demo mode flow |
-| `src/components/layout/DemoModeBanner.tsx` | Create | Subtle upgrade prompt banner |
-| `src/components/layout/AppShell.tsx` | Modify | Show demo banner when applicable |
-
----
-
-## User Flow Diagram
-
-```text
-App Launch
+Phase 1: Navigation + Hub Page
     |
     v
-[Splash Screen - 2.5s]
+Phase 2: Types + Mock Data
     |
     v
-First Time User? ----No----> [Home Dashboard]
-    |                              ^
-   Yes                             |
-    |                              |
-    v                              |
-[Onboarding Slide 1]               |
-    |                              |
-    v                              |
-[Onboarding Slide 2]               |
-    |                              |
-    v                              |
-[Onboarding Slide 3]               |
-    |                              |
-    +-- "Create Account" --> [Auth Page - Signup]
-    |                              |
-    +-- "Sign In" ---------> [Auth Page - Login]
-    |                              |
-    +-- "Try Demo" ---------------+
-         (sets demo mode)
+Phase 3: Vocal Rider Store
+    |
+    v
+Phase 4: Vocal Health Directory
+    |
+    v
+Phase 5: Stage Prep Module
+    |
+    v
+Phase 6: Home Page Integration
+    |
+    v
+Phase 7: Database Migration (Future)
 ```
 
 ---
 
-## Demo Mode Behavior
+## Total New Files Summary
 
-| Feature | Demo Mode | Authenticated |
-|---------|-----------|---------------|
-| Free songs | Full access | Full access |
-| Premium songs | Blocked (RLS) | Based on subscription |
-| Practice sessions | Not saved | Saved to database |
-| Playlists | Not available | Full access |
-| Progress tracking | Local only | Synced to database |
-| Upgrade banner | Shown | Hidden |
+| Category | Count | Key Files |
+|----------|-------|-----------|
+| Pages | 6 | Hub, VocalRiderStore, ProductDetail, VocalHealth, DoctorProfile, StagePrep |
+| Store Components | 4 | ProductCard, ProductGrid, DressingRoomHero, CategoryFilter |
+| Medical Components | 8 | USAMap, CityMarker, DoctorCard, DoctorList, VenueCard, VenueList, EMTBadge, CityDrawer |
+| Stage Prep Components | 7 | IEMShowcase, GearCard, GearGrid, PartnerBadge, DiscountReveal, PrepChecklist, PrepChecklistItem |
+| Home Components | 3 | FeaturedGearPreview, VocalRiderPicks, VocalHealthCTA |
+| Hub Components | 1 | HubCard |
+| Mock Data | 6 | mockCities, mockDoctors, mockVenues, mockProducts, mockBrands, mockChecklist |
+| Hooks | 2 | usePrepChecklist, (future: 6 React Query hooks) |
+| **Total** | **37** | |
 
 ---
 
-## Design Specifications
+## Notes
 
-### Stadium Background Integration
-- Use existing `StadiumBackground` component unchanged
-- Add overlay: `bg-gradient-to-b from-black/50 via-black/30 to-black/70`
-- Content z-index above background (z-10)
+- All new features use mock data initially - fully functional in demo mode
+- Existing audio engine, training mode, and auth remain unchanged
+- Mobile-first responsive design for all new pages
+- Framer Motion animations throughout
+- All affiliate links point to `#` in Phase 1 (can be updated later)
 
-### Button Styling
-- Primary CTA: `GlassButton variant="frosted"` (shimmer + glow)
-- Secondary: `GlassButton variant="secondary"`
-- Demo link: Text button with `text-muted-foreground hover:text-foreground`
-
-### Animations
-- Slide transitions: Framer Motion with spring physics
-- Logo entrance: Scale + fade
-- Staggered content appearance: 0.1s delay between elements
