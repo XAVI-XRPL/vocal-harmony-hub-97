@@ -276,6 +276,17 @@ export function WaveformDisplay({
         })}
       </div>
 
+      {/* Loop region indicator (display only, for stem tracks) */}
+      {loopEnd > loopStart && isLooping && !onLoopSelect && (
+        <div
+          className="absolute inset-y-0 bg-primary/20 pointer-events-none z-[5] rounded"
+          style={{
+            left: `${(loopStart / duration) * 100}%`,
+            width: `${((loopEnd - loopStart) / duration) * 100}%`,
+          }}
+        />
+      )}
+
       {/* Playhead */}
       {showProgress && (
         <motion.div

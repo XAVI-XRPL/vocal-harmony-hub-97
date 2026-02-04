@@ -421,6 +421,9 @@ export default function TrainingMode() {
                 currentTime={currentTime}
                 duration={duration}
                 onSeek={handleSeek}
+                loopStart={loopStart}
+                loopEnd={loopEnd}
+                isLooping={isLooping}
               />
             </motion.div>
           ))}

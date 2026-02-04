@@ -23,9 +23,13 @@ interface StemTrackProps {
   currentTime: number;
   duration: number;
   onSeek: (time: number) => void;
+  // Loop props for unified display
+  loopStart?: number;
+  loopEnd?: number;
+  isLooping?: boolean;
 }
 
-export function StemTrack({ stem, currentTime, duration, onSeek }: StemTrackProps) {
+export function StemTrack({ stem, currentTime, duration, onSeek, loopStart = 0, loopEnd = 0, isLooping = false }: StemTrackProps) {
   const stemStates = useAudioStore((state) => state.stemStates);
   const setStemVolume = useAudioStore((state) => state.setStemVolume);
   const toggleStemMute = useAudioStore((state) => state.toggleStemMute);
@@ -128,7 +132,7 @@ export function StemTrack({ stem, currentTime, duration, onSeek }: StemTrackProp
         </div>
       </div>
 
-      {/* Compact waveform */}
+      {/* Compact waveform with loop region */}
       <WaveformDisplay
         waveformData={stem.waveformData || []}
         currentTime={currentTime}
@@ -139,6 +143,9 @@ export function StemTrack({ stem, currentTime, duration, onSeek }: StemTrackProp
         isPlaying={isPlaying}
         showProgress={!isMuted && !isEffectivelyMuted}
         mirrored={true}
+        loopStart={loopStart}
+        loopEnd={loopEnd}
+        isLooping={isLooping}
       />
     </GlassCard>
   );
