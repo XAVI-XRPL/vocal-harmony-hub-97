@@ -5,6 +5,9 @@ import { Header } from "@/components/layout/Header";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { ContinuePractice } from "@/components/home/ContinuePractice";
+import { FeaturedGearPreview } from "@/components/home/FeaturedGearPreview";
+import { VocalRiderPicks } from "@/components/home/VocalRiderPicks";
+import { VocalHealthCTA } from "@/components/home/VocalHealthCTA";
 import { useUserStore } from "@/stores/userStore";
 import stadiumBg from "@/assets/stadium-background.png";
 
@@ -114,6 +117,21 @@ export default function Home() {
         {/* Continue Practice */}
         <motion.section variants={itemVariants} className="mb-6">
           <ContinuePractice />
+        </motion.section>
+
+        {/* Featured Gear Preview - Stage Prep */}
+        <motion.section variants={itemVariants} className="mb-6">
+          <FeaturedGearPreview />
+        </motion.section>
+
+        {/* Vocal Rider Store Picks */}
+        <motion.section variants={itemVariants} className="mb-6">
+          <VocalRiderPicks />
+        </motion.section>
+
+        {/* Vocal Health CTA */}
+        <motion.section variants={itemVariants} className="mb-6">
+          <VocalHealthCTA />
         </motion.section>
 
         {/* CTA for non-authenticated users */}
