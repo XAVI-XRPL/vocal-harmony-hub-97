@@ -1,203 +1,104 @@
 
 
-# Fix A-B Loop Functionality and Audio Sync Issues
+# Unify Loop Controls to Show on All Tracks
 
-## Problem Analysis
+## Problem
 
-Based on my investigation, there are several issues with the current A-B loop implementation:
+The A-B loop currently only shows on the Master waveform, making it unclear that the loop controls the entire song. Users see separate stem waveforms without loop markers, which creates confusion about what's being looped.
 
-### Issue 1: Loop Boundary Handling Causes Skipping
+## Solution
 
-**Current Code (lines 268-286 in useAudioPlayer.ts):**
-```typescript
-if (isLooping && loopEnd > loopStart) {
-  if (time >= loopEnd) {
-    // Pause all stems
-    stemHowlsRef.current.forEach(({ howl }) => howl.pause());
-    reSeekAllStems(loopStart);
-    setTimeout(() => {
-      if (useAudioStore.getState().isPlaying) {
-        stemHowlsRef.current.forEach(({ howl }) => howl.play());
-      }
-    }, SEEK_SYNC_DELAY_MS); // 150ms delay
-    updateCurrentTime(loopStart);
-  }
-}
-```
-
-**Problems:**
-1. The 150ms pause/seek/resume for every loop causes audible glitches
-2. Animation frame continues running during this process, causing race conditions
-3. Loop detection uses median position which can be inaccurate near boundaries
-4. No master clock reset after loop jump
-
-### Issue 2: No Drag-to-Select Loop Region
-
-Currently users must:
-1. Play to position A, click "Set A"
-2. Play to position B, click "Set B"
-
-This is cumbersome. Users should be able to tap and drag on the waveform to select a loop region directly.
-
-### Issue 3: Loop Region Not Interactive
-
-The `LoopRegion` component has `pointer-events-none`, so users cannot drag the A/B markers to adjust the loop boundaries.
+Display the loop region overlay on ALL tracks (Master and each individual stem) to make it visually clear that the loop controls the entire song as one unified track.
 
 ---
 
-## Solution Overview
+## Current State
 
-| Fix | Description |
-|-----|-------------|
-| **Smoother Loop Jumps** | Use immediate seek without pause/resume cycle for loop boundaries |
-| **Master Clock Sync** | Reset master clock after loop jump to prevent drift |
-| **Drag-to-Select** | Add mouse/touch drag on waveform to create loop regions |
-| **Draggable Markers** | Allow dragging A/B markers to adjust loop boundaries |
-| **Loop Auto-Enable** | When user drags a region, automatically enable looping |
+| Component | Loop Region Shown |
+|-----------|------------------|
+| Master waveform | Yes - with A/B markers |
+| Stem tracks | No - no visual indication |
+
+This creates visual "overlap" confusion - the Master shows a loop but stems don't.
 
 ---
 
-## Technical Implementation
+## Changes
 
-### 1. Improve Loop Boundary Handling in `useAudioPlayer.ts`
+### 1. Add Loop Region Props to StemTrack
 
-**Strategy:** Instead of pause-seek-resume, use immediate seeks and only pause if drift is too large.
+**File: `src/components/audio/StemTrack.tsx`**
 
-```typescript
-// Improved loop handling
-if (isLooping && loopEnd > loopStart) {
-  if (time >= loopEnd) {
-    // Immediate seek without pause cycle for smoother looping
-    const targetTime = loopStart;
-    
-    // Seek all stems immediately (no pause)
-    stemHowlsRef.current.forEach(({ howl }) => {
-      howl.seek(targetTime);
-    });
-    
-    // Reset master clock for accurate tracking
-    playbackStartTimeRef.current = Date.now();
-    playbackStartPositionRef.current = targetTime;
-    
-    updateCurrentTime(targetTime);
-  }
-}
-```
+Pass loop state to each stem track so it can display the loop region overlay:
 
-**Key Changes:**
-- Remove the pause/resume cycle on loop boundary
-- Immediate synchronous seek to loop start
-- Reset master clock reference for accurate position tracking
-- Only trigger drift correction if stems actually go out of sync
+| New Prop | Type | Purpose |
+|----------|------|---------|
+| `loopStart` | `number` | Loop start time |
+| `loopEnd` | `number` | Loop end time |
+| `isLooping` | `boolean` | Whether loop is active |
 
-### 2. Add Drag Selection to WaveformDisplay
+### 2. Show Loop Region Overlay on Stem Waveforms
 
 **File: `src/components/audio/WaveformDisplay.tsx`**
 
-Add new props and handlers for loop region selection:
+Add a subtle loop region highlight (not the full A/B markers - just the shaded region) when loop props are provided:
 
-| New Props | Type | Description |
-|-----------|------|-------------|
-| `onLoopSelect` | `(start: number, end: number) => void` | Callback when user drags to select a region |
-| `loopStart` | `number` | Current loop start time |
-| `loopEnd` | `number` | Current loop end time |
-| `isLooping` | `boolean` | Whether loop is active |
-
-**Add mouse/touch drag handling:**
-```typescript
-const [isDragging, setIsDragging] = useState(false);
-const [dragStart, setDragStart] = useState<number | null>(null);
-const [dragEnd, setDragEnd] = useState<number | null>(null);
-
-const handleMouseDown = (e) => {
-  // Calculate time from position
-  const time = calculateTimeFromEvent(e);
-  setIsDragging(true);
-  setDragStart(time);
-  setDragEnd(time);
-};
-
-const handleMouseMove = (e) => {
-  if (!isDragging) return;
-  const time = calculateTimeFromEvent(e);
-  setDragEnd(time);
-};
-
-const handleMouseUp = () => {
-  if (isDragging && dragStart !== null && dragEnd !== null) {
-    const start = Math.min(dragStart, dragEnd);
-    const end = Math.max(dragStart, dragEnd);
-    if (end - start > 0.5) { // Minimum 0.5s region
-      onLoopSelect?.(start, end);
-    }
-  }
-  setIsDragging(false);
-  setDragStart(null);
-  setDragEnd(null);
-};
+```
+Visual: Light purple/primary overlay showing the loop region
+No A/B markers needed - those stay on Master only
+Just a visual indicator that this section is looped
 ```
 
-### 3. Make LoopRegion Markers Draggable
-
-**File: `src/components/audio/LoopRegion.tsx`**
-
-Add drag handling to the A and B markers:
-
-| New Props | Type | Description |
-|-----------|------|-------------|
-| `onLoopStartChange` | `(time: number) => void` | Callback when A marker is dragged |
-| `onLoopEndChange` | `(time: number) => void` | Callback when B marker is dragged |
-
-**Make markers interactive:**
-```typescript
-// Remove pointer-events-none from the container
-// Add pointer-events to markers only
-
-<motion.div
-  className="... cursor-ew-resize"
-  style={{ left: 0, pointerEvents: 'auto' }}
-  onMouseDown={(e) => startDragging('start', e)}
-  onTouchStart={(e) => startDragging('start', e)}
->
-  {/* A marker */}
-</motion.div>
-```
-
-### 4. Update TrainingMode to Connect Everything
+### 3. Update TrainingMode to Pass Loop State to Stems
 
 **File: `src/pages/TrainingMode.tsx`**
 
-Wire up the new drag selection:
+Pass loop state down to each StemTrack:
 
-```typescript
-const handleLoopSelect = (start: number, end: number) => {
-  setLoop(start, end); // This auto-enables looping
-};
-
-const handleLoopMarkerChange = (marker: 'start' | 'end', time: number) => {
-  if (marker === 'start') {
-    setLoop(time, loopEnd);
-  } else {
-    setLoop(loopStart, time);
-  }
-};
-
-// Pass to WaveformDisplay
-<WaveformDisplay
-  ...
-  onLoopSelect={handleLoopSelect}
+```tsx
+<StemTrack
+  stem={stem}
+  currentTime={currentTime}
+  duration={duration}
+  onSeek={handleSeek}
   loopStart={loopStart}
   loopEnd={loopEnd}
   isLooping={isLooping}
 />
-
-// Pass to LoopRegion
-<LoopRegion
-  ...
-  onLoopStartChange={(t) => handleLoopMarkerChange('start', t)}
-  onLoopEndChange={(t) => handleLoopMarkerChange('end', t)}
-/>
 ```
+
+---
+
+## Implementation Details
+
+### WaveformDisplay Loop Region Overlay
+
+Add a non-interactive (display-only) loop region when loop is active:
+
+```tsx
+{/* Loop region indicator (display only, non-interactive) */}
+{loopEnd > loopStart && isLooping && (
+  <div
+    className="absolute inset-y-0 bg-primary/20 pointer-events-none z-5"
+    style={{
+      left: `${(loopStart / duration) * 100}%`,
+      width: `${((loopEnd - loopStart) / duration) * 100}%`,
+    }}
+  />
+)}
+```
+
+### Visual Hierarchy
+
+| Track | Loop Display |
+|-------|--------------|
+| Master | Full A/B markers with labels + highlighted region |
+| Stems | Subtle shaded region only (no markers) |
+
+This creates a clear visual that:
+- The Master track is the "control" for the loop
+- All stems are affected by the same loop region
+- The loop spans the entire song as one unit
 
 ---
 
@@ -205,38 +106,25 @@ const handleLoopMarkerChange = (marker: 'start' | 'end', time: number) => {
 
 | File | Changes |
 |------|---------|
-| `src/hooks/useAudioPlayer.ts` | Improve loop boundary handling, remove pause/resume cycle, reset master clock |
-| `src/components/audio/WaveformDisplay.tsx` | Add drag-to-select functionality for loop regions |
-| `src/components/audio/LoopRegion.tsx` | Make A/B markers draggable |
-| `src/pages/TrainingMode.tsx` | Wire up new loop selection handlers |
+| `src/components/audio/WaveformDisplay.tsx` | Add loop region overlay display when props provided |
+| `src/components/audio/StemTrack.tsx` | Accept and pass loop props to WaveformDisplay |
+| `src/pages/TrainingMode.tsx` | Pass loop state to each StemTrack |
 
 ---
 
-## Expected Outcome
+## Visual Result
 
-1. **Clean Looping**: Audio loops smoothly without skipping or glitching at boundaries
-2. **Drag Selection**: Users can tap and drag on the waveform to select a loop region
-3. **Adjustable Markers**: A and B markers can be dragged to fine-tune the loop boundaries
-4. **All Stems Loop**: The entire multi-track mixer loops together in sync
-5. **Visual Feedback**: Loop region shows during drag with real-time preview
-
----
-
-## User Experience Flow
-
-```text
-1. User taps and drags on waveform
-   ↓
-2. Blue highlight appears showing selection
-   ↓
-3. User releases finger/mouse
-   ↓
-4. Loop region is set with A and B markers
-   ↓
-5. Looping automatically enables
-   ↓
-6. User can drag A or B markers to adjust
-   ↓
-7. Audio loops cleanly at boundaries
 ```
+┌─────────────────────────────────────────────┐
+│ MASTER [A]========LOOP REGION==========[B]  │  ← Interactive markers
+├─────────────────────────────────────────────┤
+│ Lead Vocals    ════════SHADED════════       │  ← Display only
+├─────────────────────────────────────────────┤
+│ Piano          ════════SHADED════════       │  ← Display only
+├─────────────────────────────────────────────┤
+│ Guitar         ════════SHADED════════       │  ← Display only
+└─────────────────────────────────────────────┘
+```
+
+All tracks show the same loop region, making it clear they loop together as one song.
 
