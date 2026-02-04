@@ -11,7 +11,11 @@ interface LoopRegionProps {
   className?: string;
   onLoopStartChange?: (time: number) => void;
   onLoopEndChange?: (time: number) => void;
+  onClearLoop?: () => void;
 }
+
+// Double-tap detection timing
+const DOUBLE_TAP_THRESHOLD_MS = 300;
 
 export function LoopRegion({
   loopStart,
@@ -22,9 +26,11 @@ export function LoopRegion({
   className,
   onLoopStartChange,
   onLoopEndChange,
+  onClearLoop,
 }: LoopRegionProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [draggingMarker, setDraggingMarker] = useState<'start' | 'end' | null>(null);
+  const lastTapTimeRef = useRef<{ start: number; end: number; region: number }>({ start: 0, end: 0, region: 0 });
 
   const startPercent = duration > 0 ? (loopStart / duration) * 100 : 0;
   const endPercent = duration > 0 ? (loopEnd / duration) * 100 : 0;
@@ -40,13 +46,45 @@ export function LoopRegion({
     return percentage * duration;
   }, [duration]);
 
+  // Handle double-tap on marker to clear that point
+  const handleMarkerDoubleTap = useCallback((marker: 'start' | 'end') => {
+    const now = Date.now();
+    const lastTap = marker === 'start' ? lastTapTimeRef.current.start : lastTapTimeRef.current.end;
+    
+    if (now - lastTap < DOUBLE_TAP_THRESHOLD_MS) {
+      // Double tap detected - clear the loop
+      onClearLoop?.();
+      lastTapTimeRef.current[marker] = 0;
+    } else {
+      lastTapTimeRef.current[marker] = now;
+    }
+  }, [onClearLoop]);
+
+  // Handle double-tap on region to clear entire loop
+  const handleRegionDoubleTap = useCallback(() => {
+    const now = Date.now();
+    const lastTap = lastTapTimeRef.current.region;
+    
+    if (now - lastTap < DOUBLE_TAP_THRESHOLD_MS) {
+      // Double tap detected - clear the loop
+      onClearLoop?.();
+      lastTapTimeRef.current.region = 0;
+    } else {
+      lastTapTimeRef.current.region = now;
+    }
+  }, [onClearLoop]);
+
   // Handle marker drag start
   const handleMarkerPointerDown = useCallback((marker: 'start' | 'end', e: React.PointerEvent) => {
     e.stopPropagation();
     e.preventDefault();
+    
+    // Check for double-tap first
+    handleMarkerDoubleTap(marker);
+    
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     setDraggingMarker(marker);
-  }, []);
+  }, [handleMarkerDoubleTap]);
 
   // Handle marker drag move
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
@@ -88,15 +126,16 @@ export function LoopRegion({
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerUp}
     >
-      {/* Loop region highlight */}
+      {/* Loop region highlight - clickable for double-tap to clear */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: isLooping ? 1 : 0.5 }}
-        className="absolute top-0 bottom-0 pointer-events-none"
+        className="absolute top-0 bottom-0 cursor-pointer"
         style={{
           left: `${startPercent}%`,
           width: `${widthPercent}%`,
         }}
+        onClick={handleRegionDoubleTap}
       >
         {/* Main highlight area */}
         <div

@@ -333,6 +333,7 @@ export default function TrainingMode() {
                   height={40}
                   onLoopStartChange={handleLoopStartChange}
                   onLoopEndChange={handleLoopEndChange}
+                  onClearLoop={clearLoop}
                 />
               )}
             </div>
@@ -486,6 +487,26 @@ export default function TrainingMode() {
                     duration: 1.5,
                     repeat: Infinity,
                     ease: "easeInOut",
+                  }}
+                />
+              )}
+
+              {/* Loop indicator ring when looping */}
+              {isLooping && loopEnd > loopStart && (
+                <motion.div
+                  className="absolute -inset-1 rounded-full border-2 border-primary"
+                  initial={{ opacity: 0 }}
+                  animate={{
+                    opacity: [0.6, 1, 0.6],
+                    rotate: [0, 360],
+                  }}
+                  transition={{
+                    opacity: { duration: 2, repeat: Infinity, ease: "easeInOut" },
+                    rotate: { duration: 8, repeat: Infinity, ease: "linear" },
+                  }}
+                  style={{
+                    borderStyle: "dashed",
+                    borderWidth: 2,
                   }}
                 />
               )}
