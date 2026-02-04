@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Home, Library, BarChart3, Mic2, User, Crown, ChevronLeft, ChevronRight, ListMusic } from "lucide-react";
+import { Home, Library, BarChart3, User, Crown, ChevronLeft, ChevronRight, ListMusic, ShoppingBag, Stethoscope, Headphones } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { RMVTLogo } from "@/components/ui/RMVTLogo";
 import {
@@ -30,8 +30,13 @@ const navItems: NavItem[] = [
   { icon: Library, label: "Library", path: "/library" },
   { icon: ListMusic, label: "Playlists", path: "/playlists" },
   { icon: BarChart3, label: "Progress", path: "/progress" },
-  { icon: Mic2, label: "Train", path: "/training" },
   { icon: User, label: "Profile", path: "/profile" },
+];
+
+const toolkitItems: NavItem[] = [
+  { icon: ShoppingBag, label: "Vocal Rider Store", path: "/store" },
+  { icon: Stethoscope, label: "Vocal Health", path: "/vocal-health" },
+  { icon: Headphones, label: "Stage Prep", path: "/stage-prep" },
 ];
 
 export function DesktopSidebar() {
@@ -77,7 +82,8 @@ export function DesktopSidebar() {
       </SidebarHeader>
 
       {/* Navigation */}
-      <SidebarContent className="px-2 py-4">
+      <SidebarContent className="px-2 py-4 flex flex-col">
+        {/* Main Nav */}
         <SidebarMenu className="gap-2">
           {navItems.map((item) => {
             const active = isActive(item.path);
@@ -147,6 +153,77 @@ export function DesktopSidebar() {
             );
           })}
         </SidebarMenu>
+
+        {/* Toolkit Section */}
+        <div className="mt-6">
+          {!isCollapsed && (
+            <div className="px-3 mb-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Toolkit
+              </span>
+            </div>
+          )}
+          {isCollapsed && <div className="sidebar-divider mx-3 my-3" />}
+          <SidebarMenu className="gap-1">
+            {toolkitItems.map((item) => {
+              const active = isActive(item.path);
+              const Icon = item.icon;
+
+              const button = (
+                <SidebarMenuButton
+                  onClick={() => navigate(item.path)}
+                  className={cn(
+                    "relative h-10 px-3 rounded-xl transition-all duration-300",
+                    "hover:bg-primary/10",
+                    active && "sidebar-nav-item-active"
+                  )}
+                  isActive={active}
+                >
+                  <motion.div
+                    className="relative z-10 flex items-center gap-3"
+                    whileHover={{ x: isCollapsed ? 0 : 2 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Icon
+                      className={cn(
+                        "w-4 h-4 transition-all duration-300",
+                        active
+                          ? "text-primary drop-shadow-[0_0_8px_hsl(var(--primary))]"
+                          : "text-muted-foreground"
+                      )}
+                      strokeWidth={active ? 2.5 : 1.5}
+                    />
+                    {!isCollapsed && (
+                      <span
+                        className={cn(
+                          "text-sm transition-colors",
+                          active ? "text-foreground" : "text-muted-foreground"
+                        )}
+                      >
+                        {item.label}
+                      </span>
+                    )}
+                  </motion.div>
+                </SidebarMenuButton>
+              );
+
+              return (
+                <SidebarMenuItem key={item.path}>
+                  {isCollapsed ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>{button}</TooltipTrigger>
+                      <TooltipContent side="right" className="font-medium">
+                        {item.label}
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    button
+                  )}
+                </SidebarMenuItem>
+              );
+            })}
+          </SidebarMenu>
+        </div>
       </SidebarContent>
 
       {/* Footer with Pro CTA and Collapse Toggle */}
