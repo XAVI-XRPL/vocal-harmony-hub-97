@@ -60,7 +60,7 @@ export default function Splash({ onComplete }: SplashProps) {
             preload="auto"
             poster={splashImage}
             onLoadedData={() => setVideoLoaded(true)}
-            className="absolute inset-0 w-full h-full object-cover object-top"
+            className="absolute inset-0 w-full h-full object-cover object-top md:object-contain"
             initial={{ opacity: 0, scale: 1.05 }}
             animate={{ opacity: videoLoaded ? 1 : 0, scale: 1 }}
             exit={{ opacity: 0, scale: 1.02 }}
