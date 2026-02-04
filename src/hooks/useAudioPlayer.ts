@@ -32,6 +32,8 @@ export function useAudioPlayer() {
   const playbackStartPositionRef = useRef<number>(0);
   // Flag to track when playback resumes from a seek (to avoid stale closure issue)
   const seekResumeRef = useRef(false);
+  // Flag to track previous playing state - prevents re-syncing when only loop values change
+  const wasPlayingRef = useRef(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
@@ -248,10 +250,15 @@ export function useAudioPlayer() {
       if (seekResumeRef.current) {
         seekResumeRef.current = false;
         // Just continue to start the animation frame loop, don't re-seek
-      } else {
-        // Normal play - use master clock position (refs are always current, unlike state)
+      } else if (!wasPlayingRef.current) {
+        // Only sync when truly transitioning from paused to playing
+        // This prevents re-syncing when only loop values change during playback
         syncPlay(playbackStartPositionRef.current);
       }
+      // If wasPlayingRef.current is already true, we're re-running due to
+      // loop value changes - don't interrupt ongoing playback
+
+      wasPlayingRef.current = true;
 
       // Start the animation frame loop to update time
       const updateTime = () => {
@@ -288,9 +295,15 @@ export function useAudioPlayer() {
                 updateCurrentTime(loopStart);
               } else {
                 updateCurrentTime(time);
+                // Keep master clock in sync during playback for accurate position tracking
+                playbackStartTimeRef.current = Date.now();
+                playbackStartPositionRef.current = time;
               }
             } else {
               updateCurrentTime(time);
+              // Keep master clock in sync during playback for accurate position tracking
+              playbackStartTimeRef.current = Date.now();
+              playbackStartPositionRef.current = time;
             }
           }
         }
@@ -305,6 +318,9 @@ export function useAudioPlayer() {
       // Start drift correction interval
       driftCheckIntervalRef.current = setInterval(correctDrift, DRIFT_CHECK_INTERVAL_MS);
     } else {
+      // Reset playing state tracking when paused
+      wasPlayingRef.current = false;
+      
       // Pause all stems
       stemHowlsRef.current.forEach(({ howl }) => {
         howl.pause();
