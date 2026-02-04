@@ -116,6 +116,14 @@
     --accent-medical: 0 84% 60%;     /* Medical Red */
     --accent-gear: 187 85% 53%;      /* Electric Cyan */
     --accent-stage: 270 70% 65%;     /* Stage Purple */
+
+    /* Map Colors - Stadium Blue theme */
+    --map-fill: 201 68% 59%;           /* #5BA3D9 - default blue */
+    --map-fill-hover: 197 93% 63%;     /* #4FC3F7 - lighter blue on hover */
+    --map-fill-selected: 168 76% 39%;  /* #14b8a6 - teal when selected */
+    --map-fill-search: 38 92% 50%;     /* #f59e0b - amber for search matches */
+    --map-stroke: 0 0% 100% / 0.65;
+    --map-stroke-hover: 0 0% 100% / 0.9;
   }
 
   /* Light mode - Stadium at Dusk */
