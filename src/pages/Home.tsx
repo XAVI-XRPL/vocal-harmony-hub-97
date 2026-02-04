@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Play, TrendingUp, Clock, Sparkles } from "lucide-react";
+import { Play, Sparkles } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Header } from "@/components/layout/Header";
@@ -9,9 +9,7 @@ import { GlassButton } from "@/components/ui/glass-button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
 import { ContinuePractice } from "@/components/home/ContinuePractice";
-import { FeaturedGearPreview } from "@/components/home/FeaturedGearPreview";
-import { VocalRiderPicks } from "@/components/home/VocalRiderPicks";
-import { VocalHealthCTA } from "@/components/home/VocalHealthCTA";
+import { HomeHubCards } from "@/components/home/HomeHubCards";
 import { useUserStore } from "@/stores/userStore";
 import stadiumBg from "@/assets/stadium-background.png";
 
@@ -37,7 +35,6 @@ export default function Home() {
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
 
   const handleRefresh = useCallback(async () => {
-    // Invalidate and refetch all relevant queries
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["songs"] }),
       queryClient.invalidateQueries({ queryKey: ["products"] }),
@@ -77,78 +74,77 @@ export default function Home() {
               Train with isolated stems. Control every element of the mix.
             </p>
             
-            {/* Main Start Training Button - Hero CTA */}
+            {/* Enhanced 3D Start Training Button */}
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+              className="perspective-1000"
             >
-              <GlassButton
-                variant="frosted"
-                size="lg"
-                icon={<Play className="w-6 h-6 fill-white" />}
+              <motion.button
                 onClick={() => navigate("/library")}
-                className="w-full max-w-sm mx-auto text-lg py-7 shadow-2xl shadow-primary/30"
+                className="
+                  w-full max-w-sm mx-auto
+                  flex items-center justify-center gap-3
+                  text-lg font-semibold py-6 px-8
+                  rounded-2xl
+                  bg-gradient-to-b from-primary via-primary to-primary/80
+                  text-primary-foreground
+                  border-t border-white/30
+                  shadow-[0_4px_0_0_hsl(var(--primary)/0.6),0_8px_16px_-4px_hsl(var(--primary)/0.5),0_16px_32px_-8px_hsl(var(--primary)/0.3),inset_0_1px_0_0_rgba(255,255,255,0.2)]
+                  transition-all duration-150
+                  hover:shadow-[0_2px_0_0_hsl(var(--primary)/0.6),0_4px_12px_-2px_hsl(var(--primary)/0.5),0_12px_24px_-6px_hsl(var(--primary)/0.3),inset_0_1px_0_0_rgba(255,255,255,0.25)]
+                  hover:translate-y-0.5
+                  active:shadow-[0_1px_0_0_hsl(var(--primary)/0.6),0_2px_8px_-2px_hsl(var(--primary)/0.4),inset_0_1px_0_0_rgba(255,255,255,0.15)]
+                  active:translate-y-1
+                  relative overflow-hidden
+                "
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
-                Start Training
-              </GlassButton>
+                {/* Animated glow pulse */}
+                <motion.div
+                  className="absolute inset-0 rounded-2xl bg-primary/30"
+                  animate={{
+                    boxShadow: [
+                      "0 0 20px 0 hsl(var(--primary)/0.4)",
+                      "0 0 40px 8px hsl(var(--primary)/0.6)",
+                      "0 0 20px 0 hsl(var(--primary)/0.4)",
+                    ],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                />
+                
+                {/* Light sweep effect */}
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
+                  animate={{ x: ["-200%", "200%"] }}
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    repeatDelay: 1,
+                  }}
+                />
+                
+                <Play className="w-6 h-6 fill-current relative z-10" />
+                <span className="relative z-10">Start Training</span>
+              </motion.button>
             </motion.div>
           </motion.section>
 
-          {/* Quick Stats */}
+          {/* Hub Module Cards */}
           <motion.section variants={itemVariants} className="mb-6">
-            <div className="grid grid-cols-2 gap-3">
-              <GlassCard padding="md" hover={false} depth="raised" shine>
-                <div className="flex items-center gap-3">
-                  <motion.div
-                    className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center"
-                    whileHover={{ scale: 1.1 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                  >
-                    <TrendingUp className="w-5 h-5 text-primary" />
-                  </motion.div>
-                  <div>
-                    <p className="text-2xl font-bold">12</p>
-                    <p className="text-xs text-muted-foreground">Songs Practiced</p>
-                  </div>
-                </div>
-              </GlassCard>
-              <GlassCard padding="md" hover={false} depth="raised" shine>
-                <div className="flex items-center gap-3">
-                  <motion.div
-                    className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center"
-                    whileHover={{ scale: 1.1 }}
-                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                  >
-                    <Clock className="w-5 h-5 text-accent" />
-                  </motion.div>
-                  <div>
-                    <p className="text-2xl font-bold">3.5h</p>
-                    <p className="text-xs text-muted-foreground">Training Time</p>
-                  </div>
-                </div>
-              </GlassCard>
-            </div>
+            <HomeHubCards />
           </motion.section>
 
           {/* Continue Practice */}
           <motion.section variants={itemVariants} className="mb-6">
             <ContinuePractice />
-          </motion.section>
-
-          {/* Featured Gear Preview - Stage Prep */}
-          <motion.section variants={itemVariants} className="mb-6">
-            <FeaturedGearPreview />
-          </motion.section>
-
-          {/* Vocal Rider Store Picks */}
-          <motion.section variants={itemVariants} className="mb-6">
-            <VocalRiderPicks />
-          </motion.section>
-
-          {/* Vocal Health CTA */}
-          <motion.section variants={itemVariants} className="mb-6">
-            <VocalHealthCTA />
           </motion.section>
 
           {/* CTA for non-authenticated users */}
