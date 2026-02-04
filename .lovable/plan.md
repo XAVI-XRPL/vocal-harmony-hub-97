@@ -1,91 +1,57 @@
 
-# Home Screen Simplification Plan
+
+# Home Hub Cards - Horizontal Layout with Custom Icons
 
 ## Overview
-Simplify the Home screen by removing the current horizontal preview sections and replacing them with 3 clean navigation cards that link to the Hub modules. The "Start Training" button will be enhanced with more 3D effects, and the stats cards will be removed.
+Redesign the HomeHubCards component to display 3 compact cards in a horizontal row instead of vertically stacked. Each card will feature a specific icon and color scheme, with enhanced animations for visual impact.
 
-## Current State
-- Hero section with "Start Training" button
-- 2 stats cards (Songs Practiced, Training Time)
-- ContinuePractice section
-- FeaturedGearPreview section (horizontal scroll)
-- VocalRiderPicks section (grid of products)
-- VocalHealthCTA section (custom card)
-- Subscription CTA for non-authenticated users
+## Design Changes
 
-## Target State
-- Hero section with enhanced 3D "Start Training" button
-- 3 clean Hub module cards (Vocal Rider Store, Vocal Health, Stage Prep)
-- ContinuePractice section (keep)
-- Subscription CTA for non-authenticated users (keep)
+### Card Layout
+- Change from vertical column to horizontal row (3 cards side by side)
+- Each card will be a compact square/tile with centered icon
+- Title only (remove descriptions for cleaner look)
+- Equal width distribution using CSS grid
 
----
+### Icon and Color Scheme
+| Card | Icon | Color |
+|------|------|-------|
+| Vocal Rider Store | Mic | Green (#22c55e / emerald) |
+| Vocal Health | Stethoscope | Red (#ef4444) |
+| Stage Prep | Headphones | Teal (#14b8a6 / teal) |
 
-## Implementation Steps
+### Animation Enhancements
+- Staggered entrance animation with scale + fade
+- Hover: lift effect with glow pulse in card's accent color
+- Active: subtle press feedback
+- Continuous subtle icon pulse animation
 
-### Step 1: Create New HomeHubCards Component
-Create a new component `src/components/home/HomeHubCards.tsx` that displays 3 clean navigation cards using the same icons from the Hub page:
-- **Vocal Rider Store** - ShoppingBag icon, gold accent
-- **Vocal Health** - Stethoscope icon, red accent
-- **Stage Prep** - Headphones icon, cyan accent
+## Technical Implementation
 
-The cards will:
-- Use the existing `hub-accent-*` CSS classes for consistent styling
-- Be arranged in a single column with consistent spacing
-- Have glass-card styling with subtle hover effects
-- Navigate to their respective routes on click
+### File to Modify
+`src/components/home/HomeHubCards.tsx`
 
-### Step 2: Enhance Start Training Button
-Modify the "Start Training" button in `Home.tsx` to have more pronounced 3D effects:
-- Add deeper shadow layers for depth
-- Add a subtle border highlight on top edge
-- Increase the glow pulse intensity
-- Add transform perspective for 3D appearance
-- Larger padding and more visual weight
-
-### Step 3: Update Home.tsx Layout
-Modify `src/pages/Home.tsx`:
-- Remove the Quick Stats section (TrendingUp/Clock cards)
-- Remove FeaturedGearPreview import and section
-- Remove VocalRiderPicks import and section  
-- Remove VocalHealthCTA import and section
-- Add new HomeHubCards component below the Start Training button
-- Keep ContinuePractice section
-- Keep subscription CTA for non-authenticated users
-- Clean up unused imports (TrendingUp, Clock)
-
----
-
-## Technical Details
-
-### HomeHubCards Component Structure
+### Component Structure
 ```text
-+----------------------------------+
-|  [ShoppingBag]  Vocal Rider Store|
-|  Curated products...          > |
-+----------------------------------+
-|  [Stethoscope]  Vocal Health     |
-|  Find ENT doctors...          > |
-+----------------------------------+
-|  [Headphones]   Stage Prep       |
-|  IEMs, gear, checklists...    > |
-+----------------------------------+
++--------+  +--------+  +--------+
+|  [Mic] |  [Steth] |  [Head]  |
+|        |  |        |  |        |
+| Store  |  | Health |  | Prep   |
++--------+  +--------+  +--------+
+   Green       Red        Teal
 ```
 
-### Enhanced Button Styling
-The 3D button effect will use:
-- Multiple layered box-shadows for depth
-- Top border highlight (inset)
-- Perspective transform on hover
-- Enhanced glow pulse animation
-- Slightly larger scale on press feedback
+### Key Changes
+1. Update container from `flex-col` to `grid grid-cols-3` with gap
+2. Replace ShoppingBag icon with Mic icon from Lucide
+3. Add custom color classes for green, red, and teal accents
+4. Restructure card content to be vertically centered with icon on top, title below
+5. Remove ChevronRight arrow and description text
+6. Add pulsing glow animation on hover
+7. Use inline styles for custom accent colors per card
 
-### Files to Modify
-1. `src/components/home/HomeHubCards.tsx` (new file)
-2. `src/pages/Home.tsx` (remove stats, previews; add hub cards; enhance button)
-
-### Files to Keep (no changes needed)
-- `src/components/home/ContinuePractice.tsx`
-- `src/components/ui/glass-card.tsx`
-- `src/components/ui/glass-button.tsx`
-- `src/index.css` (hub accent classes already exist)
+### Animation Details
+- Container: staggered entrance with 0.1s delay between cards
+- Cards: scale from 0.8 to 1 with opacity fade
+- Hover: translateY(-4px) with shadow glow in accent color
+- Icon: subtle bounce animation on hover
