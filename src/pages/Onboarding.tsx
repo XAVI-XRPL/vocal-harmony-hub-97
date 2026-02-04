@@ -1,97 +1,84 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTheme } from "next-themes";
-import { Music4, Layers, SlidersHorizontal, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronRight, Music4, Layers } from "lucide-react";
 import { GlassButton } from "@/components/ui/glass-button";
+import { RMVTLogo } from "@/components/ui/RMVTLogo";
+import { StadiumBackground } from "@/components/layout/StadiumBackground";
 import { cn } from "@/lib/utils";
 
 interface OnboardingProps {
-  onComplete: () => void;
+  onComplete: (mode: "auth" | "demo") => void;
 }
 
 const slides = [
   {
-    icon: Music4,
-    title: "Welcome to RVMT",
-    description: "Master your voice with isolated stem training technology",
-    color: "hsl(var(--gradient-start))",
+    id: "welcome",
+    title: "Master Your Voice",
+    description: "Professional stem-based vocal training",
   },
   {
-    icon: Layers,
-    title: "Separate & Control",
-    description: "Isolate vocals, harmonies, and instrumentals independently",
-    color: "hsl(var(--stem-harmony))",
+    id: "how-it-works",
+    title: "Control Every Layer",
+    description: "Isolate vocals, harmonies, and instruments to practice your part",
   },
   {
-    icon: SlidersHorizontal,
-    title: "Solo & Mute",
-    description: "Solo any track to focus, or mute to practice your part",
-    color: "hsl(var(--stem-vocal))",
+    id: "get-started",
+    title: "Ready to Train?",
+    description: "Create an account or explore with a demo",
   },
 ];
 
 export default function Onboarding({ onComplete }: OnboardingProps) {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === "dark";
+  const navigate = useNavigate();
 
   const handleNext = () => {
     if (currentSlide < slides.length - 1) {
       setCurrentSlide((prev) => prev + 1);
-    } else {
-      onComplete();
     }
   };
 
   const handleSkip = () => {
-    onComplete();
+    setCurrentSlide(slides.length - 1);
+  };
+
+  const handleCreateAccount = () => {
+    onComplete("auth");
+    navigate("/auth?signup=true");
+  };
+
+  const handleSignIn = () => {
+    onComplete("auth");
+    navigate("/auth");
+  };
+
+  const handleTryDemo = () => {
+    onComplete("demo");
   };
 
   const slide = slides[currentSlide];
   const isLastSlide = currentSlide === slides.length - 1;
-  const Icon = slide.icon;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background overflow-hidden">
-      {/* Background gradient - Theme aware */}
-      <div className="absolute inset-0">
-        <motion.div
-          key={currentSlide}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0"
-          style={{
-            background: `radial-gradient(circle at 50% 40%, ${slide.color}${isDark ? '20' : '12'} 0%, transparent 60%)`,
-          }}
-        />
-        
-        {/* Extra ambient blobs for light mode */}
-        {!isDark && (
-          <>
-            <motion.div
-              className="absolute w-64 h-64 rounded-full"
-              style={{
-                background: `radial-gradient(circle, ${slide.color}08 0%, transparent 70%)`,
-                top: "60%",
-                right: "10%",
-              }}
-              animate={{
-                scale: [1, 1.2, 1],
-                opacity: [0.5, 0.8, 0.5],
-              }}
-              transition={{ duration: 4, repeat: Infinity }}
-            />
-          </>
-        )}
-      </div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex flex-col overflow-hidden"
+    >
+      {/* Stadium Background */}
+      <StadiumBackground />
+
+      {/* Dark overlay for readability */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/70" />
 
       {/* Skip button */}
       <div className="relative z-10 flex justify-end p-4 safe-top">
         {!isLastSlide && (
           <motion.button
             onClick={handleSkip}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-full hover:bg-glass"
+            className="text-sm text-white/60 hover:text-white transition-colors px-3 py-1.5 rounded-full hover:bg-white/10"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
@@ -105,101 +92,92 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
         <AnimatePresence mode="wait">
           <motion.div
             key={currentSlide}
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
             className="flex flex-col items-center text-center"
           >
-            {/* Icon */}
-            <motion.div
-              className="w-32 h-32 rounded-3xl flex items-center justify-center mb-8"
-              style={{
-                background: `linear-gradient(135deg, ${slide.color}${isDark ? '40' : '25'}, ${slide.color}${isDark ? '20' : '10'})`,
-                boxShadow: `0 0 60px ${slide.color}${isDark ? '40' : '20'}`,
-              }}
-              animate={{
-                scale: [1, 1.05, 1],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-            >
-              <Icon className="w-16 h-16" style={{ color: slide.color }} />
-            </motion.div>
-
-            {/* Stem waveform demo for slide 2 */}
-            {currentSlide === 1 && (
-              <div className="mb-8 space-y-2 w-64">
-                {["Vocal", "Harmony", "Instrumental"].map((name, i) => (
-                  <motion.div
-                    key={name}
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.2 + i * 0.1 }}
-                    className="flex items-center gap-2"
-                  >
-                    <span className="text-xs text-muted-foreground w-20">{name}</span>
-                    <div className="flex-1 h-3 bg-muted/30 rounded-full overflow-hidden">
-                      <motion.div
-                        className="h-full rounded-full"
-                        style={{
-                          background: `hsl(var(--stem-${name.toLowerCase()}))`,
-                          width: `${60 + i * 15}%`,
-                        }}
-                        animate={{ opacity: [0.6, 1, 0.6] }}
-                        transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 }}
-                      />
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+            {/* Slide 1: Welcome with Logo */}
+            {currentSlide === 0 && (
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1, type: "spring" }}
+                className="mb-8"
+              >
+                <RMVTLogo size="xl" animated />
+              </motion.div>
             )}
 
-            {/* Solo/Mute demo for slide 3 */}
-            {currentSlide === 2 && (
-              <div className="mb-8 flex items-center gap-3">
-                <motion.div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center border-2"
-                  style={{
-                    borderColor: slide.color,
-                    background: `${slide.color}20`,
-                  }}
-                  animate={{
-                    boxShadow: [
-                      `0 0 0 ${slide.color}00`,
-                      `0 0 20px ${slide.color}40`,
-                      `0 0 0 ${slide.color}00`,
-                    ],
-                  }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                >
-                  <span className="text-sm font-bold" style={{ color: slide.color }}>S</span>
-                </motion.div>
-                <motion.div
-                  className="w-12 h-12 rounded-xl flex items-center justify-center bg-muted/30 border border-muted"
-                  animate={{ opacity: [1, 0.5, 1] }}
-                  transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
-                >
-                  <span className="text-sm font-bold text-muted-foreground">M</span>
-                </motion.div>
-                <div className="w-32 h-2 bg-muted/30 rounded-full overflow-hidden">
-                  <motion.div
-                    className="h-full gradient-bg"
-                    animate={{ width: ["30%", "70%", "30%"] }}
-                    transition={{ duration: 3, repeat: Infinity }}
-                  />
+            {/* Slide 2: Stem visualization */}
+            {currentSlide === 1 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="mb-8 w-64"
+              >
+                <div className="space-y-3">
+                  {[
+                    { name: "Vocals", color: "hsl(var(--stem-vocal))", width: "85%" },
+                    { name: "Harmony", color: "hsl(var(--stem-harmony))", width: "70%" },
+                    { name: "Instrumental", color: "hsl(var(--primary))", width: "60%" },
+                  ].map((stem, i) => (
+                    <motion.div
+                      key={stem.name}
+                      initial={{ x: -20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: 0.2 + i * 0.1 }}
+                      className="flex items-center gap-3"
+                    >
+                      <span className="text-xs text-white/70 w-20 text-right">{stem.name}</span>
+                      <div className="flex-1 h-4 bg-white/10 rounded-full overflow-hidden backdrop-blur-sm">
+                        <motion.div
+                          className="h-full rounded-full"
+                          style={{ backgroundColor: stem.color }}
+                          initial={{ width: 0 }}
+                          animate={{ width: stem.width }}
+                          transition={{ delay: 0.4 + i * 0.1, duration: 0.6, ease: "easeOut" }}
+                        />
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
-              </div>
+              </motion.div>
+            )}
+
+            {/* Slide 3: Get Started icon */}
+            {currentSlide === 2 && (
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="mb-8"
+              >
+                <div className="w-20 h-20 rounded-2xl bg-primary/20 backdrop-blur-sm flex items-center justify-center border border-primary/30">
+                  <Music4 className="w-10 h-10 text-primary" />
+                </div>
+              </motion.div>
             )}
 
             {/* Title and description */}
-            <h2 className="text-3xl font-bold mb-3">{slide.title}</h2>
-            <p className="text-muted-foreground text-lg max-w-xs">
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="text-3xl sm:text-4xl font-bold mb-3 text-white"
+            >
+              {slide.title}
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-white/70 text-lg max-w-xs"
+            >
               {slide.description}
-            </p>
+            </motion.p>
           </motion.div>
         </AnimatePresence>
       </div>
@@ -214,7 +192,9 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               onClick={() => setCurrentSlide(i)}
               className={cn(
                 "h-2 rounded-full transition-all duration-300",
-                i === currentSlide ? "w-8 gradient-bg" : "w-2 bg-muted hover:bg-muted-foreground/30"
+                i === currentSlide
+                  ? "w-8 bg-primary"
+                  : "w-2 bg-white/30 hover:bg-white/50"
               )}
               animate={i === currentSlide ? { scale: [1, 1.1, 1] } : {}}
               transition={{ duration: 0.3 }}
@@ -222,16 +202,44 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
           ))}
         </div>
 
-        {/* CTA Button */}
-        <GlassButton
-          size="lg"
-          className="w-full"
-          onClick={handleNext}
-        >
-          {isLastSlide ? "Start Training" : "Next"}
-          <ChevronRight className="w-5 h-5 ml-2" />
-        </GlassButton>
+        {/* CTA Buttons */}
+        {!isLastSlide ? (
+          <GlassButton
+            size="lg"
+            variant="frosted"
+            className="w-full"
+            onClick={handleNext}
+          >
+            Next
+            <ChevronRight className="w-5 h-5 ml-2" />
+          </GlassButton>
+        ) : (
+          <div className="space-y-3">
+            <GlassButton
+              size="lg"
+              variant="frosted"
+              className="w-full"
+              onClick={handleCreateAccount}
+            >
+              Create Account
+            </GlassButton>
+            <GlassButton
+              size="lg"
+              variant="secondary"
+              className="w-full border-white/20 text-white hover:bg-white/10"
+              onClick={handleSignIn}
+            >
+              Sign In
+            </GlassButton>
+            <button
+              onClick={handleTryDemo}
+              className="w-full text-center py-3 text-white/60 hover:text-white text-sm transition-colors"
+            >
+              Try Demo Mode
+            </button>
+          </div>
+        )}
       </div>
-    </div>
+    </motion.div>
   );
 }
