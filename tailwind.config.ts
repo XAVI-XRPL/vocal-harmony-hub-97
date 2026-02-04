@@ -137,6 +137,10 @@ export default {
           "0%, 100%": { borderRadius: "60% 40% 30% 70% / 60% 30% 70% 40%" },
           "50%": { borderRadius: "30% 60% 70% 40% / 50% 60% 30% 60%" },
         },
+        "slow-zoom": {
+          "0%": { transform: "scale(1)" },
+          "100%": { transform: "scale(1.1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -150,6 +154,7 @@ export default {
         shimmer: "shimmer 2s infinite",
         float: "float 3s ease-in-out infinite",
         "liquid-flow": "liquid-flow 8s ease-in-out infinite",
+        "slow-zoom": "slow-zoom 30s ease-in-out infinite alternate",
       },
       backdropBlur: {
         xs: "2px",
