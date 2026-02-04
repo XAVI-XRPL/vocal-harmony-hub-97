@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { AppShell } from "@/components/layout/AppShell";
 import { useOnboarding } from "@/hooks/useOnboarding";
@@ -23,15 +23,59 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Component that handles navigation after splash/onboarding completes
+function AppRoutes({ onAppReady }: { onAppReady: () => void }) {
+  const navigate = useNavigate();
+  const [hasNavigatedHome, setHasNavigatedHome] = useState(false);
+
+  useEffect(() => {
+    // Navigate to home once when app becomes ready
+    if (!hasNavigatedHome) {
+      navigate("/", { replace: true });
+      setHasNavigatedHome(true);
+      onAppReady();
+    }
+  }, [navigate, hasNavigatedHome, onAppReady]);
+
+  return (
+    <Routes>
+      {/* Auth page without AppShell */}
+      <Route path="/auth" element={<Auth />} />
+      
+      {/* Main app routes with AppShell */}
+      <Route path="*" element={
+        <AppShell>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/library" element={<Library />} />
+            <Route path="/playlists" element={<Playlists />} />
+            <Route path="/playlist/:id" element={<PlaylistDetail />} />
+            <Route path="/progress" element={<Progress />} />
+            <Route path="/song/:id" element={<SongDetail />} />
+            <Route path="/training/:id" element={<TrainingMode />} />
+            <Route path="/training" element={<Library />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/subscription" element={<Subscription />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AppShell>
+      } />
+    </Routes>
+  );
+}
+
 function AppContent() {
   const { isComplete, isLoading, completeOnboarding } = useOnboarding();
   const [showSplash, setShowSplash] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showApp, setShowApp] = useState(false);
 
   // After splash completes, check if we need onboarding
   const handleSplashComplete = () => {
     if (isComplete) {
       setShowSplash(false);
+      setShowApp(true);
     } else {
       setShowSplash(false);
       setShowOnboarding(true);
@@ -41,6 +85,11 @@ function AppContent() {
   const handleOnboardingComplete = () => {
     completeOnboarding();
     setShowOnboarding(false);
+    setShowApp(true);
+  };
+
+  const handleAppReady = () => {
+    // App has navigated to home and is ready
   };
 
   // Wait for onboarding state to load
@@ -59,33 +108,8 @@ function AppContent() {
         )}
       </AnimatePresence>
 
-      {!showSplash && !showOnboarding && (
-        <BrowserRouter>
-          <Routes>
-            {/* Auth page without AppShell */}
-            <Route path="/auth" element={<Auth />} />
-            
-            {/* Main app routes with AppShell */}
-            <Route path="*" element={
-              <AppShell>
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/library" element={<Library />} />
-                  <Route path="/playlists" element={<Playlists />} />
-                  <Route path="/playlist/:id" element={<PlaylistDetail />} />
-                  <Route path="/progress" element={<Progress />} />
-                  <Route path="/song/:id" element={<SongDetail />} />
-                  <Route path="/training/:id" element={<TrainingMode />} />
-                  <Route path="/training" element={<Library />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/subscription" element={<Subscription />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </AppShell>
-            } />
-          </Routes>
-        </BrowserRouter>
+      {showApp && (
+        <AppRoutes onAppReady={handleAppReady} />
       )}
     </>
   );
@@ -94,9 +118,11 @@ function AppContent() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AppContent />
+      <BrowserRouter>
+        <Toaster />
+        <Sonner />
+        <AppContent />
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );
