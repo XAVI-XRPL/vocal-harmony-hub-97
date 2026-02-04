@@ -1,347 +1,151 @@
 
+# Vocal Rider Store: Kimad Products Integration
 
-# RVMT v2.0 Implementation Plan
-## Complete Vocalist Lifestyle Ecosystem
+## Overview
+Replace the current mock products with real products from Kimad Productions Store (kimadstore.com). These are curated vocal health products used by professional vocalists, including throat care items, hydration tools, essential oils, and supplements.
 
-This plan outlines the phased implementation of the comprehensive v2.0 features from your master prompt document. The implementation is organized into 6 phases to ensure each feature module is built incrementally with proper testing between phases.
+## Products to Implement
 
----
+Based on the Kimad Store content, here are the products to add:
 
-## Current State vs. Target State
+### Throat Care & Lozenges
+1. **Grether's Pastilles Variety Pack** - Blackcurrant flavor, professional throat lozenges
+2. **Grether's Pastilles Elderflower** - Premium Swiss throat pastilles
+3. **Traditional Medicinals Throat Coat Lozenges** - Echinacea formula
+4. **ACT Dry Mouth Lozenges** - Soothing moisturizing lozenges
+5. **doTERRA On Guard Throat Drops** - Essential oil throat drops
 
-| Component | Current | Target v2.0 |
-|-----------|---------|-------------|
-| Pages | 13 pages | 19 pages (+6 new) |
-| Navigation tabs | 5 (Library, Playlists, Home, Train, Progress) | 5 (Library, Playlists, Home, **Hub**, Progress) |
-| Mock data files | 1 (mockSongs) | 7 (+6 new) |
-| Zustand stores | 3 (audio, user, ui) | 4 (+storeCartStore) |
-| Database tables | 7 tables | 13 tables (+6 new) |
-| Component directories | Standard | +5 new (store/, medical/, stage-prep/, hub/, home/) |
+### Hydration & Nebulizers
+6. **VocalMist Portable Nebulizer** - Professional vocal hydration device
+7. **VocalMist Carrying Case** - Protective case for nebulizer
+8. **VocalMist Hydration Formula Refill Pack** - Saline refills
+9. **Voice Straw H2O** - Vocal exercise straw (Coming Soon placeholder)
 
----
+### Essential Oils (doTERRA)
+10. **doTERRA On Guard Softgels** - Immune support blend
+11. **doTERRA Breathe Essential Oil** - Respiratory support blend
+12. **doTERRA Lavender Essential Oil** - Relaxation and wellness
+13. **doTERRA Deep Blue Rub** - Muscle relief for performers
+14. **doTERRA On Guard Chewable Tablets** - Immune chewables
 
-## Phase 1: Foundation & Navigation Updates
-**Estimated effort: 1 session**
+### Teas & Honey
+15. **Traditional Medicinals Throat Coat Tea** - Classic herbal throat tea
+16. **Throat Coat Eucalyptus Tea** - Eucalyptus variant
+17. **Yogi Tea Throat Comfort** - Licorice-based soothing tea
+18. **Manuka Health Honey MGO 573+** - Premium NZ manuka honey
+19. **Wedderspoon Manuka Honey Drops** - Honey lozenges variety
 
-### 1.1 Copy Reference Document
-- Save `RVMT_Lovable_Prompt_v2.md` to project docs folder for persistent reference
+### Nasal & Sinus Care
+20. **Ponaris Nasal Emollient** - Nasal moisturizer
+21. **Alkalol Nasal Wash** - Nasal rinse solution
 
-### 1.2 Update Navigation
-- **MobileNav.tsx**: Replace "Train" tab (Mic2 icon) with "Hub" tab (LayoutGrid or diamond icon)
-- **DesktopSidebar.tsx**: Add "TOOLKIT" section below existing nav with 3 new items:
-  - Vocal Rider Store
-  - Vocal Health
-  - Stage Prep
+### Allergy & Wellness
+22. **Zyrtec Allergy Tablets** - Antihistamine
+23. **Allegra 24HR Non-Drowsy** - Allergy relief
+24. **Claritin Non-Drowsy** - Allergy medicine
+25. **Mucinex Chest Congestion** - Expectorant
+26. **TUMS Antacid Chewables** - Acid reflux relief
 
-### 1.3 Create Hub Gateway Page
-- **New file: `src/pages/Hub.tsx`**
-- 3 large tappable glass cards with module-specific accent colors:
-  - Vocal Rider Store (Warm Gold #D4A574)
-  - Vocal Health (Medical Red #EF4444)
-  - Stage Prep (Electric Cyan #22D3EE)
-- Framer Motion `whileTap={{ scale: 0.97 }}` animations
-
-### 1.4 Add Hub Component
-- **New file: `src/components/hub/HubCard.tsx`**
-- Reusable gateway card with icon, title, description, and colored glow
-
-### 1.5 Update App Routes
-- Add `/hub` route to App.tsx
-- Update Training nav to point to Library (training route already exists)
-
-### Files to create:
-- `src/pages/Hub.tsx`
-- `src/components/hub/HubCard.tsx`
-
-### Files to modify:
-- `src/App.tsx` (add Hub route)
-- `src/components/layout/MobileNav.tsx` (replace Train with Hub)
-- `src/components/layout/DesktopSidebar.tsx` (add TOOLKIT section)
+### Recovery
+27. **BEMER Therapy** - Professional recovery device (featured)
 
 ---
 
-## Phase 2: Mock Data & Type Definitions
-**Estimated effort: 1 session**
+## Implementation Details
 
-### 2.1 Extend Type Definitions
-Add to `src/types/index.ts`:
-- `Product` interface (store products)
-- `Doctor` interface (medical providers)
-- `City` interface (map cities)
-- `Venue` interface (stadiums/arenas)
-- `PartnerBrand` interface
-- `GearProduct` interface
-- `ChecklistItem` interface
+### 1. Update Product Categories
+Expand the `ProductCategory` type to include new categories:
+- `throat-care` - Lozenges, sprays, pastilles
+- `hydration` - Nebulizers, steamers, straws
+- `essential-oils` - doTERRA and similar products
+- `tea-honey` - Teas and honey products
+- `nasal-sinus` - Nasal care products
+- `allergy-wellness` - OTC medications
+- `accessories` - Cases, travel items
 
-### 2.2 Create Mock Data Files
-- `src/data/mockCities.ts` - 13 major US cities with SVG coordinates
-- `src/data/mockDoctors.ts` - 15 medical providers across cities
-- `src/data/mockVenues.ts` - 30+ stadiums/arenas
-- `src/data/mockProducts.ts` - 14 vocal care products
-- `src/data/mockBrands.ts` - 7 partner brands + gear products
-- `src/data/mockChecklist.ts` - 8 pre-show checklist items
+### 2. New Mock Products Data
+Replace `src/data/mockProducts.ts` with Kimad store products:
+- Include real Amazon affiliate links from the site
+- Use product-appropriate placeholder images
+- Include VocalMist and Voice Straw affiliate links with discount codes
+- Mark key products as featured
 
-### Files to create:
-- `src/data/mockCities.ts`
-- `src/data/mockDoctors.ts`
-- `src/data/mockVenues.ts`
-- `src/data/mockProducts.ts`
-- `src/data/mockBrands.ts`
-- `src/data/mockChecklist.ts`
+### 3. Update Category Filter
+Modify `CategoryFilter.tsx` to include the new categories with appropriate icons.
 
-### Files to modify:
-- `src/types/index.ts`
+### 4. Enhanced Product Card
+Update `ProductCard.tsx` to:
+- Show discount codes when available (e.g., "Use Code RAAB10")
+- Display "Coming Soon" badge for unreleased products
+- Add partner brand indicator for VocalMist/doTERRA products
 
----
+### 5. Store Hero Update
+Update `DressingRoomHero.tsx` to reference Kimad Productions branding subtly while maintaining the RVMT aesthetic.
 
-## Phase 3: Vocal Rider Store
-**Estimated effort: 2 sessions**
-
-### 3.1 Create Store Components
-- `src/components/store/ProductCard.tsx` - Warm gold glass card with category badge, price
-- `src/components/store/ProductGrid.tsx` - Responsive 2-column grid
-- `src/components/store/DressingRoomHero.tsx` - CSS/SVG illustrated vanity mirror scene
-- `src/components/store/CategoryFilter.tsx` - Horizontal pill filter (All, Throat Care, Hydration, etc.)
-
-### 3.2 Add Dressing Room Theme Styles
-Update `src/index.css`:
-```css
-.dressing-room-bg { /* warm dark wood gradient */ }
-.dressing-room-card { /* warm tinted glass */ }
-```
-
-### 3.3 Create Store Pages
-- `src/pages/VocalRiderStore.tsx` - Full store with hero, filters, product grid
-- `src/pages/ProductDetail.tsx` - Individual product view (optional, can use affiliate links)
-
-### 3.4 Add Store Routes
-Update App.tsx with:
-- `/store`
-- `/store/:productId`
-
-### Files to create:
-- `src/pages/VocalRiderStore.tsx`
-- `src/pages/ProductDetail.tsx`
-- `src/components/store/ProductCard.tsx`
-- `src/components/store/ProductGrid.tsx`
-- `src/components/store/DressingRoomHero.tsx`
-- `src/components/store/CategoryFilter.tsx`
-
-### Files to modify:
-- `src/App.tsx`
-- `src/index.css`
+### 6. Home Preview Update
+Update `VocalRiderPicks.tsx` to showcase featured Kimad products.
 
 ---
 
-## Phase 4: Vocal Health Directory
-**Estimated effort: 2 sessions**
+## File Changes
 
-### 4.1 Create Medical Components
-- `src/components/medical/USAMap.tsx` - Inline SVG map with tappable city dots
-- `src/components/medical/CityMarker.tsx` - Animated glowing dot component
-- `src/components/medical/DoctorCard.tsx` - Provider card with red accent border
-- `src/components/medical/DoctorList.tsx` - Scrollable list of filtered doctors
-- `src/components/medical/VenueCard.tsx` - Stadium/venue card
-- `src/components/medical/VenueList.tsx` - Horizontal venue scroll
-- `src/components/medical/EMTBadge.tsx` - Red cross medical icon (sm/md/lg sizes)
-- `src/components/medical/CityDrawer.tsx` - Content section for selected city
-
-### 4.2 Create Medical Pages
-- `src/pages/VocalHealth.tsx` - Interactive map + doctor/venue lists
-- `src/pages/DoctorProfile.tsx` - Individual doctor profile
-
-### 4.3 Add Routes
-- `/vocal-health`
-- `/vocal-health/doctor/:doctorId`
-
-### Technical: USA Map SVG
-Use a simplified continental US outline as a single `<path>` element with city markers positioned at approximate coordinates. No external library needed.
-
-### Files to create:
-- `src/pages/VocalHealth.tsx`
-- `src/pages/DoctorProfile.tsx`
-- `src/components/medical/USAMap.tsx`
-- `src/components/medical/CityMarker.tsx`
-- `src/components/medical/DoctorCard.tsx`
-- `src/components/medical/DoctorList.tsx`
-- `src/components/medical/VenueCard.tsx`
-- `src/components/medical/VenueList.tsx`
-- `src/components/medical/EMTBadge.tsx`
-- `src/components/medical/CityDrawer.tsx`
+| File | Action | Description |
+|------|--------|-------------|
+| `src/types/index.ts` | Modify | Add new product categories |
+| `src/data/mockProducts.ts` | Replace | New Kimad products data |
+| `src/components/store/CategoryFilter.tsx` | Modify | Add new category tabs |
+| `src/components/store/ProductCard.tsx` | Modify | Add discount code display |
+| `src/components/home/VocalRiderPicks.tsx` | Modify | Update featured products display |
 
 ---
 
-## Phase 5: Stage Prep Module
-**Estimated effort: 2 sessions**
+## Technical Notes
 
-### 5.1 Create Stage Prep Components
-- `src/components/stage-prep/IEMShowcase.tsx` - Large swipeable IEM product cards
-- `src/components/stage-prep/GearCard.tsx` - Equipment card with partner badge
-- `src/components/stage-prep/GearGrid.tsx` - Grid of gear products
-- `src/components/stage-prep/PartnerBadge.tsx` - "X% OFF" ribbon badge
-- `src/components/stage-prep/DiscountReveal.tsx` - Tap-to-reveal discount code
-- `src/components/stage-prep/PrepChecklist.tsx` - Interactive checklist with animations
-- `src/components/stage-prep/PrepChecklistItem.tsx` - Single item with checkbox animation
+### Affiliate Links
+- VocalMist: `https://myvocalmist.com/?sca_ref=922`
+- Voice Straw: `https://voicestraw.com/` (Code: RAAB10)
+- doTERRA: `https://referral.doterra.me/6111833` (25% off)
+- Amazon products: Direct Amazon links with product ASINs
 
-### 5.2 Create Checklist Persistence Hook
-- `src/hooks/usePrepChecklist.ts` - LocalStorage for demo mode, Supabase for auth users
+### Image Strategy
+Since we cannot scrape actual product images, we will use:
+- High-quality stock photos from Unsplash matching product types
+- Consistent image dimensions (300x300)
+- Product category-appropriate imagery
 
-### 5.3 Create Stage Prep Page
-- `src/pages/StagePrep.tsx` - IEM showcase, gear grid, pre-show checklist
-
-### 5.4 Add Route
-- `/stage-prep`
-
-### Files to create:
-- `src/pages/StagePrep.tsx`
-- `src/components/stage-prep/IEMShowcase.tsx`
-- `src/components/stage-prep/GearCard.tsx`
-- `src/components/stage-prep/GearGrid.tsx`
-- `src/components/stage-prep/PartnerBadge.tsx`
-- `src/components/stage-prep/DiscountReveal.tsx`
-- `src/components/stage-prep/PrepChecklist.tsx`
-- `src/components/stage-prep/PrepChecklistItem.tsx`
-- `src/hooks/usePrepChecklist.ts`
+### Discount Codes to Display
+- **RAAB10** - Voice Straw products
+- **RVMT15** - Partner discount (if applicable)
+- **doTERRA 25% OFF** - First year discount
 
 ---
 
-## Phase 6: Home Page Updates & Integration
-**Estimated effort: 1 session**
+## UI Enhancements
 
-### 6.1 Create Home Preview Components
-- `src/components/home/FeaturedGearPreview.tsx` - Horizontal scroll of 2-3 IEM products
-- `src/components/home/VocalRiderPicks.tsx` - 3-4 store product thumbnails
-- `src/components/home/VocalHealthCTA.tsx` - Single glass CTA card with EMT cross
-
-### 6.2 Update Home Page Layout
-Modify `src/pages/Home.tsx` to add below "Continue Practice":
-1. "Prep for the Stage" - FeaturedGearPreview
-2. "Dressing Room Essentials" - VocalRiderPicks
-3. "Vocal Health" - VocalHealthCTA
-
-### 6.3 Horizontal Scroll Styling
-Add to index.css:
-```css
-.horizontal-scroll {
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-}
-.horizontal-scroll > * {
-  scroll-snap-align: start;
-}
-```
-
-### Files to create:
-- `src/components/home/FeaturedGearPreview.tsx`
-- `src/components/home/VocalRiderPicks.tsx`
-- `src/components/home/VocalHealthCTA.tsx`
-
-### Files to modify:
-- `src/pages/Home.tsx`
-- `src/index.css`
-
----
-
-## Phase 7 (Future): Database Tables & React Query Hooks
-**Estimated effort: 2 sessions**
-
-When ready to move from mock data to real database:
-
-### 7.1 Create Database Tables
-- `products` - Store products with RLS (public read)
-- `medical_providers` - Doctors with RLS (public read)
-- `cities` - City coordinates (public read)
-- `venues` - Stadiums/arenas (public read)
-- `partner_brands` - Gear brands (public read)
-- `gear_products` - IEMs/mics (public read)
-- `prep_checklists` - User checklists with RLS (user-owned)
-
-### 7.2 Create React Query Hooks
-- `src/hooks/useProducts.ts`
-- `src/hooks/useDoctors.ts`
-- `src/hooks/useVenues.ts`
-- `src/hooks/useCities.ts`
-- `src/hooks/useGear.ts`
-- `src/hooks/usePartnerBrands.ts`
-
-### 7.3 Seed Database
-Migrate mock data to Supabase tables
-
----
-
-## Design System Extensions
-
-### New Module Accent Colors
-| Module | Accent | Hex | CSS Variable |
-|--------|--------|-----|--------------|
-| Vocal Rider Store | Warm Gold | #D4A574 | `--accent-store` |
-| Vocal Health | Medical Red | #EF4444 | `--accent-medical` |
-| Stage Prep | Electric Cyan | #22D3EE | `--accent-gear` |
-
-### New CSS Classes to Add
-```css
-/* Store dressing room theme */
-.dressing-room-bg { ... }
-.dressing-room-card { ... }
-
-/* Medical directory */
-.medical-card { border-left: 3px solid var(--accent-medical); }
-.emt-badge { ... }
-
-/* Stage prep */
-.partner-badge { ... }
-.discount-reveal { ... }
-```
-
----
-
-## Implementation Order Summary
-
+### Discount Badge Component
 ```text
-Phase 1: Navigation + Hub Page
-    |
-    v
-Phase 2: Types + Mock Data
-    |
-    v
-Phase 3: Vocal Rider Store
-    |
-    v
-Phase 4: Vocal Health Directory
-    |
-    v
-Phase 5: Stage Prep Module
-    |
-    v
-Phase 6: Home Page Integration
-    |
-    v
-Phase 7: Database Migration (Future)
++---------------------------+
+|  [Featured]               |
+|  [Product Image]          |
+|                           |
+|  VocalMist                |
+|  Portable Nebulizer       |
+|  ★ 4.9 (234)              |
+|  $149.99                  |
+|  [Use Code: RAAB10] ←NEW  |
++---------------------------+
+```
+
+### Category Pills (Updated)
+```text
+[All] [Throat Care] [Hydration] [Essential Oils] [Tea & Honey] [Nasal Care] [Allergy]
 ```
 
 ---
 
-## Total New Files Summary
-
-| Category | Count | Key Files |
-|----------|-------|-----------|
-| Pages | 6 | Hub, VocalRiderStore, ProductDetail, VocalHealth, DoctorProfile, StagePrep |
-| Store Components | 4 | ProductCard, ProductGrid, DressingRoomHero, CategoryFilter |
-| Medical Components | 8 | USAMap, CityMarker, DoctorCard, DoctorList, VenueCard, VenueList, EMTBadge, CityDrawer |
-| Stage Prep Components | 7 | IEMShowcase, GearCard, GearGrid, PartnerBadge, DiscountReveal, PrepChecklist, PrepChecklistItem |
-| Home Components | 3 | FeaturedGearPreview, VocalRiderPicks, VocalHealthCTA |
-| Hub Components | 1 | HubCard |
-| Mock Data | 6 | mockCities, mockDoctors, mockVenues, mockProducts, mockBrands, mockChecklist |
-| Hooks | 2 | usePrepChecklist, (future: 6 React Query hooks) |
-| **Total** | **37** | |
-
----
-
-## Notes
-
-- All new features use mock data initially - fully functional in demo mode
-- Existing audio engine, training mode, and auth remain unchanged
-- Mobile-first responsive design for all new pages
-- Framer Motion animations throughout
-- All affiliate links point to `#` in Phase 1 (can be updated later)
-
+## Next Steps After Approval
+1. Update types with new categories
+2. Create comprehensive product data file
+3. Update UI components for discount codes
+4. Test all affiliate links work correctly
+5. Verify responsive layout with new product count
