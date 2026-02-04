@@ -1,68 +1,201 @@
 
 
-# Enhance Studio Background with Reduced Opacity and Subtle Animation
+# Fix A-B Loop Functionality and Audio Sync Issues
 
-## Overview
+## Problem Analysis
 
-Reduce the dark overlay opacity to let more of the studio image show through, and add a subtle slow zoom animation to create depth and visual interest.
+Based on my investigation, there are several issues with the current A-B loop implementation:
 
----
+### Issue 1: Loop Boundary Handling Causes Skipping
 
-## Current State
-
-The `StudioBackground` component has:
-- Dark overlay at `bg-background/60` (60% opacity)
-- Gradient overlay from `from-background/40` to `to-background/80`
-- Static image with no animation
-
----
-
-## Changes
-
-### 1. Reduce Overlay Opacity
-
-**File: `src/components/layout/StudioBackground.tsx`**
-
-| Element | Current | New |
-|---------|---------|-----|
-| Dark overlay | `bg-background/60` | `bg-background/40` |
-| Top gradient | `from-background/40` | `from-background/30` |
-| Bottom gradient | `to-background/80` | `to-background/60` |
-
-This will make the studio image more visible while still maintaining readability for glass cards.
-
-### 2. Add Slow Zoom Animation
-
-**File: `tailwind.config.ts`**
-
-Add a new keyframe animation for subtle zoom effect:
-
+**Current Code (lines 268-286 in useAudioPlayer.ts):**
 ```typescript
-keyframes: {
-  "slow-zoom": {
-    "0%": { transform: "scale(1)" },
-    "100%": { transform: "scale(1.1)" },
-  },
-}
-
-animation: {
-  "slow-zoom": "slow-zoom 30s ease-in-out infinite alternate",
+if (isLooping && loopEnd > loopStart) {
+  if (time >= loopEnd) {
+    // Pause all stems
+    stemHowlsRef.current.forEach(({ howl }) => howl.pause());
+    reSeekAllStems(loopStart);
+    setTimeout(() => {
+      if (useAudioStore.getState().isPlaying) {
+        stemHowlsRef.current.forEach(({ howl }) => howl.play());
+      }
+    }, SEEK_SYNC_DELAY_MS); // 150ms delay
+    updateCurrentTime(loopStart);
+  }
 }
 ```
 
-This creates a very slow, subtle zoom in and out (scale 1.0 to 1.1 over 30 seconds) that loops infinitely, giving the background a sense of depth without being distracting.
+**Problems:**
+1. The 150ms pause/seek/resume for every loop causes audible glitches
+2. Animation frame continues running during this process, causing race conditions
+3. Loop detection uses median position which can be inaccurate near boundaries
+4. No master clock reset after loop jump
 
-### 3. Apply Animation to Background Image
+### Issue 2: No Drag-to-Select Loop Region
 
-**File: `src/components/layout/StudioBackground.tsx`**
+Currently users must:
+1. Play to position A, click "Set A"
+2. Play to position B, click "Set B"
 
-Add the `animate-slow-zoom` class to the image element:
+This is cumbersome. Users should be able to tap and drag on the waveform to select a loop region directly.
 
-```tsx
-<img
-  src={studioBackground}
-  alt=""
-  className="absolute inset-0 w-full h-full object-cover animate-slow-zoom"
+### Issue 3: Loop Region Not Interactive
+
+The `LoopRegion` component has `pointer-events-none`, so users cannot drag the A/B markers to adjust the loop boundaries.
+
+---
+
+## Solution Overview
+
+| Fix | Description |
+|-----|-------------|
+| **Smoother Loop Jumps** | Use immediate seek without pause/resume cycle for loop boundaries |
+| **Master Clock Sync** | Reset master clock after loop jump to prevent drift |
+| **Drag-to-Select** | Add mouse/touch drag on waveform to create loop regions |
+| **Draggable Markers** | Allow dragging A/B markers to adjust loop boundaries |
+| **Loop Auto-Enable** | When user drags a region, automatically enable looping |
+
+---
+
+## Technical Implementation
+
+### 1. Improve Loop Boundary Handling in `useAudioPlayer.ts`
+
+**Strategy:** Instead of pause-seek-resume, use immediate seeks and only pause if drift is too large.
+
+```typescript
+// Improved loop handling
+if (isLooping && loopEnd > loopStart) {
+  if (time >= loopEnd) {
+    // Immediate seek without pause cycle for smoother looping
+    const targetTime = loopStart;
+    
+    // Seek all stems immediately (no pause)
+    stemHowlsRef.current.forEach(({ howl }) => {
+      howl.seek(targetTime);
+    });
+    
+    // Reset master clock for accurate tracking
+    playbackStartTimeRef.current = Date.now();
+    playbackStartPositionRef.current = targetTime;
+    
+    updateCurrentTime(targetTime);
+  }
+}
+```
+
+**Key Changes:**
+- Remove the pause/resume cycle on loop boundary
+- Immediate synchronous seek to loop start
+- Reset master clock reference for accurate position tracking
+- Only trigger drift correction if stems actually go out of sync
+
+### 2. Add Drag Selection to WaveformDisplay
+
+**File: `src/components/audio/WaveformDisplay.tsx`**
+
+Add new props and handlers for loop region selection:
+
+| New Props | Type | Description |
+|-----------|------|-------------|
+| `onLoopSelect` | `(start: number, end: number) => void` | Callback when user drags to select a region |
+| `loopStart` | `number` | Current loop start time |
+| `loopEnd` | `number` | Current loop end time |
+| `isLooping` | `boolean` | Whether loop is active |
+
+**Add mouse/touch drag handling:**
+```typescript
+const [isDragging, setIsDragging] = useState(false);
+const [dragStart, setDragStart] = useState<number | null>(null);
+const [dragEnd, setDragEnd] = useState<number | null>(null);
+
+const handleMouseDown = (e) => {
+  // Calculate time from position
+  const time = calculateTimeFromEvent(e);
+  setIsDragging(true);
+  setDragStart(time);
+  setDragEnd(time);
+};
+
+const handleMouseMove = (e) => {
+  if (!isDragging) return;
+  const time = calculateTimeFromEvent(e);
+  setDragEnd(time);
+};
+
+const handleMouseUp = () => {
+  if (isDragging && dragStart !== null && dragEnd !== null) {
+    const start = Math.min(dragStart, dragEnd);
+    const end = Math.max(dragStart, dragEnd);
+    if (end - start > 0.5) { // Minimum 0.5s region
+      onLoopSelect?.(start, end);
+    }
+  }
+  setIsDragging(false);
+  setDragStart(null);
+  setDragEnd(null);
+};
+```
+
+### 3. Make LoopRegion Markers Draggable
+
+**File: `src/components/audio/LoopRegion.tsx`**
+
+Add drag handling to the A and B markers:
+
+| New Props | Type | Description |
+|-----------|------|-------------|
+| `onLoopStartChange` | `(time: number) => void` | Callback when A marker is dragged |
+| `onLoopEndChange` | `(time: number) => void` | Callback when B marker is dragged |
+
+**Make markers interactive:**
+```typescript
+// Remove pointer-events-none from the container
+// Add pointer-events to markers only
+
+<motion.div
+  className="... cursor-ew-resize"
+  style={{ left: 0, pointerEvents: 'auto' }}
+  onMouseDown={(e) => startDragging('start', e)}
+  onTouchStart={(e) => startDragging('start', e)}
+>
+  {/* A marker */}
+</motion.div>
+```
+
+### 4. Update TrainingMode to Connect Everything
+
+**File: `src/pages/TrainingMode.tsx`**
+
+Wire up the new drag selection:
+
+```typescript
+const handleLoopSelect = (start: number, end: number) => {
+  setLoop(start, end); // This auto-enables looping
+};
+
+const handleLoopMarkerChange = (marker: 'start' | 'end', time: number) => {
+  if (marker === 'start') {
+    setLoop(time, loopEnd);
+  } else {
+    setLoop(loopStart, time);
+  }
+};
+
+// Pass to WaveformDisplay
+<WaveformDisplay
+  ...
+  onLoopSelect={handleLoopSelect}
+  loopStart={loopStart}
+  loopEnd={loopEnd}
+  isLooping={isLooping}
+/>
+
+// Pass to LoopRegion
+<LoopRegion
+  ...
+  onLoopStartChange={(t) => handleLoopMarkerChange('start', t)}
+  onLoopEndChange={(t) => handleLoopMarkerChange('end', t)}
 />
 ```
 
@@ -72,15 +205,38 @@ Add the `animate-slow-zoom` class to the image element:
 
 | File | Changes |
 |------|---------|
-| `tailwind.config.ts` | Add `slow-zoom` keyframe and animation |
-| `src/components/layout/StudioBackground.tsx` | Reduce overlay opacity values, add zoom animation to image |
+| `src/hooks/useAudioPlayer.ts` | Improve loop boundary handling, remove pause/resume cycle, reset master clock |
+| `src/components/audio/WaveformDisplay.tsx` | Add drag-to-select functionality for loop regions |
+| `src/components/audio/LoopRegion.tsx` | Make A/B markers draggable |
+| `src/pages/TrainingMode.tsx` | Wire up new loop selection handlers |
 
 ---
 
-## Visual Result
+## Expected Outcome
 
-- More of the studio atmosphere will be visible (microphone, acoustic panels, blue lighting)
-- The image will slowly, subtly zoom in and out creating a cinematic depth effect
-- Glass cards will still be readable but with a richer background presence
-- Animation is slow enough (30s cycle) to not be distracting during training sessions
+1. **Clean Looping**: Audio loops smoothly without skipping or glitching at boundaries
+2. **Drag Selection**: Users can tap and drag on the waveform to select a loop region
+3. **Adjustable Markers**: A and B markers can be dragged to fine-tune the loop boundaries
+4. **All Stems Loop**: The entire multi-track mixer loops together in sync
+5. **Visual Feedback**: Loop region shows during drag with real-time preview
+
+---
+
+## User Experience Flow
+
+```text
+1. User taps and drags on waveform
+   ↓
+2. Blue highlight appears showing selection
+   ↓
+3. User releases finger/mouse
+   ↓
+4. Loop region is set with A and B markers
+   ↓
+5. Looping automatically enables
+   ↓
+6. User can drag A or B markers to adjust
+   ↓
+7. Audio loops cleanly at boundaries
+```
 
