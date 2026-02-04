@@ -1,93 +1,100 @@
 
-# Audio Sync Verification and Improvements for DONT LEAVE EXERCISE
+# Performance and Reset Button Fixes for Training Mode
 
-## Summary
-The "3. DONT LEAVE EXERCISE" song has 12 stems compared to 9 (Testify) and 6 (Throwback). The existing synchronization system is robust, but a few targeted improvements will ensure rock-solid sync for larger stem counts and smoother A-B loop behavior.
+## Overview
+Fix the waveform animation freeze when skipping in "3. DONT LEAVE EXERCISE" (12 stems) and ensure the Reset button properly resets the song to the beginning across all songs.
 
-## Current Architecture Analysis
+## Root Cause Analysis
 
-The audio synchronization system uses:
-- **Howler.js** with HTML5 audio mode for streaming
-- **Master Clock** reference (wall-clock time) for accurate position tracking
-- **Drift Correction** at 1-second intervals with a 0.15s threshold
-- **Synchronized Seeking** with pause-seek-verify-resume cycle
+### Problem 1: Waveform Animation Freeze
+With 12 stems, the player renders:
+- 12 StemTrack components, each with a WaveformDisplay
+- Each WaveformDisplay has ~80 animated bars (top + bottom for mirrored view)
+- Total: **1,920 individually animated elements** with `repeat: Infinity`
 
-## Identified Improvements
+Framer Motion's continuous opacity animations on this many elements overwhelms the browser's animation thread, causing stuttering when the audio player is also processing seeks/syncs.
 
-### 1. Increase Seek Sync Delay for Larger Stem Counts
-With 12 stems, HTML5 audio buffers need slightly more time to stabilize after seeking. Increase the delay from 150ms to 200ms.
+### Problem 2: Reset Button Not Working
+The `resetMixer` function in audioStore only resets stem states (volume/mute/solo). It does NOT:
+- Reset playback position to 0
+- Clear loop settings
+- Reset playback rate
 
-### 2. Tighter Drift Tolerance
-Reduce the correction threshold from 0.15s to 0.10s to catch drift earlier before it becomes audible.
+### Problem 3: Ref Warning (Minor)
+Components `WaveformDisplay` and `StudioBackground` receive refs but aren't wrapped with `forwardRef`.
 
-### 3. Staggered Stem Start for Better Sync
-When resuming playback, start stems in small batches rather than all at once to reduce browser audio thread contention.
-
-### 4. Loop Boundary Buffer
-Add a small safety margin when detecting loop end to prevent overshoot on slower devices.
-
-### 5. Force Sync on Loop Reset
-Explicitly re-sync all stems when looping back to start point, not just seek.
+---
 
 ## Technical Implementation
 
-### File: `src/hooks/useAudioPlayer.ts`
+### File 1: `src/components/audio/WaveformDisplay.tsx`
 
-#### Change 1: Adjust timing constants for 12-stem songs
+**Changes:**
+1. Add `React.forwardRef` wrapper to fix ref warning
+2. Remove continuous `repeat: Infinity` opacity animations from individual bars
+3. Use CSS animations instead of framer-motion for the pulse effect (much lighter)
+4. Add `will-change: transform` CSS hint for GPU acceleration
+5. Memoize the bar rendering to prevent re-renders on time updates
+
+**Key optimization:**
 ```typescript
-// Current
-const SEEK_SYNC_DELAY_MS = 150;
-const DRIFT_CORRECTION_THRESHOLD = 0.15;
-
-// New (optimized for larger stem counts)
-const SEEK_SYNC_DELAY_MS = 200;
-const DRIFT_CORRECTION_THRESHOLD = 0.10;
+// Replace framer-motion infinite animations with CSS classes
+className={cn(
+  "w-full rounded-sm",
+  isPlaying && isPlayed && "animate-bar-pulse"
+)}
 ```
 
-#### Change 2: Improve loop detection with buffer zone
-In the animation frame update loop, add a small buffer before the loop end point to prevent overshoot:
-```typescript
-// Current
-if (time >= state.loopEnd) {
+### File 2: `src/stores/audioStore.ts`
 
-// New - add 0.05s buffer for detection
-if (time >= state.loopEnd - 0.05) {
+**Changes:**
+Add a comprehensive `resetAll` function that:
+- Resets playback position to 0
+- Clears loop settings
+- Resets playback rate to 1
+- Resets all stem states
+
+Rename current `resetMixer` behavior or update it to be more complete.
+
+### File 3: `src/pages/TrainingMode.tsx`
+
+**Changes:**
+1. Update Reset button to call the new comprehensive reset function
+2. Also trigger `seekTo(0)` through the audio player hook to sync Howler instances
+
+### File 4: `src/components/layout/StudioBackground.tsx`
+
+**Changes:**
+Wrap with `React.forwardRef` to fix the ref warning.
+
+### File 5: `src/index.css` (optional)
+
+**Changes:**
+Add lightweight CSS animation for bar pulse:
+```css
+@keyframes bar-pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+.animate-bar-pulse {
+  animation: bar-pulse 1.5s ease-in-out infinite;
+}
 ```
 
-#### Change 3: Force sync on loop reset
-When looping back to start, add a brief pause-sync-resume cycle instead of direct seek for tighter synchronization:
-```typescript
-// Pause all, seek to loop start, resume
-stemHowlsRef.current.forEach(({ howl }) => howl.pause());
-stemHowlsRef.current.forEach(({ howl }) => howl.seek(state.loopStart));
+---
 
-// Small delay then resume
-setTimeout(() => {
-  stemHowlsRef.current.forEach(({ howl }) => howl.play());
-}, 20);
-```
+## Performance Impact
 
-#### Change 4: Add stem-count-aware sync verification
-Scale the sync tolerance based on the number of stems:
-```typescript
-const getSyncTolerance = (stemCount: number): number => {
-  // More stems = slightly looser tolerance to avoid overcorrection
-  if (stemCount > 10) return 0.10;
-  if (stemCount > 6) return 0.08;
-  return 0.06;
-};
-```
+| Metric | Before | After |
+|--------|--------|-------|
+| Animated elements | 1,920 | 0 (CSS handles it) |
+| Re-renders per frame | High | Minimal |
+| GPU memory | High | Low |
+
+---
 
 ## Expected Results
-- All 12 stems in DONT LEAVE EXERCISE will stay in perfect sync during playback
-- Skip forward/backward will properly re-sync all stems before resuming
-- A-B loop will smoothly reset without drift accumulation
-- No audio overlapping or phasing artifacts
-
-## Testing Checklist
-After implementation:
-1. Play DONT LEAVE EXERCISE from start - verify all 12 stems are in sync
-2. Skip forward 10s multiple times - stems should resync each time
-3. Set an A-B loop and let it repeat 5+ times - no drift should accumulate
-4. Drag the loop markers while playing - playback should remain smooth
-5. Double-tap to clear loop - verify seamless continuation
+1. Smooth waveform animations even with 12 stems
+2. No freeze when skipping or seeking
+3. Reset button works consistently: returns to 0:00, clears loops, resets tempo
+4. No more console warnings about refs
