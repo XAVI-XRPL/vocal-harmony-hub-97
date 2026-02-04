@@ -48,11 +48,13 @@ export function useAudioPlayer() {
   } = useAudioStore();
 
   // Calculate expected position based on wall-clock time (master clock)
+  // Uses refs to avoid re-render cascades - reads store state directly when needed
   const getExpectedPosition = useCallback((): number => {
-    if (!isPlaying) return currentTime;
+    const state = useAudioStore.getState();
+    if (!state.isPlaying) return playbackStartPositionRef.current;
     const elapsed = (Date.now() - playbackStartTimeRef.current) / 1000;
-    return playbackStartPositionRef.current + (elapsed * playbackRate);
-  }, [isPlaying, currentTime, playbackRate]);
+    return playbackStartPositionRef.current + (elapsed * state.playbackRate);
+  }, []);
 
   // Helper to verify all stems are synchronized
   const verifyStemSync = useCallback((targetTime: number): boolean => {
