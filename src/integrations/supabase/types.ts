@@ -14,6 +14,217 @@ export type Database = {
   }
   public: {
     Tables: {
+      checklist_items: {
+        Row: {
+          category: Database["public"]["Enums"]["checklist_category"]
+          created_at: string
+          description: string
+          id: string
+          item_order: number
+          label: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["checklist_category"]
+          created_at?: string
+          description: string
+          id: string
+          item_order: number
+          label: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["checklist_category"]
+          created_at?: string
+          description?: string
+          id?: string
+          item_order?: number
+          label?: string
+        }
+        Relationships: []
+      }
+      cities: {
+        Row: {
+          abbreviation: string
+          created_at: string
+          doctor_count: number | null
+          id: string
+          name: string
+          state: string
+          svg_x: number
+          svg_y: number
+          venue_count: number | null
+        }
+        Insert: {
+          abbreviation: string
+          created_at?: string
+          doctor_count?: number | null
+          id: string
+          name: string
+          state: string
+          svg_x: number
+          svg_y: number
+          venue_count?: number | null
+        }
+        Update: {
+          abbreviation?: string
+          created_at?: string
+          doctor_count?: number | null
+          id?: string
+          name?: string
+          state?: string
+          svg_x?: number
+          svg_y?: number
+          venue_count?: number | null
+        }
+        Relationships: []
+      }
+      gear_products: {
+        Row: {
+          affiliate_url: string
+          brand_id: string
+          category: Database["public"]["Enums"]["gear_category"]
+          created_at: string
+          description: string
+          id: string
+          image_url: string
+          is_featured: boolean | null
+          name: string
+          price: number
+          specs: Json | null
+        }
+        Insert: {
+          affiliate_url: string
+          brand_id: string
+          category: Database["public"]["Enums"]["gear_category"]
+          created_at?: string
+          description: string
+          id: string
+          image_url: string
+          is_featured?: boolean | null
+          name: string
+          price: number
+          specs?: Json | null
+        }
+        Update: {
+          affiliate_url?: string
+          brand_id?: string
+          category?: Database["public"]["Enums"]["gear_category"]
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string
+          is_featured?: boolean | null
+          name?: string
+          price?: number
+          specs?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gear_products_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "partner_brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medical_providers: {
+        Row: {
+          accepts_emergency: boolean | null
+          address: string
+          bio: string
+          city_id: string
+          created_at: string
+          credentials: string
+          id: string
+          image_url: string
+          name: string
+          phone: string
+          practice: string
+          rating: number | null
+          review_count: number | null
+          specialty: Database["public"]["Enums"]["doctor_specialty"]
+          touring_artist_friendly: boolean | null
+          website: string
+        }
+        Insert: {
+          accepts_emergency?: boolean | null
+          address: string
+          bio: string
+          city_id: string
+          created_at?: string
+          credentials: string
+          id: string
+          image_url: string
+          name: string
+          phone: string
+          practice: string
+          rating?: number | null
+          review_count?: number | null
+          specialty: Database["public"]["Enums"]["doctor_specialty"]
+          touring_artist_friendly?: boolean | null
+          website: string
+        }
+        Update: {
+          accepts_emergency?: boolean | null
+          address?: string
+          bio?: string
+          city_id?: string
+          created_at?: string
+          credentials?: string
+          id?: string
+          image_url?: string
+          name?: string
+          phone?: string
+          practice?: string
+          rating?: number | null
+          review_count?: number | null
+          specialty?: Database["public"]["Enums"]["doctor_specialty"]
+          touring_artist_friendly?: boolean | null
+          website?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_providers_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_brands: {
+        Row: {
+          created_at: string
+          description: string
+          discount_code: string
+          discount_percent: number | null
+          id: string
+          logo_url: string
+          name: string
+          website_url: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          discount_code: string
+          discount_percent?: number | null
+          id: string
+          logo_url: string
+          name: string
+          website_url: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          discount_code?: string
+          discount_percent?: number | null
+          id?: string
+          logo_url?: string
+          name?: string
+          website_url?: string
+        }
+        Relationships: []
+      }
       playlist_songs: {
         Row: {
           added_at: string
@@ -127,6 +338,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      products: {
+        Row: {
+          affiliate_url: string
+          brand: string
+          category: Database["public"]["Enums"]["product_category"]
+          created_at: string
+          description: string
+          id: string
+          image_url: string
+          is_featured: boolean | null
+          name: string
+          price: number
+          rating: number | null
+          review_count: number | null
+          tags: string[] | null
+        }
+        Insert: {
+          affiliate_url: string
+          brand: string
+          category: Database["public"]["Enums"]["product_category"]
+          created_at?: string
+          description: string
+          id: string
+          image_url: string
+          is_featured?: boolean | null
+          name: string
+          price: number
+          rating?: number | null
+          review_count?: number | null
+          tags?: string[] | null
+        }
+        Update: {
+          affiliate_url?: string
+          brand?: string
+          category?: Database["public"]["Enums"]["product_category"]
+          created_at?: string
+          description?: string
+          id?: string
+          image_url?: string
+          is_featured?: boolean | null
+          name?: string
+          price?: number
+          rating?: number | null
+          review_count?: number | null
+          tags?: string[] | null
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -244,6 +503,51 @@ export type Database = {
           },
         ]
       }
+      user_checklist_progress: {
+        Row: {
+          checked_at: string | null
+          checklist_item_id: string
+          created_at: string
+          id: string
+          is_checked: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          checked_at?: string | null
+          checklist_item_id: string
+          created_at?: string
+          id?: string
+          is_checked?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          checked_at?: string | null
+          checklist_item_id?: string
+          created_at?: string
+          id?: string
+          is_checked?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_checklist_progress_checklist_item_id_fkey"
+            columns: ["checklist_item_id"]
+            isOneToOne: false
+            referencedRelation: "checklist_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_checklist_progress_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_song_progress: {
         Row: {
           created_at: string
@@ -288,6 +592,47 @@ export type Database = {
           },
         ]
       }
+      venues: {
+        Row: {
+          address: string
+          capacity: number
+          city_id: string
+          created_at: string
+          id: string
+          image_url: string
+          name: string
+          type: Database["public"]["Enums"]["venue_type"]
+        }
+        Insert: {
+          address: string
+          capacity: number
+          city_id: string
+          created_at?: string
+          id: string
+          image_url: string
+          name: string
+          type: Database["public"]["Enums"]["venue_type"]
+        }
+        Update: {
+          address?: string
+          capacity?: number
+          city_id?: string
+          created_at?: string
+          id?: string
+          image_url?: string
+          name?: string
+          type?: Database["public"]["Enums"]["venue_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "venues_city_id_fkey"
+            columns: ["city_id"]
+            isOneToOne: false
+            referencedRelation: "cities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -296,7 +641,26 @@ export type Database = {
       has_premium_access: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      checklist_category: "vocal" | "gear" | "mental" | "physical"
+      doctor_specialty:
+        | "ENT"
+        | "Laryngologist"
+        | "Voice Therapist"
+        | "Vocal Coach"
+      gear_category:
+        | "iem"
+        | "microphone"
+        | "in-ear-monitor"
+        | "cable"
+        | "case"
+        | "accessories"
+      product_category:
+        | "throat-care"
+        | "hydration"
+        | "vitamins"
+        | "accessories"
+        | "apparel"
+      venue_type: "arena" | "stadium" | "theater" | "club"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -423,6 +787,30 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      checklist_category: ["vocal", "gear", "mental", "physical"],
+      doctor_specialty: [
+        "ENT",
+        "Laryngologist",
+        "Voice Therapist",
+        "Vocal Coach",
+      ],
+      gear_category: [
+        "iem",
+        "microphone",
+        "in-ear-monitor",
+        "cable",
+        "case",
+        "accessories",
+      ],
+      product_category: [
+        "throat-care",
+        "hydration",
+        "vitamins",
+        "accessories",
+        "apparel",
+      ],
+      venue_type: ["arena", "stadium", "theater", "club"],
+    },
   },
 } as const
