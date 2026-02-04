@@ -1,57 +1,35 @@
 
-
-# Home Hub Cards - Horizontal Layout with Custom Icons
+# Add Final 2 Stems to DONT LEAVE EXERCISE
 
 ## Overview
-Redesign the HomeHubCards component to display 3 compact cards in a horizontal row instead of vertically stacked. Each card will feature a specific icon and color scheme, with enhanced animations for visual impact.
+Complete the 12-stem setup for "3. DONT LEAVE EXERCISE" by adding the last 2 RAab harmony tracks.
 
-## Design Changes
+## Current State
+- Song has 10 stems (positions 0-9)
+- Last harmony is "JLevy Harmony 3" at position 9
 
-### Card Layout
-- Change from vertical column to horizontal row (3 cards side by side)
-- Each card will be a compact square/tile with centered icon
-- Title only (remove descriptions for cleaner look)
-- Equal width distribution using CSS grid
+## Files to Add
+1. `3._DONT-LEAVE-EXERCISE-RAab-Harmony-3.mp3` → `public/audio/dont-leave-exercise/raab-harmony-3.mp3`
+2. `3._DONT-LEAVE-EXERCISE-RAab-Harmony-4.mp3` → `public/audio/dont-leave-exercise/raab-harmony-4.mp3`
 
-### Icon and Color Scheme
-| Card | Icon | Color |
-|------|------|-------|
-| Vocal Rider Store | Mic | Green (#22c55e / emerald) |
-| Vocal Health | Stethoscope | Red (#ef4444) |
-| Stage Prep | Headphones | Teal (#14b8a6 / teal) |
+## Database Records to Insert
 
-### Animation Enhancements
-- Staggered entrance animation with scale + fade
-- Hover: lift effect with glow pulse in card's accent color
-- Active: subtle press feedback
-- Continuous subtle icon pulse animation
+| ID | Name | Type | Position | Color |
+|----|------|------|----------|-------|
+| dontleave-raab-harmony-3 | RAab Harmony 3 | harmony | 10 | #d946ef (fuchsia) |
+| dontleave-raab-harmony-4 | RAab Harmony 4 | harmony | 11 | #f472b6 (pink) |
 
-## Technical Implementation
+## Implementation Steps
 
-### File to Modify
-`src/components/home/HomeHubCards.tsx`
+### Step 1: Copy Audio Files
+Copy both uploaded MP3 files to the `public/audio/dont-leave-exercise/` directory with clean lowercase filenames.
 
-### Component Structure
-```text
-+--------+  +--------+  +--------+
-|  [Mic] |  [Steth] |  [Head]  |
-|        |  |        |  |        |
-| Store  |  | Health |  | Prep   |
-+--------+  +--------+  +--------+
-   Green       Red        Teal
-```
+### Step 2: Insert Stem Records
+Execute SQL to insert the 2 new stems into the `stems` table with:
+- Matching song_id: `dont-leave-exercise`
+- Type: `harmony` (consistent with other harmony tracks)
+- Sequential positions: 10 and 11
+- Distinct colors for visual differentiation in the mixer
 
-### Key Changes
-1. Update container from `flex-col` to `grid grid-cols-3` with gap
-2. Replace ShoppingBag icon with Mic icon from Lucide
-3. Add custom color classes for green, red, and teal accents
-4. Restructure card content to be vertically centered with icon on top, title below
-5. Remove ChevronRight arrow and description text
-6. Add pulsing glow animation on hover
-7. Use inline styles for custom accent colors per card
-
-### Animation Details
-- Container: staggered entrance with 0.1s delay between cards
-- Cards: scale from 0.8 to 1 with opacity fade
-- Hover: translateY(-4px) with shadow glow in accent color
-- Icon: subtle bounce animation on hover
+### Result
+Song will have complete 12-stem setup matching the expected structure.
