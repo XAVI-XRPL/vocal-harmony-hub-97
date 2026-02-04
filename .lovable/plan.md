@@ -1,111 +1,231 @@
 
-
-# Test Premium Content Access Control
+# Simple Onboarding Flow with Stadium Background & Demo Mode
 
 ## Summary
 
-This plan adds a premium song to the database and verifies that the RLS policies correctly block free users from accessing it. The current logged-in user has `subscription_tier: free`, so they should NOT be able to see or access premium content.
+Create a streamlined, visually stunning onboarding experience using the existing stadium background with animated light orbs and particles. The flow will be simple (3 slides max) and include a "Try Demo" option that allows users to explore the app without creating an account.
 
 ---
 
-## Phase 1: Add Premium Song to Database
+## Current State Analysis
 
-Insert a new premium song with stems to test the access control:
+- **Onboarding (`src/pages/Onboarding.tsx`)**: 3-slide carousel with custom gradient backgrounds, icons, and animations
+- **Stadium Background (`src/components/layout/StadiumBackground.tsx`)**: Animated particle system with light orbs, sweeping beams, and fog effects
+- **App Flow (`src/App.tsx`)**: Splash -> Onboarding (if first time) -> Home
+- **Auth**: Uses Supabase auth with email/password login/signup
+- **User Store**: Tracks `isAuthenticated`, user profile, subscription tier
 
-**SQL to execute:**
+---
 
-```sql
--- Insert premium song
-INSERT INTO public.songs (id, title, artist, cover_art, duration, bpm, key, difficulty, genre, is_premium)
-VALUES (
-  'bouncing-on-a-blessing',
-  '3. BOUNCING ON A BLESSING',
-  'RVMT',
-  'https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=400&h=400&fit=crop',
-  220,
-  120,
-  'E Major',
-  'intermediate',
-  'Gospel',
-  true  -- This is a PREMIUM song
-);
+## Design Approach
 
--- Insert stems for the premium song (using existing audio files in public/audio/bouncing-on-a-blessing/)
-INSERT INTO public.stems (id, song_id, name, type, audio_path, color, position) VALUES
-  ('bouncing-lead-vocals', 'bouncing-on-a-blessing', 'Lead Vocals', 'vocal', '/audio/bouncing-on-a-blessing/lead-vocals.mp3', '#14b8a6', 0),
-  ('bouncing-backing-vocals', 'bouncing-on-a-blessing', 'Backing Vocals', 'harmony', '/audio/bouncing-on-a-blessing/backing-vocals.mp3', '#a855f7', 1),
-  ('bouncing-drums', 'bouncing-on-a-blessing', 'Drums', 'drums', '/audio/bouncing-on-a-blessing/drums.mp3', '#ef4444', 2),
-  ('bouncing-bass', 'bouncing-on-a-blessing', 'Bass', 'bass', '/audio/bouncing-on-a-blessing/bass.mp3', '#f59e0b', 3),
-  ('bouncing-guitar', 'bouncing-on-a-blessing', 'Guitar', 'instrumental', '/audio/bouncing-on-a-blessing/guitar.mp3', '#f97316', 4),
-  ('bouncing-keyboard', 'bouncing-on-a-blessing', 'Keyboard', 'keys', '/audio/bouncing-on-a-blessing/keyboard.mp3', '#10b981', 5),
-  ('bouncing-synth', 'bouncing-on-a-blessing', 'Synth', 'other', '/audio/bouncing-on-a-blessing/synth.mp3', '#22d3ee', 6),
-  ('bouncing-other', 'bouncing-on-a-blessing', 'Other', 'other', '/audio/bouncing-on-a-blessing/other.mp3', '#6366f1', 7);
+### Visual Design
+- Replace the current plain gradient background with the cinematic StadiumBackground
+- Add a dark overlay for text readability
+- Keep the glassmorphism aesthetic consistent with the rest of the app
+- Use the frosted GlassButton for CTAs
+
+### Onboarding Slides (Simplified to 3)
+1. **Welcome** - "Master Your Voice" with RVMT branding
+2. **How It Works** - Show stem separation concept visually
+3. **Get Started** - Options: "Create Account", "Sign In", or "Try Demo"
+
+### Demo Mode
+- Allow users to explore the app without authentication
+- Demo users can access free songs only (RLS already enforces this)
+- Show subtle prompts to sign up when accessing limited features
+- Store demo mode state in localStorage
+
+---
+
+## Technical Implementation
+
+### Phase 1: Create Demo Mode Hook
+
+**File: `src/hooks/useDemoMode.ts`**
+
+```typescript
+import { useState, useEffect } from "react";
+
+const DEMO_MODE_KEY = "rvmt_demo_mode";
+
+export function useDemoMode() {
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(DEMO_MODE_KEY);
+    setIsDemoMode(stored === "true");
+    setIsLoading(false);
+  }, []);
+
+  const enableDemoMode = () => {
+    localStorage.setItem(DEMO_MODE_KEY, "true");
+    setIsDemoMode(true);
+  };
+
+  const disableDemoMode = () => {
+    localStorage.removeItem(DEMO_MODE_KEY);
+    setIsDemoMode(false);
+  };
+
+  return { isDemoMode, isLoading, enableDemoMode, disableDemoMode };
+}
+```
+
+### Phase 2: Redesign Onboarding with Stadium Background
+
+**File: `src/pages/Onboarding.tsx`** (Complete rewrite)
+
+Key changes:
+- Import and use `StadiumBackground` component
+- Add dark overlay for readability (`bg-gradient-to-b from-black/50 via-black/30 to-black/70`)
+- Simplify to 3 focused slides
+- Add final slide with auth options:
+  - "Create Account" -> Navigate to `/auth?signup=true`
+  - "Sign In" -> Navigate to `/auth`
+  - "Try Demo" -> Enable demo mode and proceed to home
+
+```text
+Slide Structure:
+
+[Slide 1: Welcome]
+- Large animated RVMT logo
+- "Master Your Voice"
+- "Professional stem-based vocal training"
+
+[Slide 2: How It Works]  
+- Visual stem bars animation
+- "Control Every Layer"
+- "Isolate vocals, harmonies, and instruments"
+
+[Slide 3: Get Started]
+- "Ready to Train?"
+- [Create Account] (Primary frosted button)
+- [Sign In] (Secondary glass button)
+- [Try Demo] (Ghost link button)
+```
+
+### Phase 3: Update App Flow to Support Demo Mode
+
+**File: `src/App.tsx`**
+
+Modify `AppContent` to check for demo mode:
+- If demo mode is enabled and onboarding complete, show the app
+- Demo users skip auth but can still access free content
+
+```typescript
+const { isDemoMode, enableDemoMode } = useDemoMode();
+
+// After splash completes:
+if (isComplete) {
+  // Already onboarded - show app (auth or demo)
+  setShowApp(true);
+} else {
+  // First time - show onboarding
+  setShowOnboarding(true);
+}
+
+const handleOnboardingComplete = (mode: 'auth' | 'demo') => {
+  if (mode === 'demo') {
+    enableDemoMode();
+  }
+  completeOnboarding();
+  setShowOnboarding(false);
+  setShowApp(true);
+};
+```
+
+### Phase 4: Add Demo Mode Indicator & Upgrade Prompts
+
+**File: `src/components/layout/DemoModeBanner.tsx`** (New)
+
+A subtle top banner for demo mode users:
+```typescript
+<motion.div className="bg-primary/20 border-b border-primary/30 px-4 py-2 text-center">
+  <p className="text-sm">
+    <span className="text-muted-foreground">Exploring in demo mode.</span>
+    <button onClick={() => navigate('/auth')} className="text-primary ml-2">
+      Create account to save progress
+    </button>
+  </p>
+</motion.div>
+```
+
+Update `AppShell.tsx` to show the banner when in demo mode.
+
+---
+
+## File Changes Summary
+
+| File | Action | Description |
+|------|--------|-------------|
+| `src/hooks/useDemoMode.ts` | Create | Demo mode state management |
+| `src/pages/Onboarding.tsx` | Rewrite | Stadium background, simplified slides, auth options |
+| `src/App.tsx` | Modify | Support demo mode flow |
+| `src/components/layout/DemoModeBanner.tsx` | Create | Subtle upgrade prompt banner |
+| `src/components/layout/AppShell.tsx` | Modify | Show demo banner when applicable |
+
+---
+
+## User Flow Diagram
+
+```text
+App Launch
+    |
+    v
+[Splash Screen - 2.5s]
+    |
+    v
+First Time User? ----No----> [Home Dashboard]
+    |                              ^
+   Yes                             |
+    |                              |
+    v                              |
+[Onboarding Slide 1]               |
+    |                              |
+    v                              |
+[Onboarding Slide 2]               |
+    |                              |
+    v                              |
+[Onboarding Slide 3]               |
+    |                              |
+    +-- "Create Account" --> [Auth Page - Signup]
+    |                              |
+    +-- "Sign In" ---------> [Auth Page - Login]
+    |                              |
+    +-- "Try Demo" ---------------+
+         (sets demo mode)
 ```
 
 ---
 
-## Phase 2: Test Free User Access (Should Be Blocked)
+## Demo Mode Behavior
 
-After adding the premium song, verify:
-
-1. **Library Page Test**
-   - Navigate to `/library`
-   - Verify only 2 songs are shown (the free songs)
-   - Premium song "3. BOUNCING ON A BLESSING" should NOT appear
-
-2. **Direct URL Access Test**
-   - Navigate directly to `/training/bouncing-on-a-blessing`
-   - Page should show "Song not found" or redirect
-   - Premium song data should NOT be returned by the database
-
-3. **API Response Test**
-   - Check network requests to verify the Supabase query only returns 2 songs (not 3)
+| Feature | Demo Mode | Authenticated |
+|---------|-----------|---------------|
+| Free songs | Full access | Full access |
+| Premium songs | Blocked (RLS) | Based on subscription |
+| Practice sessions | Not saved | Saved to database |
+| Playlists | Not available | Full access |
+| Progress tracking | Local only | Synced to database |
+| Upgrade banner | Shown | Hidden |
 
 ---
 
-## Phase 3: Verify Premium User Access (Optional Future Test)
+## Design Specifications
 
-To fully verify the security works both ways, you could:
+### Stadium Background Integration
+- Use existing `StadiumBackground` component unchanged
+- Add overlay: `bg-gradient-to-b from-black/50 via-black/30 to-black/70`
+- Content z-index above background (z-10)
 
-1. Update the test user's subscription to 'pro':
-   ```sql
-   UPDATE public.profiles 
-   SET subscription_tier = 'pro' 
-   WHERE id = '209a5430-47f4-40af-905f-4de0336a6a62';
-   ```
+### Button Styling
+- Primary CTA: `GlassButton variant="frosted"` (shimmer + glow)
+- Secondary: `GlassButton variant="secondary"`
+- Demo link: Text button with `text-muted-foreground hover:text-foreground`
 
-2. Refresh the library page and verify all 3 songs now appear
-
-3. Revert back to 'free' tier to confirm access is revoked
-
----
-
-## Expected Results
-
-| Test | Free User | Pro User |
-|------|-----------|----------|
-| Library shows song count | 2 songs | 3 songs |
-| Premium song visible | NO | YES |
-| Direct URL access | Blocked | Allowed |
-| Stems accessible | NO | YES |
-
----
-
-## Technical Details
-
-The security is enforced by these RLS policies:
-
-**Songs Table:**
-- `Anyone can view free songs`: Returns songs where `is_premium = false`
-- `Premium subscribers can view premium songs`: Returns songs where `is_premium = true` AND user has valid subscription in profiles table
-
-**Stems Table:**
-- `Users can view stems for free songs`: Returns stems for songs where `is_premium = false`
-- `Premium users can view stems for premium songs`: Returns stems for songs where `is_premium = true` AND user has valid subscription
-
----
-
-## Files Modified
-
-No code changes required - this is purely a data insertion test using the existing security infrastructure.
-
+### Animations
+- Slide transitions: Framer Motion with spring physics
+- Logo entrance: Scale + fade
+- Staggered content appearance: 0.1s delay between elements
