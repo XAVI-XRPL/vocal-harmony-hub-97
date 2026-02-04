@@ -1,8 +1,8 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { Play, Clock, ChevronRight } from "lucide-react";
+import { Play, Clock, ChevronRight, Loader2 } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
-import { mockSongs } from "@/data/mockSongs";
+import { useSongs } from "@/hooks/useSongs";
 import { cn } from "@/lib/utils";
 
 interface ContinuePracticeProps {
@@ -11,14 +11,38 @@ interface ContinuePracticeProps {
 
 export function ContinuePractice({ className }: ContinuePracticeProps) {
   const navigate = useNavigate();
+  const { data: songs, isLoading } = useSongs();
+  
   // Get first 2 songs as "recent" practice
-  const recentSongs = mockSongs.slice(0, 2);
+  const recentSongs = songs?.slice(0, 2) ?? [];
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
+
+  if (isLoading) {
+    return (
+      <motion.div
+        className={cn("space-y-3", className)}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-muted-foreground">Continue Practice</h3>
+        </div>
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+      </motion.div>
+    );
+  }
+
+  if (recentSongs.length === 0) {
+    return null;
+  }
 
   return (
     <motion.div

@@ -134,6 +134,8 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          subscription_expires_at: string | null
+          subscription_tier: string | null
           updated_at: string
         }
         Insert: {
@@ -141,6 +143,8 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id: string
+          subscription_expires_at?: string | null
+          subscription_tier?: string | null
           updated_at?: string
         }
         Update: {
@@ -148,9 +152,97 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          subscription_expires_at?: string | null
+          subscription_tier?: string | null
           updated_at?: string
         }
         Relationships: []
+      }
+      songs: {
+        Row: {
+          artist: string
+          bpm: number | null
+          cover_art: string
+          created_at: string
+          difficulty: string
+          duration: number
+          full_mix_url: string | null
+          genre: string
+          id: string
+          is_premium: boolean
+          key: string | null
+          title: string
+        }
+        Insert: {
+          artist: string
+          bpm?: number | null
+          cover_art: string
+          created_at?: string
+          difficulty: string
+          duration: number
+          full_mix_url?: string | null
+          genre: string
+          id: string
+          is_premium?: boolean
+          key?: string | null
+          title: string
+        }
+        Update: {
+          artist?: string
+          bpm?: number | null
+          cover_art?: string
+          created_at?: string
+          difficulty?: string
+          duration?: number
+          full_mix_url?: string | null
+          genre?: string
+          id?: string
+          is_premium?: boolean
+          key?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
+      stems: {
+        Row: {
+          audio_path: string
+          color: string
+          created_at: string
+          id: string
+          name: string
+          position: number
+          song_id: string
+          type: string
+        }
+        Insert: {
+          audio_path: string
+          color: string
+          created_at?: string
+          id: string
+          name: string
+          position?: number
+          song_id: string
+          type: string
+        }
+        Update: {
+          audio_path?: string
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          position?: number
+          song_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stems_song_id_fkey"
+            columns: ["song_id"]
+            isOneToOne: false
+            referencedRelation: "songs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_song_progress: {
         Row: {
@@ -201,7 +293,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_premium_access: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
