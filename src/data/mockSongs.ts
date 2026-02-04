@@ -200,7 +200,7 @@ export const mockSongs: Song[] = [
   // Real song with actual audio
   {
     id: 'testify-exercise',
-    title: 'TESTIFY EXERCISE',
+    title: '1. TESTIFY EXERCISE',
     artist: 'RVMT',
     coverArt: covers.gospel,
     duration: 180,
@@ -214,7 +214,7 @@ export const mockSongs: Song[] = [
   },
   {
     id: 'throwback-exercise',
-    title: 'THROWBACK EXERCISE',
+    title: '2. THROWBACK EXERCISE',
     artist: 'RVMT',
     coverArt: throwbackCover,
     duration: 180,
