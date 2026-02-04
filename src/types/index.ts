@@ -106,3 +106,99 @@ export interface PlaylistSong {
   added_at: string;
   song?: Song;
 }
+
+// ========== V2.0 Hub Module Types ==========
+
+// Vocal Rider Store
+export type ProductCategory = 'throat-care' | 'hydration' | 'vitamins' | 'accessories' | 'apparel';
+
+export interface Product {
+  id: string;
+  name: string;
+  brand: string;
+  description: string;
+  price: number;
+  category: ProductCategory;
+  imageUrl: string;
+  affiliateUrl: string;
+  rating: number;
+  reviewCount: number;
+  isFeatured: boolean;
+  tags: string[];
+}
+
+// Vocal Health Directory
+export interface City {
+  id: string;
+  name: string;
+  state: string;
+  abbreviation: string;
+  svgX: number;  // X coordinate on USA map SVG (0-100 scale)
+  svgY: number;  // Y coordinate on USA map SVG (0-100 scale)
+  venueCount: number;
+  doctorCount: number;
+}
+
+export type DoctorSpecialty = 'ENT' | 'Laryngologist' | 'Voice Therapist' | 'Vocal Coach';
+
+export interface Doctor {
+  id: string;
+  name: string;
+  credentials: string;
+  specialty: DoctorSpecialty;
+  practice: string;
+  cityId: string;
+  address: string;
+  phone: string;
+  website: string;
+  bio: string;
+  imageUrl: string;
+  acceptsEmergency: boolean;
+  touringArtistFriendly: boolean;
+  rating: number;
+  reviewCount: number;
+}
+
+export interface Venue {
+  id: string;
+  name: string;
+  type: 'arena' | 'stadium' | 'theater' | 'club';
+  cityId: string;
+  address: string;
+  capacity: number;
+  imageUrl: string;
+}
+
+// Stage Prep
+export interface PartnerBrand {
+  id: string;
+  name: string;
+  logoUrl: string;
+  description: string;
+  discountCode: string;
+  discountPercent: number;
+  websiteUrl: string;
+}
+
+export type GearCategory = 'iem' | 'microphone' | 'in-ear-monitor' | 'cable' | 'case' | 'accessories';
+
+export interface GearProduct {
+  id: string;
+  name: string;
+  brandId: string;
+  category: GearCategory;
+  description: string;
+  price: number;
+  imageUrl: string;
+  affiliateUrl: string;
+  isFeatured: boolean;
+  specs: Record<string, string>;
+}
+
+export interface ChecklistItem {
+  id: string;
+  label: string;
+  category: 'vocal' | 'gear' | 'mental' | 'physical';
+  description: string;
+  order: number;
+}
