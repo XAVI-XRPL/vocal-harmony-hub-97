@@ -9,13 +9,17 @@ interface StemHowl {
 }
 
 // Delay to allow HTML5 audio buffers to stabilize after seeking
-const SEEK_SYNC_DELAY_MS = 100;
+const SEEK_SYNC_DELAY_MS = 150;
 // Maximum acceptable drift between stems (in seconds)
-const SYNC_TOLERANCE_SEC = 0.05;
+const SYNC_TOLERANCE_SEC = 0.08;
 // Maximum retry attempts for sync correction
 const MAX_SYNC_RETRIES = 3;
 // Interval for checking drift during playback (ms)
-const DRIFT_CHECK_INTERVAL_MS = 500;
+const DRIFT_CHECK_INTERVAL_MS = 1000;
+// Minimum drift required to trigger correction (prevents overcorrection)
+const DRIFT_CORRECTION_THRESHOLD = 0.15;
+// Minimum time between corrections to allow stabilization
+const MIN_CORRECTION_INTERVAL_MS = 2000;
 
 export function useAudioPlayer() {
   const stemHowlsRef = useRef<StemHowl[]>([]);
@@ -23,6 +27,9 @@ export function useAudioPlayer() {
   const driftCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isSeekingRef = useRef(false);
   const lastDriftCorrectionRef = useRef<number>(0);
+  // Master clock references for accurate position tracking
+  const playbackStartTimeRef = useRef<number>(0);
+  const playbackStartPositionRef = useRef<number>(0);
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
@@ -39,6 +46,13 @@ export function useAudioPlayer() {
     setDuration,
     pause,
   } = useAudioStore();
+
+  // Calculate expected position based on wall-clock time (master clock)
+  const getExpectedPosition = useCallback((): number => {
+    if (!isPlaying) return currentTime;
+    const elapsed = (Date.now() - playbackStartTimeRef.current) / 1000;
+    return playbackStartPositionRef.current + (elapsed * playbackRate);
+  }, [isPlaying, currentTime, playbackRate]);
 
   // Helper to verify all stems are synchronized
   const verifyStemSync = useCallback((targetTime: number): boolean => {
@@ -69,19 +83,23 @@ export function useAudioPlayer() {
     // First ensure all stems are at the same position
     reSeekAllStems(targetTime);
     
+    // Record master clock reference
+    playbackStartTimeRef.current = Date.now();
+    playbackStartPositionRef.current = targetTime;
+    
     // Start all stems in rapid succession
     stemHowlsRef.current.forEach(({ howl }) => {
       howl.play();
     });
   }, [reSeekAllStems]);
 
-  // Correct drift during playback
+  // Correct drift during playback - improved strategy to prevent overcorrection
   const correctDrift = useCallback(() => {
     if (isSeekingRef.current || stemHowlsRef.current.length === 0) return;
     
     const now = Date.now();
-    // Prevent too frequent corrections
-    if (now - lastDriftCorrectionRef.current < 200) return;
+    // Prevent too frequent corrections - use longer debounce
+    if (now - lastDriftCorrectionRef.current < MIN_CORRECTION_INTERVAL_MS) return;
     
     const positions = stemHowlsRef.current
       .map(({ howl }) => howl.seek() as number)
@@ -93,33 +111,37 @@ export function useAudioPlayer() {
     const maxPos = Math.max(...positions);
     const spread = maxPos - minPos;
     
-    if (spread > SYNC_TOLERANCE_SEC) {
-      console.log(`Drift detected: ${spread.toFixed(3)}s, correcting...`);
+    // Only correct significant drift (prevents overcorrection loops)
+    if (spread > DRIFT_CORRECTION_THRESHOLD) {
+      console.log(`Significant drift detected: ${spread.toFixed(3)}s, correcting...`);
       lastDriftCorrectionRef.current = now;
       
-      // Calculate median position
-      positions.sort((a, b) => a - b);
-      const medianIndex = Math.floor(positions.length / 2);
-      const medianPos = positions[medianIndex];
+      // Calculate expected position from master clock for accuracy
+      const expectedPos = getExpectedPosition();
       
-      // Pause all stems briefly
+      // Pause all stems briefly for clean correction
       stemHowlsRef.current.forEach(({ howl }) => {
         howl.pause();
       });
       
-      // Re-seek all to median
-      reSeekAllStems(medianPos);
+      // Re-seek all to expected position
+      reSeekAllStems(expectedPos);
       
-      // Resume after brief delay
+      // Longer delay before resuming to allow buffers to stabilize
       setTimeout(() => {
         if (useAudioStore.getState().isPlaying) {
+          // Reset master clock to current position
+          playbackStartTimeRef.current = Date.now();
+          playbackStartPositionRef.current = expectedPos;
+          
+          // Start all stems together
           stemHowlsRef.current.forEach(({ howl }) => {
             howl.play();
           });
         }
-      }, 30);
+      }, 100);
     }
-  }, [reSeekAllStems]);
+  }, [reSeekAllStems, getExpectedPosition]);
 
   // Clean up all Howl instances
   const cleanup = useCallback(() => {
