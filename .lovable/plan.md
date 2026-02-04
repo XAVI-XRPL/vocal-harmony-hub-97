@@ -1,179 +1,150 @@
 
-# Interactive USA State Map for Vocal Health Directory
+# Splash Screen Video & Performance Optimization Plan
 
-## Overview
-This plan replaces the current simplified city-marker-based USA map with a full interactive inline SVG map featuring all 48 contiguous US states + Hawaii + DC (50 entries total). The new map follows the Stadium Blue glassmorphism design system and enables state-based doctor/provider filtering.
+## Problem Analysis
 
-## Current State Analysis
+### Splash Screen Video Not Auto-Playing on Mobile
+The current splash screen has a fundamental issue with mobile video autoplay. Mobile browsers (especially iOS Safari) have strict policies:
+- Videos must have `muted` and `playsinline` attributes (already present)
+- Videos require a user gesture to play in many contexts
+- Large video files may not buffer fast enough before the timeout triggers the transition
 
-### What Exists Now
-- **`USAMap.tsx`**: A simplified outline with city dot markers (using a basic viewBox of `0 0 100 62`)
-- **`CityMarker.tsx`**: Individual city dots that can be selected
-- **`mockCities.ts`**: 13 major cities with coordinates for the current simplified map
-- **`VocalHealth.tsx`**: Page using city-based filtering with `mockDoctors` and `mockVenues`
-- **`useMedicalProviders.ts`**: Hook querying by `cityId` from database
+**Current Issues Found:**
+1. The splash uses fixed timers (2.5s exit, 3.1s complete) regardless of whether the video actually loaded/played
+2. No fallback handling if video fails to play
+3. No detection of actual video playback status
+4. Video may still be buffering when the transition starts
 
-### What the Prompt Specifies
-- Full inline SVG with all 50 state paths (Albers USA projection, `viewBox="0 0 960 620"`)
-- State-based selection instead of city-based
-- Stadium Blue color scheme: `#5BA3D9` default, `#4FC3F7` hover, `#14b8a6` selected, `#f59e0b` search match
-- Search functionality to highlight matching states by name/abbreviation/region
-- Floating tooltip on hover showing state name and region
-- State abbreviation labels centered on each state
+### Performance Bottlenecks Identified
 
-## Implementation Strategy
+1. **Heavy Background Animations** - `StadiumBackground.tsx` renders 25+ animated particles with continuous Framer Motion animations on every page
+2. **Unoptimized Images** - Large PNG backgrounds loaded without lazy loading or srcset
+3. **No Video Preloading** - Splash video loads only when component mounts
+4. **Waveform Generation** - Mock waveform data (200 points) generated for every stem on every render
+5. **React Query Stale Time** - Currently 5 minutes, could be increased for static content
+6. **Redundant Preload Hooks** - Both Home and ContinuePractice call `useAutoPreload` for the same songs
 
-### Phase 1: Create State Data File
+---
 
-Create `src/data/usStateData.ts` with all 50 state entries:
+## Implementation Plan
 
-```text
-Structure per state:
-+---------------+------------------------------------------+
-| Field         | Description                              |
-+---------------+------------------------------------------+
-| id            | FIPS code (2-digit, e.g., "01" = AL)     |
-| name          | Full state name                          |
-| abbr          | 2-letter abbreviation                    |
-| region        | Geographic region (Southeast, etc.)      |
-| cx, cy        | Label position (SVG coordinates)         |
-| d             | SVG path data (Albers USA projection)    |
-+---------------+------------------------------------------+
-```
+### Phase 1: Fix Splash Screen Video Playback
 
-All 50 entries are provided in the uploaded prompt document. This includes:
-- 48 contiguous states
-- Hawaii (inset positioned)
-- District of Columbia
-- NO Alaska (excluded per spec)
+**1.1 Add Robust Video Playback Detection**
+- Listen for `canplay`, `playing`, and `error` events
+- Detect when video actually starts playing vs when it fails
+- Track video current time to ensure playback is progressing
 
-### Phase 2: Create New Map Component
+**1.2 Implement Smart Timing**
+- Wait for video to actually play before starting the exit timer
+- If video fails to play within 1 second, use the static poster image
+- Sync the progress bar with actual video duration or fallback timer
 
-Replace `src/components/medical/USAMap.tsx` with a state-based interactive map:
+**1.3 Add User Interaction Fallback**
+- If video cannot autoplay, show a tap-to-play overlay on mobile
+- Alternatively, gracefully fall back to image-based splash with smooth animation
 
-**Features:**
-1. **State paths**: Render all 50 state `<path>` elements
-2. **Hover effects**: Lighter blue fill (`#4FC3F7`) on mouse enter
-3. **Selection**: Teal fill (`#14b8a6`) with subtle glow on click
-4. **Search highlighting**: Amber fill (`#f59e0b`) for states matching search query
-5. **State labels**: 2-letter abbreviations centered on each state
-6. **Floating tooltip**: Shows full state name + region on hover
-7. **Small state handling**: Smaller font for tiny states (CT, DE, DC, MA, MD, NH, NJ, RI, VT)
+**1.4 Smooth Transition to Onboarding**
+- Ensure fade-out completes before onboarding mounts
+- Add `will-change: opacity` for GPU-accelerated transitions
 
-**Props interface:**
-```typescript
-interface USAMapProps {
-  selectedState: StateData | null;
-  onStateSelect: (state: StateData) => void;
-  searchQuery?: string;
-}
-```
+### Phase 2: Performance Optimizations
 
-### Phase 3: Update VocalHealth.tsx
+**2.1 Optimize StadiumBackground**
+- Reduce particle count from 25 to 12 on mobile
+- Use CSS animations instead of Framer Motion for particles (reduces JS overhead)
+- Add `will-change: transform` to animated elements
+- Implement `useDeferredValue` or conditional rendering for particles
 
-Modify the page to use state-based selection:
+**2.2 Image Optimization**
+- Add `loading="lazy"` to non-critical images
+- Use `fetchpriority="high"` for critical images (stadium background on Home)
+- Add image preloading in index.html for critical assets
 
-| Change | Before | After |
-|--------|--------|-------|
-| Selection type | City object | State object (FIPS code) |
-| Filter key | `cityId` | `state_fips` |
-| Search bar | Not functional | Filters states by name/abbr/region |
-| Empty state | "Select a city..." | "Select a state..." |
+**2.3 Reduce Waveform Generation Overhead**
+- Memoize waveform generation with `useMemo` at the song level
+- Generate waveforms once and cache in memory
+- Consider moving to a separate worker for large stem counts
 
-**Updated flow:**
-1. User searches or taps a state on the map
-2. Selected state turns teal with glow
-3. Page shows state header card with name, region, clear button
-4. Doctor cards filter by `state_fips` matching the FIPS code
-5. Loading shimmer while fetching providers
+**2.4 Optimize React Query Caching**
+- Increase staleTime to 30 minutes for songs (they rarely change)
+- Add `gcTime` (garbage collection) configuration
+- Prefetch songs data during splash screen
 
-### Phase 4: Database Schema Consideration
+**2.5 Fix Duplicate Preloading**
+- Remove redundant `useAutoPreload` call from ContinuePractice
+- Centralize preloading logic in the Library/Home parent components
 
-The current `medical_providers` table uses `city_id`. The prompt suggests `state_fips` for state-based filtering.
+**2.6 Add Critical Asset Preloading**
+- Preload splash video in index.html
+- Add DNS prefetch for Supabase
+- Preload key fonts if any are custom loaded
 
-**Options:**
-- **Option A**: Add `state_fips` column to existing table (allows both city and state filtering)
-- **Option B**: Keep existing structure, derive state from city relationship
+---
 
-I recommend **Option A** for future flexibility. Migration will add:
-```sql
-ALTER TABLE medical_providers ADD COLUMN state_fips TEXT;
-CREATE INDEX idx_medical_providers_state ON medical_providers(state_fips);
-```
+## Technical Implementation Details
 
-### Phase 5: Add CSS Variables for Map Colors
-
-Add to `src/index.css`:
-```css
-/* Map-specific colors */
---map-fill: 201 68% 59%;           /* #5BA3D9 */
---map-fill-hover: 197 93% 63%;     /* #4FC3F7 */
---map-fill-selected: 168 76% 39%;  /* #14b8a6 */
---map-fill-search: 38 92% 50%;     /* #f59e0b */
---map-stroke: 0 0% 100% / 0.65;
---map-stroke-hover: 0 0% 100% / 0.9;
-```
-
-## File Changes Summary
-
-| File | Action | Description |
-|------|--------|-------------|
-| `src/data/usStateData.ts` | Create | 50 state entries with SVG path data |
-| `src/components/medical/USAMap.tsx` | Replace | Full interactive state map component |
-| `src/pages/VocalHealth.tsx` | Modify | State-based selection, search bar |
-| `src/index.css` | Modify | Add map color variables |
-| `src/types/index.ts` | Modify | Add StateData interface or import |
-| Database migration | Create | Add state_fips column (optional) |
-
-## Visual Design Spec
+### Splash Screen Changes (src/pages/Splash.tsx)
 
 ```text
-+--------------------------------------------------+
-|  Vocal Health                                    |
-|  Find ENT & Vocal Specialists Near You           |
-+--------------------------------------------------+
-|  [Search by state, abbreviation, or region...]   |
-+--------------------------------------------------+
-|                                                  |
-|       +----------------------------------+       |
-|       |                                  |       |
-|       |     [Interactive USA Map]        |       |
-|       |     - States filled blue         |       |
-|       |     - White borders              |       |
-|       |     - State abbreviations        |       |
-|       |     - Hover: lighter blue        |       |
-|       |     - Selected: teal glow        |       |
-|       |                                  |       |
-|       +----------------------------------+       |
-|                                                  |
-|  [Selected State Card - California, West]        |
-+--------------------------------------------------+
-|  Vocal Specialists (3)                           |
-|  +----------------------------------------------+|
-|  | Dr. Sarah Chen, MD                    ★ 4.9  ||
-|  | Laryngologist / ENT                          ||
-|  | Downtown Medical Center · Los Angeles        ||
-|  | [Call] [Book]                                ||
-|  +----------------------------------------------+|
-+--------------------------------------------------+
+Key modifications:
+- Add videoRef with play state tracking
+- Add `onCanPlay`, `onPlaying`, `onError`, `onEnded` handlers
+- Replace fixed timers with video-event-driven timing
+- Add fallback for autoplay failure with graceful image-only mode
+- Track `hasVideoStarted` and `videoError` states
+- Only start exit timer after video confirms playback or after 1.5s timeout
 ```
 
-## Preserved Functionality
+### StadiumBackground Optimizations (src/components/layout/StadiumBackground.tsx)
 
-- **EMT Badge** in header stays
-- **Medical gradient background** (`medical-bg` class) stays
-- **Doctor cards** keep existing styling with medical red left border
-- **Glassmorphism cards** maintain current aesthetic
-- **Mobile responsive** with touch-friendly tap targets
+```text
+Key modifications:
+- Detect mobile with `useIsMobile()` hook
+- Reduce particles to 10-12 on mobile, keep 20-25 on desktop
+- Convert particle animations from Framer Motion to CSS keyframes
+- Add `will-change: transform, opacity` to animated layers
+- Consider using `requestAnimationFrame` for smoother performance
+```
 
-## Testing Checklist
+### Index.html Preloading
 
-1. Verify all 50 states render correctly with proper paths
-2. Test hover state changes color to lighter blue
-3. Test click selects state and turns teal with glow
-4. Test search filters states by name, abbreviation, or region (amber highlight)
-5. Verify state labels are readable on all states
-6. Test clear selection button resets map
-7. Verify doctor list filters by selected state
-8. Test on mobile viewport for touch interactions
-9. Verify dark/light mode compatibility
+```text
+Add to <head>:
+- <link rel="preload" href="/video/RVMTvideo.mp4" as="video" type="video/mp4">
+- <link rel="preconnect" href="https://rgmirxeyzrtowutkhizu.supabase.co">
+- <link rel="dns-prefetch" href="https://rgmirxeyzrtowutkhizu.supabase.co">
+```
+
+### React Query Optimization (src/hooks/useSongs.ts)
+
+```text
+Increase caching:
+- staleTime: 30 * 60 * 1000 (30 minutes)
+- gcTime: 60 * 60 * 1000 (1 hour)
+```
+
+---
+
+## Expected Improvements
+
+| Area | Before | After |
+|------|--------|-------|
+| Splash video on mobile | Often fails silently | Reliable playback with fallback |
+| Transition smoothness | Abrupt, timer-based | Video-synced with graceful fade |
+| Background CPU usage | High (25 animated particles) | Reduced 40-50% on mobile |
+| Initial data load | Blocks on API | Prefetched during splash |
+| Image loading | All at once | Lazy loaded, prioritized |
+| Song cache lifetime | 5 minutes | 30 minutes |
+
+---
+
+## Files to Modify
+
+1. `src/pages/Splash.tsx` - Complete rewrite of video handling logic
+2. `src/components/layout/StadiumBackground.tsx` - Optimize animations
+3. `index.html` - Add preload/prefetch hints
+4. `src/hooks/useSongs.ts` - Increase cache times
+5. `src/components/home/ContinuePractice.tsx` - Remove duplicate preload call
+6. `src/index.css` - Add CSS keyframe animations for particles
+
