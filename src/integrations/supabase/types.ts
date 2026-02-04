@@ -346,9 +346,12 @@ export type Database = {
           category: Database["public"]["Enums"]["product_category"]
           created_at: string
           description: string
+          discount_code: string | null
           id: string
           image_url: string
+          is_coming_soon: boolean | null
           is_featured: boolean | null
+          is_partner_brand: boolean | null
           name: string
           price: number
           rating: number | null
@@ -361,9 +364,12 @@ export type Database = {
           category: Database["public"]["Enums"]["product_category"]
           created_at?: string
           description: string
+          discount_code?: string | null
           id: string
           image_url: string
+          is_coming_soon?: boolean | null
           is_featured?: boolean | null
+          is_partner_brand?: boolean | null
           name: string
           price: number
           rating?: number | null
@@ -376,9 +382,12 @@ export type Database = {
           category?: Database["public"]["Enums"]["product_category"]
           created_at?: string
           description?: string
+          discount_code?: string | null
           id?: string
           image_url?: string
+          is_coming_soon?: boolean | null
           is_featured?: boolean | null
+          is_partner_brand?: boolean | null
           name?: string
           price?: number
           rating?: number | null
@@ -660,6 +669,10 @@ export type Database = {
         | "vitamins"
         | "accessories"
         | "apparel"
+        | "essential-oils"
+        | "tea-honey"
+        | "nasal-sinus"
+        | "allergy-wellness"
       venue_type: "arena" | "stadium" | "theater" | "club"
     }
     CompositeTypes: {
@@ -809,6 +822,10 @@ export const Constants = {
         "vitamins",
         "accessories",
         "apparel",
+        "essential-oils",
+        "tea-honey",
+        "nasal-sinus",
+        "allergy-wellness",
       ],
       venue_type: ["arena", "stadium", "theater", "club"],
     },
