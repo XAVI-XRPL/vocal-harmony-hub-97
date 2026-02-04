@@ -1,131 +1,159 @@
 
+# Fix Audio Track Synchronization on Throwback Exercise
 
-# Make Radar Chart Smaller, Cleaner, and More Transparent
+## Problem Analysis
 
-## Overview
-
-Streamline the VocalProgressDiagram component to create a more compact, minimalist, and transparent design that better integrates with the stadium background.
-
----
-
-## Current State
-
-The current radar chart:
-- Height: 220px container
-- Full glass-card-3d styling with heavy effects
-- Prominent level badge below chart
-- Stats row at the bottom
-- Solid fill with glow effects
+When seeking (skipping around) in the Throwback Exercise training mode, the audio stems lose synchronization. This is a known challenge with HTML5 audio when playing multiple tracks simultaneously.
 
 ---
 
-## Proposed Changes
+## Root Causes
 
-### 1. Reduce Size
+After analyzing the `useAudioPlayer.ts` implementation, I identified several issues:
 
-| Element | Current | New |
-|---------|---------|-----|
-| Chart container height | 220px | 160px |
-| Overall padding | p-6 | p-4 |
-| Outer radius | 65% | 70% (proportionally larger in smaller container) |
-| Level badge | max-w-[200px] | max-w-[160px] |
-| Icon sizes | h-10/w-10 | h-8/w-8 |
+| Issue | Description |
+|-------|-------------|
+| **Short sync delay** | The 50ms delay after seeking may not be enough for HTML5 audio buffers to stabilize across 6+ stems |
+| **Single correction attempt** | After seeking, drift is checked once but only corrected once - persistent drift isn't handled |
+| **No pre-playback alignment** | When resuming, stems start playing without verifying they're all at the same position |
+| **No continuous drift correction** | During playback, stems can gradually drift apart with no correction mechanism |
 
-### 2. Increase Transparency
+---
 
-| Element | Current | New |
-|---------|---------|-----|
-| Card background | glass-card-3d | Custom transparent bg with blur |
-| Fill opacity | 0.3-0.4 | 0.15-0.25 |
-| Grid opacity | 0.15 | 0.1 |
-| Glow effects | Strong blur | Subtle or removed |
-| Border | Solid glass | More transparent border |
+## Solution Overview
 
-### 3. Cleaner Design
+Implement a more robust synchronization system with:
 
-| Element | Change |
-|---------|--------|
-| Custom dot glow | Reduce blur radius from 3px to 1.5px |
-| Dot size | Reduce from 5px to 4px |
-| Label text shadows | Reduce intensity |
-| Level badge | Simpler, flatter design |
-| Stats row | Tighter spacing, smaller icons |
-| Shine overlay | Remove or reduce |
+1. **Increased sync delay** - Allow more time for HTML5 buffers to stabilize
+2. **Multiple correction passes** - Retry sync correction if drift persists
+3. **Pre-playback alignment verification** - Confirm all stems are aligned before resuming
+4. **Continuous drift monitoring** - Detect and correct drift during playback
 
 ---
 
 ## Technical Implementation
 
-### File: `src/components/home/VocalProgressDiagram.tsx`
+### File: `src/hooks/useAudioPlayer.ts`
 
-**Container Changes:**
+#### 1. Increase Sync Constants
+
+| Constant | Before | After |
+|----------|--------|-------|
+| `SEEK_SYNC_DELAY_MS` | 50 | 100 |
+| `SYNC_TOLERANCE_SEC` | 0.1 | 0.05 |
+
+Add new constant:
+- `MAX_SYNC_RETRIES = 3` - Maximum correction attempts after seeking
+
+#### 2. Enhanced `seekTo` Function
+
+Implement retry logic for sync correction:
+
 ```text
-Before: "glass-card-3d relative overflow-hidden rounded-3xl p-6"
-After:  "relative overflow-hidden rounded-2xl p-4 bg-white/5 dark:bg-black/20 backdrop-blur-md border border-white/10"
+seekTo(time):
+  1. Set seeking flag
+  2. Cancel animation frame
+  3. Pause all stems
+  4. Seek all stems to target time
+  5. Update store immediately (UI responsiveness)
+  6. Wait for buffer stabilization (100ms)
+  7. Verify sync (check position spread)
+  8. If out of sync:
+     - Re-seek all stems
+     - Wait again
+     - Repeat up to MAX_SYNC_RETRIES times
+  9. If was playing, resume all stems simultaneously
+  10. Clear seeking flag
 ```
 
-**Chart Container:**
+#### 3. Add Continuous Drift Correction
+
+During playback, add drift detection and correction:
+
 ```text
-Before: height 220px
-After:  height 160px
+In updateTime loop:
+  1. Read positions from all stems
+  2. Calculate position spread (max - min)
+  3. If spread > SYNC_TOLERANCE:
+     - Pause all stems briefly
+     - Re-seek to median position
+     - Resume playback
 ```
 
-**Radar Fill Gradient:**
+#### 4. Synchronized Playback Start
+
+Replace individual `howl.play()` calls with a synchronized start:
+
 ```text
-Reduce stopOpacity values from 0.3-0.4 to 0.15-0.2
+syncPlay():
+  1. Get target position from first stem
+  2. Seek all stems to that position
+  3. Wait for buffer sync
+  4. Call play() on all stems in rapid succession
 ```
-
-**Grid Stroke:**
-```text
-Before: strokeOpacity={0.15}
-After:  strokeOpacity={0.08}
-```
-
-**CustomDot Component:**
-- Reduce outer glow circle from r={8} to r={5}
-- Reduce blur from 3px to 1.5px
-- Reduce main dot from r={5} to r={4}
-
-**Level Badge:**
-- Smaller padding and icon sizes
-- More transparent background
-
-**Stats Row:**
-- Tighter gap spacing
-- Smaller icons (h-4/w-4 to h-3.5/w-3.5)
 
 ---
 
-## Visual Comparison
+## Detailed Code Changes
 
-```text
-Current:                        New:
-+-------------------------+     +---------------------+
-|     LARGE CHART         |     |   COMPACT CHART     |
-|    Heavy Glass Effect   |     |   Subtle Blur       |
-|    Bright Glows         |     |   Soft Transparency |
-|                         |     |                     |
-|   [LEVEL BADGE BIG]     |     | [level badge small] |
-|                         |     |                     |
-|   67% Complete          |     | 67% Complete        |
-|   [Stats] [Stats]       |     | [Stats] [Stats]     |
-+-------------------------+     +---------------------+
+### Constants Section
+```typescript
+const SEEK_SYNC_DELAY_MS = 100;
+const SYNC_TOLERANCE_SEC = 0.05;
+const MAX_SYNC_RETRIES = 3;
+const DRIFT_CHECK_INTERVAL = 500; // Check every 500ms during playback
 ```
+
+### New Helper: `verifyStemSync`
+```typescript
+const verifyStemSync = (targetTime: number): boolean => {
+  const positions = stemHowlsRef.current.map(({ howl }) => howl.seek() as number);
+  const minPos = Math.min(...positions);
+  const maxPos = Math.max(...positions);
+  return (maxPos - minPos) <= SYNC_TOLERANCE_SEC && 
+         positions.every(p => Math.abs(p - targetTime) < SYNC_TOLERANCE_SEC);
+};
+```
+
+### Enhanced `seekTo` with Retry Loop
+```typescript
+const seekTo = useCallback(async (time: number) => {
+  if (isSeekingRef.current) return;
+  // ... pause, seek, verify sync with retries
+  for (let attempt = 0; attempt < MAX_SYNC_RETRIES; attempt++) {
+    if (verifyStemSync(time)) break;
+    // Re-seek and wait
+  }
+  // Resume if was playing
+}, []);
+```
+
+### Periodic Drift Correction
+Add interval-based drift checking during playback that detects when stems have drifted apart and performs a quick re-sync.
 
 ---
 
-## Files to Modify
+## Summary of Changes
 
 | File | Changes |
 |------|---------|
-| `src/components/home/VocalProgressDiagram.tsx` | Reduce sizes, increase transparency, simplify effects |
+| `src/hooks/useAudioPlayer.ts` | Increase sync delay, add retry logic, add continuous drift correction, add synchronized playback start |
 
 ---
 
 ## Expected Outcome
 
-- Chart takes up less vertical space on the Home page
-- Better visibility of the stadium background through the component
-- Cleaner, more modern aesthetic matching the premium glass-morphism theme
-- All functionality preserved (skill colors, animations, level display)
+- Stems remain synchronized when seeking to any position
+- Rapid seeking handled gracefully with debouncing
+- Any drift that occurs during playback is automatically corrected
+- More reliable multi-track audio experience across different browsers
 
+---
+
+## Testing Recommendations
+
+After implementation:
+1. Seek to various positions rapidly
+2. Test with playback rate changes (0.5x, 1.5x)
+3. Test loop region seeking
+4. Verify on both desktop and mobile browsers
