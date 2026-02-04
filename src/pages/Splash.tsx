@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import splashImage from "@/assets/RVMT.png";
 
@@ -6,13 +6,103 @@ interface SplashProps {
   onComplete: () => void;
 }
 
+const FALLBACK_DURATION = 3000; // Fallback timer if video fails
+const VIDEO_PLAY_TIMEOUT = 1500; // Max wait for video to start playing
+const MIN_DISPLAY_TIME = 2000; // Minimum time to show splash
+
 export default function Splash({ onComplete }: SplashProps) {
   const [isExiting, setIsExiting] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [videoLoaded, setVideoLoaded] = useState(false);
+  const [videoState, setVideoState] = useState<'loading' | 'playing' | 'fallback'>('loading');
+  
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hasVideoStartedRef = useRef(false);
+  const mountTimeRef = useRef(Date.now());
+  const exitTriggeredRef = useRef(false);
 
+  // Trigger exit with minimum display time enforcement
+  const triggerExit = useCallback(() => {
+    if (exitTriggeredRef.current) return;
+    
+    const elapsed = Date.now() - mountTimeRef.current;
+    const remainingTime = Math.max(0, MIN_DISPLAY_TIME - elapsed);
+    
+    setTimeout(() => {
+      exitTriggeredRef.current = true;
+      setIsExiting(true);
+      
+      // Complete after fade-out animation
+      setTimeout(() => {
+        onComplete();
+      }, 600);
+    }, remainingTime);
+  }, [onComplete]);
+
+  // Handle video events
+  const handleVideoPlaying = useCallback(() => {
+    if (!hasVideoStartedRef.current) {
+      hasVideoStartedRef.current = true;
+      setVideoState('playing');
+    }
+  }, []);
+
+  const handleVideoError = useCallback(() => {
+    console.log('Splash video error - using fallback');
+    setVideoState('fallback');
+    triggerExit();
+  }, [triggerExit]);
+
+  const handleVideoEnded = useCallback(() => {
+    triggerExit();
+  }, [triggerExit]);
+
+  // Try to play video and handle autoplay restrictions
   useEffect(() => {
-    // Progress animation
+    const video = videoRef.current;
+    if (!video) return;
+
+    let playTimeout: ReturnType<typeof setTimeout>;
+    let fallbackTimeout: ReturnType<typeof setTimeout>;
+
+    const attemptPlay = async () => {
+      try {
+        await video.play();
+      } catch (error) {
+        console.log('Splash video autoplay blocked - using fallback');
+        setVideoState('fallback');
+      }
+    };
+
+    // Attempt to play once video can play
+    video.addEventListener('canplay', attemptPlay, { once: true });
+
+    // If video doesn't start playing within timeout, use fallback
+    playTimeout = setTimeout(() => {
+      if (!hasVideoStartedRef.current) {
+        console.log('Splash video play timeout - using fallback');
+        setVideoState('fallback');
+      }
+    }, VIDEO_PLAY_TIMEOUT);
+
+    // Fallback timer in case video never loads/plays
+    fallbackTimeout = setTimeout(() => {
+      if (!exitTriggeredRef.current) {
+        triggerExit();
+      }
+    }, FALLBACK_DURATION);
+
+    return () => {
+      clearTimeout(playTimeout);
+      clearTimeout(fallbackTimeout);
+      video.removeEventListener('canplay', attemptPlay);
+    };
+  }, [triggerExit]);
+
+  // Progress bar animation
+  useEffect(() => {
+    const duration = videoState === 'playing' ? 2500 : FALLBACK_DURATION;
+    const interval = duration / 50;
+    
     const progressInterval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
@@ -21,24 +111,10 @@ export default function Splash({ onComplete }: SplashProps) {
         }
         return prev + 2;
       });
-    }, 40);
+    }, interval);
 
-    // Trigger exit after 2.5s
-    const exitTimer = setTimeout(() => {
-      setIsExiting(true);
-    }, 2500);
-
-    // Complete after exit animation
-    const completeTimer = setTimeout(() => {
-      onComplete();
-    }, 3100);
-
-    return () => {
-      clearInterval(progressInterval);
-      clearTimeout(exitTimer);
-      clearTimeout(completeTimer);
-    };
-  }, [onComplete]);
+    return () => clearInterval(progressInterval);
+  }, [videoState]);
 
   return (
     <AnimatePresence mode="wait">
@@ -46,26 +122,45 @@ export default function Splash({ onComplete }: SplashProps) {
         <motion.div
           key="splash"
           className="fixed inset-0 z-50 bg-black"
-          style={{ height: "100dvh" }}
+          style={{ height: "100dvh", willChange: "opacity" }}
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6, ease: "easeIn" }}
         >
           {/* Full-screen video */}
           <motion.video
+            ref={videoRef}
             src="/video/RVMTvideo.mp4"
             autoPlay
             muted
             playsInline
             preload="auto"
             poster={splashImage}
-            onLoadedData={() => setVideoLoaded(true)}
+            onPlaying={handleVideoPlaying}
+            onEnded={handleVideoEnded}
+            onError={handleVideoError}
             className="absolute inset-0 w-full h-full object-cover object-top md:object-contain"
-            initial={{ opacity: 0, scale: 1.05 }}
-            animate={{ opacity: videoLoaded ? 1 : 0, scale: 1 }}
-            exit={{ opacity: 0, scale: 1.02 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
+            style={{ willChange: "opacity, transform" }}
+            initial={{ opacity: 0, scale: 1.02 }}
+            animate={{ 
+              opacity: videoState !== 'loading' ? 1 : 0, 
+              scale: 1 
+            }}
+            exit={{ opacity: 0, scale: 1.01 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
           />
+
+          {/* Fallback image if video fails */}
+          {videoState === 'fallback' && (
+            <motion.img
+              src={splashImage}
+              alt="RVMT"
+              className="absolute inset-0 w-full h-full object-cover object-top md:object-contain"
+              initial={{ opacity: 0, scale: 1.05 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+            />
+          )}
 
           {/* Dark overlay gradients for depth */}
           <motion.div
@@ -88,7 +183,7 @@ export default function Splash({ onComplete }: SplashProps) {
             className="absolute bottom-16 left-1/2 -translate-x-1/2 z-10"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.3 }}
+            transition={{ delay: 0.3, duration: 0.3 }}
           >
             <div className="w-32 h-0.5 bg-white/20 rounded-full overflow-hidden">
               <motion.div
