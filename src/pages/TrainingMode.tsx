@@ -181,6 +181,20 @@ export default function TrainingMode() {
     }
   };
 
+  // Handle drag-to-select loop region on waveform
+  const handleLoopSelect = (start: number, end: number) => {
+    setLoop(start, end);
+  };
+
+  // Handle dragging individual loop markers
+  const handleLoopStartChange = (time: number) => {
+    setLoop(time, loopEnd);
+  };
+
+  const handleLoopEndChange = (time: number) => {
+    setLoop(loopStart, time);
+  };
+
   // Generate master waveform from all stems combined
   const masterWaveform = generateMockWaveform(200);
 
@@ -304,8 +318,12 @@ export default function TrainingMode() {
                 isPlaying={isPlaying}
                 mirrored={true}
                 showProgress={!allMuted}
+                onLoopSelect={handleLoopSelect}
+                loopStart={loopStart}
+                loopEnd={loopEnd}
+                isLooping={isLooping}
               />
-              {/* Loop region overlay */}
+              {/* Loop region overlay with draggable markers */}
               {loopEnd > loopStart && (
                 <LoopRegion
                   loopStart={loopStart}
@@ -313,6 +331,8 @@ export default function TrainingMode() {
                   duration={duration}
                   isLooping={isLooping}
                   height={40}
+                  onLoopStartChange={handleLoopStartChange}
+                  onLoopEndChange={handleLoopEndChange}
                 />
               )}
             </div>
