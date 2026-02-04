@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { ShoppingBag, Stethoscope, Headphones } from "lucide-react";
 import { HubCard } from "@/components/hub/HubCard";
-import { StadiumBackground } from "@/components/layout/StadiumBackground";
+import { VocalNotesDeskBackground } from "@/components/layout/VocalNotesDeskBackground";
 
 const hubModules = [
   {
@@ -57,11 +57,8 @@ const itemVariants = {
 export default function Hub() {
   return (
     <div className="relative min-h-screen">
-      {/* Stadium Background */}
-      <StadiumBackground />
-      
-      {/* Dark Overlay for Readability */}
-      <div className="absolute inset-0 bg-gradient-to-b from-background/60 via-background/40 to-background/80" />
+      {/* Vocal Notes Desk Background */}
+      <VocalNotesDeskBackground />
 
       {/* Content */}
       <div className="relative z-10 px-4 pt-8 pb-32 md:px-8 md:pt-12">

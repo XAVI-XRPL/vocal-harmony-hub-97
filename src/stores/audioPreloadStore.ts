@@ -81,7 +81,7 @@ export const useAudioPreloadStore = create<AudioPreloadState>((set, get) => ({
   loadingProgress: new Map(),
   preloadQueue: [],
   currentlyLoading: null,
-  maxCachedSongs: 3,
+  maxCachedSongs: 4,
 
   getLoadingState: (songId) => {
     return get().loadingStates.get(songId) ?? 'idle';
@@ -215,8 +215,8 @@ export const useAudioPreloadStore = create<AudioPreloadState>((set, get) => ({
     const loadedStems: StemCache[] = [];
     let loadedCount = 0;
     
-    // Preload stems in priority order (2 concurrent requests)
-    const CONCURRENT_REQUESTS = 2;
+    // Preload stems in priority order (3 concurrent requests for larger stem counts)
+    const CONCURRENT_REQUESTS = 3;
     
     for (let i = 0; i < sortedStems.length; i += CONCURRENT_REQUESTS) {
       const batch = sortedStems.slice(i, i + CONCURRENT_REQUESTS);
