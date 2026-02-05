@@ -517,10 +517,14 @@ export function useAudioPlayer() {
     };
   }, [seekTo]);
 
+  // Derive hasRealAudio from song metadata for immediate accuracy
+  // (stemHowlsRef.length is only populated after loading completes)
+  const songHasRealAudio = currentSong?.stems?.some(stem => stem.url && stem.url.length > 0) ?? false;
+
   return {
     isLoaded,
     loadingProgress,
     seekTo,
-    hasRealAudio: stemHowlsRef.current.length > 0,
+    hasRealAudio: songHasRealAudio,
   };
 }
