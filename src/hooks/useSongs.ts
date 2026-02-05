@@ -101,7 +101,6 @@ export function useSongs() {
             position
           )
         `)
-        .order('title');
         .order('display_order');
 
       if (error) {
