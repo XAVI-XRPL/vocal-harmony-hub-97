@@ -1,173 +1,115 @@
 
 
-# MP3 Optimization & Song Reordering Plan
+# Fix: Audio Buffering State Not Updating for High Stem Count Songs
 
-## Overview
+## Problem Identified During Testing
 
-This plan addresses three goals:
-1. Add a song ordering system so "12. Testify Version 2" appears after song 3
-2. Optimize MP3 loading for faster playback on large stem songs
-3. Implement best practices for audio file delivery
+When testing "12. TESTIFY (VERSION 2)" (14 stems), I discovered that:
 
----
+1. All 14 stems load successfully (confirmed in console logs)
+2. The play button remains disabled
+3. The UI shows "Buffering 0/14" indefinitely
+4. The `isReadyToPlay` state never becomes `true`
 
-## Part 1: Add Song Ordering System
+## Root Cause
 
-### Current State
-- Songs are fetched using `.order('title')` which sorts alphabetically
-- Song titles use number prefixes ("1.", "2.", "3.", "12.") but alphabetical sorting puts "12." after "1." and before "2."
-- There's no dedicated `order` column in the database
-
-### Solution: Add Display Order Column
-
-**Step 1: Database Migration**
-Add a new `display_order` column to the `songs` table:
+There is a **stale closure bug** in the buffer readiness timeout callback in `useAudioPlayer.ts`:
 
 ```text
-ALTER TABLE songs ADD COLUMN display_order INTEGER;
-
--- Set initial order values:
--- 1. TESTIFY EXERCISE -> order 1
--- 2. THROWBACK EXERCISE -> order 2  
--- 3. DONT LEAVE EXERCISE -> order 3
--- 4. TESTIFY (VERSION 2) -> order 4 (after song 3!)
--- 5. BOUNCING ON A BLESSING -> REMOVE COMPLETELY WITH STEMS 
-
-UPDATE songs SET display_order = 1 WHERE id = 'testify-exercise';
-UPDATE songs SET display_order = 2 WHERE id = 'throwback-exercise';
-UPDATE songs SET display_order = 3 WHERE id = 'dont-leave-exercise';
-UPDATE songs SET display_order = 4 WHERE id = 'testify-v2';
-UPDATE songs SET display_order = 5 WHERE id = 'bouncing-on-a-blessing';
+// Line 398-403 - the timeout callback captures loadedCount at value 0
+const readyTimeout = setTimeout(() => {
+  if (!isReadyToPlay && loadedCount >= minRequiredBuffered) {
+    // loadedCount is always 0 here (stale closure)!
+    setIsReadyToPlay(true);
+  }
+}, 1500);
 ```
 
-**Step 2: Update useSongs Hook**
-Change the query from `.order('title')` to `.order('display_order')`:
+The `loadedCount` variable is captured in the closure when the timeout is created (value = 0). Even though it increments to 14 in the `onload` callbacks, the timeout callback still sees 0.
+
+---
+
+## Solution
+
+Use a ref to track `loadedCount` instead of a local variable, so the timeout callback reads the current value.
+
+### File: `src/hooks/useAudioPlayer.ts`
+
+**Change 1**: Add a ref to track loaded count
 
 ```text
-File: src/hooks/useSongs.ts
-
-Change line 104:
-  .order('title')
-To:
-  .order('display_order')
+// Add near other refs (around line 96):
+const loadedCountRef = useRef<number>(0);
 ```
 
-**Step 3: Update Song Titles (Optional)**
-Consider renaming titles to match new order:
-- "12. TESTIFY (VERSION 2)" becomes "4. TESTIFY (VERSION 2)"
+**Change 2**: Update loadSong function to use the ref
 
----
-
-## Part 2: MP3 Loading Optimization
-
-### Current Challenges
-- Large MP3 files (14 stems for Testify V2) compete for bandwidth
-- HTML5 streaming mode requires buffering before playback
-- No server-side compression or CDN optimization
-
-### Optimization Strategies
-
-**Strategy 1: Audio Format Recommendations (Manual Action Required)**
-
-MP3 files can be optimized before upload using these settings:
-- **Bitrate**: 128kbps for practice/exercise tracks (smaller files, acceptable quality)
-- **Bitrate**: 192kbps for final/showcase tracks (good quality)
-- **Sample Rate**: 44.1kHz (standard)
-- **Channels**: Mono for individual stems (halves file size!)
-- **Format**: Consider AAC/M4A for even better compression at same quality
-
-You would need to re-export your audio files with these settings using software like:
-- Audacity (free)
-- Adobe Audition
-- Logic Pro / GarageBand
-
-**Strategy 2: Progressive Loading Enhancement (Code Changes)**
-
-Improve the current loading system:
-
-1. **Pre-buffer check before play button enables**
-   - Already implemented in previous changes
-   
-2. **Increase preload priority for critical stems**
-   - Master/Coaching and Instrumental load first
-   - Already implemented
-
-3. **Add audio loading states to UI**
-   - Show individual stem loading progress
-   - Indicate when stems are buffered
-
-4. **Consider lazy-loading non-priority stems**
-   - Load harmonies/other stems after playback starts
-   - This reduces initial load time
-
-**Strategy 3: Blob URL Caching (Already Implemented)**
-
-The current `audioPreloadStore.ts` already:
-- Caches downloaded audio as blob URLs
-- Uses LRU eviction (max 4 songs)
-- Preloads priority stems first
-
-**Strategy 4: Add Loading Skeleton for Stems**
-
-Show visual feedback while each stem loads:
-- Gray shimmer effect on unloaded stems
-- Green checkmark when stem is ready
-- Amber warning if stem failed to load
-
----
-
-## Part 3: Implementation Summary
-
-### Database Changes
-| Change | Description |
-|--------|-------------|
-| Add `display_order` column | Integer column for explicit ordering |
-| Set order values | Position Testify V2 as song 4 |
-
-### Code Changes
-
-| File | Change |
-|------|--------|
-| `src/hooks/useSongs.ts` | Change order clause from `title` to `display_order` |
-| `src/pages/TrainingMode.tsx` | Add per-stem loading indicators (optional) |
-
-### Manual Recommendations (For You to Do Outside Lovable)
-
-| Task | Tool | Impact |
-|------|------|--------|
-| Convert stems to mono | Audacity | 50% file size reduction |
-| Reduce bitrate to 128kbps | Any audio editor | 30-50% size reduction |
-| Convert to AAC/M4A | FFmpeg | 20-30% better compression |
-
-Example FFmpeg command for optimal compression:
 ```text
-ffmpeg -i input.mp3 -ac 1 -b:a 128k -ar 44100 output.mp3
+// In loadSong function, change:
+let loadedCount = 0;
+
+// To:
+loadedCountRef.current = 0;
+
+// And update all references from loadedCount to loadedCountRef.current:
+// - In onload callback
+// - In onloaderror callback  
+// - In the timeout check
 ```
 
-This converts to mono, 128kbps, 44.1kHz sample rate.
+**Change 3**: Fix the timeout callback to read from ref
+
+```text
+// Change line 399 from:
+if (!isReadyToPlay && loadedCount >= minRequiredBuffered) {
+
+// To:
+if (!isReadyToPlay && loadedCountRef.current >= minRequiredBuffered) {
+```
 
 ---
 
-## New Song Order After Changes
+## Additional Improvement: Ensure Buffering State Shows Real Progress
 
-| Order | Title | Stem Count |
-|-------|-------|------------|
-| 1 | TESTIFY EXERCISE | 9 stems |
-| 2 | THROWBACK EXERCISE | 6 stems |
-| 3 | DONT LEAVE EXERCISE | 12 stems |
-| 4 | TESTIFY (VERSION 2) | 14 stems |
-| 5 | BOUNCING ON A BLESSING | 8 stems |
+Currently `bufferedCount` stays at 0 because it only updates on `onplay` events. We should also update it when stems finish loading.
+
+**Change 4**: Update buffered count on load (not just on play)
+
+```text
+// In onload callback, after incrementing loadedCount:
+setBufferedCount(loadedCountRef.current);
+
+// And check readiness immediately on load:
+if (loadedCountRef.current >= minRequiredBuffered && !isReadyToPlay) {
+  setIsReadyToPlay(true);
+  setIsBuffering(false);
+}
+```
 
 ---
 
-## Technical Details
+## Files to Modify
 
-### Files to Modify
-1. **Database**: Add `display_order` column and set values
-2. `src/hooks/useSongs.ts`: Update order clause
+| File | Changes |
+|------|---------|
+| `src/hooks/useAudioPlayer.ts` | Fix stale closure bug, update buffering state on load |
 
-### Expected Improvements
-- Songs appear in intended order regardless of title
-- Loading experience feels smoother with better feedback
-- Future flexibility to reorder songs without renaming
+---
+
+## Expected Result After Fix
+
+| Before | After |
+|--------|-------|
+| "Buffering 0/14" shown indefinitely | "Buffering 4/14", "8/14", "14/14" progress shown |
+| Play button never enables | Play button enables when buffer threshold met |
+| Cannot play "12. TESTIFY (VERSION 2)" | Playback starts smoothly after buffering |
+
+---
+
+## Testing Steps After Implementation
+
+1. Navigate to Library and select "12. TESTIFY (VERSION 2)"
+2. Observe the buffering progress updating (should show 2/14, 4/14, etc.)
+3. Once buffering reaches threshold (~4 stems), play button should enable
+4. Press play and verify smooth playback without choppy audio
 
