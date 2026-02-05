@@ -17,6 +17,7 @@ import {
   Zap,
   Check,
 } from "lucide-react";
+import { toast } from "sonner";
 import { IconButton } from "@/components/ui/icon-button";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -69,6 +70,7 @@ export default function TrainingMode() {
   const { data: song, isLoading: songLoading, error: songError } = useSong(id || "");
   
   const intervalRef = useRef<number | null>(null);
+  const prevAllStemsReadyRef = useRef(false);
   const [showControls, setShowControls] = React.useState(false);
 
   // Web Audio Engine hook for sample-accurate playback
@@ -128,6 +130,17 @@ export default function TrainingMode() {
       setCurrentSong(song);
     }
   }, [song, currentSong, setCurrentSong]);
+
+  // Toast notification when all stems are ready
+  useEffect(() => {
+    if (allStemsReady && !prevAllStemsReadyRef.current && mixdownReady) {
+      toast.success("Stem Mixer Ready", {
+        description: "All stems loaded. Individual track controls are now available.",
+        duration: 4000,
+      });
+    }
+    prevAllStemsReadyRef.current = allStemsReady;
+  }, [allStemsReady, mixdownReady]);
 
   // Simulate playback timer for mock songs (no real audio)
   useEffect(() => {
@@ -295,11 +308,28 @@ export default function TrainingMode() {
             </div>
           </div>
           <div className="flex items-center gap-1">
-            {/* Audio Mode Badge */}
+            {/* Audio Mode Badge with enhanced transition animations */}
             {songHasRealAudio && mixdownReady && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
+                key={audioMode}
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ 
+                  opacity: 1, 
+                  scale: 1,
+                  boxShadow: audioMode === 'stems' 
+                    ? ['0 0 0 0 rgba(34,197,94,0)', '0 0 20px 4px rgba(34,197,94,0.4)', '0 0 0 0 rgba(34,197,94,0)']
+                    : audioMode === 'crossfading'
+                    ? ['0 0 0 0 rgba(168,85,247,0)', '0 0 15px 3px rgba(168,85,247,0.3)', '0 0 0 0 rgba(168,85,247,0)']
+                    : undefined
+                }}
+                transition={{ 
+                  duration: 0.3,
+                  boxShadow: audioMode === 'stems' 
+                    ? { duration: 0.8, repeat: 2 } 
+                    : audioMode === 'crossfading'
+                    ? { duration: 0.6, repeat: Infinity }
+                    : undefined
+                }}
                 className={cn(
                   "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold",
                   audioMode === 'mixdown' && "bg-blue-500/20 text-blue-400",
@@ -308,7 +338,7 @@ export default function TrainingMode() {
                 )}
               >
                 {audioMode === 'mixdown' && <Music className="w-3 h-3" />}
-                {audioMode === 'crossfading' && <Zap className="w-3 h-3" />}
+                {audioMode === 'crossfading' && <Zap className="w-3 h-3 animate-pulse" />}
                 {audioMode === 'stems' && <Check className="w-3 h-3" />}
                 <span>
                   {audioMode === 'mixdown' && 'MIX'}
