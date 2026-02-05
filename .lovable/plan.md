@@ -1,115 +1,82 @@
 
+# Replace Testify Exercise MP3s with Optimized AAC Files
 
-# Fix: Audio Buffering State Not Updating for High Stem Count Songs
+## Overview
 
-## Problem Identified During Testing
-
-When testing "12. TESTIFY (VERSION 2)" (14 stems), I discovered that:
-
-1. All 14 stems load successfully (confirmed in console logs)
-2. The play button remains disabled
-3. The UI shows "Buffering 0/14" indefinitely
-4. The `isReadyToPlay` state never becomes `true`
-
-## Root Cause
-
-There is a **stale closure bug** in the buffer readiness timeout callback in `useAudioPlayer.ts`:
-
-```text
-// Line 398-403 - the timeout callback captures loadedCount at value 0
-const readyTimeout = setTimeout(() => {
-  if (!isReadyToPlay && loadedCount >= minRequiredBuffered) {
-    // loadedCount is always 0 here (stale closure)!
-    setIsReadyToPlay(true);
-  }
-}, 1500);
-```
-
-The `loadedCount` variable is captured in the closure when the timeout is created (value = 0). Even though it increments to 14 in the `onload` callbacks, the timeout callback still sees 0.
+You've uploaded 9 AAC files to replace the MP3 stems for "1. TESTIFY EXERCISE". AAC files offer better compression at the same quality, which should result in smoother playback and faster loading.
 
 ---
 
-## Solution
+## What Will Be Done
 
-Use a ref to track `loadedCount` instead of a local variable, so the timeout callback reads the current value.
+### Step 1: Copy AAC Files to Project
 
-### File: `src/hooks/useAudioPlayer.ts`
+Copy all 9 uploaded AAC files to the `public/audio/testify-exercise/` folder with clean filenames:
 
-**Change 1**: Add a ref to track loaded count
+| Uploaded File | Destination |
+|---------------|-------------|
+| 1-TESTIFY-_RAab-Coaching.aac | public/audio/testify-exercise/raab-coaching.aac |
+| 1-TESTIFY-Instrumental.aac | public/audio/testify-exercise/instrumental.aac |
+| 1-TESTIFY-EXERCISE-PIANO.aac | public/audio/testify-exercise/piano.aac |
+| 1-TESTIFY-EXERCISE-Guitar.aac | public/audio/testify-exercise/guitar.aac |
+| 1-TESTIFY-RAab-EXERCISE.aac | public/audio/testify-exercise/raab-exercise.aac |
+| 1-TESTIFY-JLEVY-EXERCISE-1.aac | public/audio/testify-exercise/jlevy-exercise-1.aac |
+| 1-TESTIFY-RAab-HARMONY-2.aac | public/audio/testify-exercise/raab-harmony-2.aac |
+| 1-TESTIFY-JLEVY-HARMONY-2.aac | public/audio/testify-exercise/jlevy-harmony-2.aac |
+| 1-TESTIFY-RAab-HARMONY-3.aac | public/audio/testify-exercise/raab-harmony-3.aac |
 
-```text
-// Add near other refs (around line 96):
-const loadedCountRef = useRef<number>(0);
-```
+### Step 2: Update Database Paths
 
-**Change 2**: Update loadSong function to use the ref
-
-```text
-// In loadSong function, change:
-let loadedCount = 0;
-
-// To:
-loadedCountRef.current = 0;
-
-// And update all references from loadedCount to loadedCountRef.current:
-// - In onload callback
-// - In onloaderror callback  
-// - In the timeout check
-```
-
-**Change 3**: Fix the timeout callback to read from ref
+Update all 9 stem records to point to the new `.aac` files:
 
 ```text
-// Change line 399 from:
-if (!isReadyToPlay && loadedCount >= minRequiredBuffered) {
-
-// To:
-if (!isReadyToPlay && loadedCountRef.current >= minRequiredBuffered) {
+UPDATE stems SET audio_path = '/audio/testify-exercise/raab-coaching.aac' WHERE id = 'testify-raab-coaching';
+UPDATE stems SET audio_path = '/audio/testify-exercise/instrumental.aac' WHERE id = 'testify-instrumental';
+UPDATE stems SET audio_path = '/audio/testify-exercise/piano.aac' WHERE id = 'testify-piano';
+UPDATE stems SET audio_path = '/audio/testify-exercise/guitar.aac' WHERE id = 'testify-guitar';
+UPDATE stems SET audio_path = '/audio/testify-exercise/raab-exercise.aac' WHERE id = 'testify-raab-exercise';
+UPDATE stems SET audio_path = '/audio/testify-exercise/jlevy-exercise-1.aac' WHERE id = 'testify-jlevy-exercise';
+UPDATE stems SET audio_path = '/audio/testify-exercise/raab-harmony-2.aac' WHERE id = 'testify-raab-harmony-2';
+UPDATE stems SET audio_path = '/audio/testify-exercise/jlevy-harmony-2.aac' WHERE id = 'testify-jlevy-harmony-2';
+UPDATE stems SET audio_path = '/audio/testify-exercise/raab-harmony-3.aac' WHERE id = 'testify-raab-harmony-3';
 ```
+
+### Step 3: Remove Old MP3 Files
+
+Delete the original 9 MP3 files from `public/audio/testify-exercise/`:
+- guitar.mp3
+- instrumental.mp3
+- jlevy-exercise-1.mp3
+- jlevy-harmony-2.mp3
+- piano.mp3
+- raab-coaching.mp3
+- raab-exercise.mp3
+- raab-harmony-2.mp3
+- raab-harmony-3.mp3
 
 ---
 
-## Additional Improvement: Ensure Buffering State Shows Real Progress
+## Expected Benefits
 
-Currently `bufferedCount` stays at 0 because it only updates on `onplay` events. We should also update it when stems finish loading.
-
-**Change 4**: Update buffered count on load (not just on play)
-
-```text
-// In onload callback, after incrementing loadedCount:
-setBufferedCount(loadedCountRef.current);
-
-// And check readiness immediately on load:
-if (loadedCountRef.current >= minRequiredBuffered && !isReadyToPlay) {
-  setIsReadyToPlay(true);
-  setIsBuffering(false);
-}
-```
+| Metric | Before (MP3) | After (AAC) |
+|--------|--------------|-------------|
+| File Format | MP3 | AAC |
+| Compression | Less efficient | 20-30% smaller at same quality |
+| Load Time | Slower | Faster |
+| Playback | May buffer | Smoother |
 
 ---
 
-## Files to Modify
+## Files Changed
 
-| File | Changes |
-|------|---------|
-| `src/hooks/useAudioPlayer.ts` | Fix stale closure bug, update buffering state on load |
-
----
-
-## Expected Result After Fix
-
-| Before | After |
+| Action | Files |
 |--------|-------|
-| "Buffering 0/14" shown indefinitely | "Buffering 4/14", "8/14", "14/14" progress shown |
-| Play button never enables | Play button enables when buffer threshold met |
-| Cannot play "12. TESTIFY (VERSION 2)" | Playback starts smoothly after buffering |
+| Add | 9 AAC files to `public/audio/testify-exercise/` |
+| Delete | 9 MP3 files from `public/audio/testify-exercise/` |
+| Database | Update 9 stem `audio_path` values |
 
 ---
 
-## Testing Steps After Implementation
+## No Code Changes Required
 
-1. Navigate to Library and select "12. TESTIFY (VERSION 2)"
-2. Observe the buffering progress updating (should show 2/14, 4/14, etc.)
-3. Once buffering reaches threshold (~4 stems), play button should enable
-4. Press play and verify smooth playback without choppy audio
-
+The audio player already supports AAC format through Howler.js, so no code modifications are needed - just file replacement and database updates.
