@@ -429,19 +429,35 @@ class WebAudioEngine {
   
   /**
    * Get current state.
+   * IMPORTANT: For React external-store subscriptions, this must be referentially stable
+   * and only change when the internal state changes.
    */
   getState(): EngineState {
-    return { ...this.state };
+    return this.state;
   }
-  
+
   /**
-   * Subscribe to state changes.
+   * Subscribe to state changes (legacy).
+   * Calls listener immediately with current state and on every change.
    */
   subscribe(listener: StateListener): () => void {
     this.listeners.add(listener);
     // Immediately call with current state
     listener(this.state);
-    
+
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  /**
+   * Subscribe to state *changes* only (React useSyncExternalStore-compatible).
+   * The callback must be invoked ONLY when the store changes and should NOT be called immediately.
+   */
+  subscribeOnChange(onStoreChange: () => void): () => void {
+    const listener: StateListener = () => onStoreChange();
+    this.listeners.add(listener);
+
     return () => {
       this.listeners.delete(listener);
     };
