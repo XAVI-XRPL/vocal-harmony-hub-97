@@ -1,89 +1,159 @@
 
-# Hub Icon & Audio Player Debug Plan
+# Fix Choppy Audio for "12. Testify Version 2" & Full Song Loading
 
-## Part 1: Change Hub Icon to Toolkit
+## Problem Analysis
 
-### Current State
-- The Hub navigation icon uses `LayoutGrid` from lucide-react (in MobileNav.tsx line 16)
-- The Hub page itself uses a different set of module icons
+### Root Cause: "12. TESTIFY (VERSION 2)" Has 14 Stems
+This song has significantly more audio tracks than others (14 stems vs 6-12 for other songs). Loading and synchronizing 14 simultaneous audio streams causes:
 
-### Change Required
-Replace `LayoutGrid` with `Wrench` icon from lucide-react to represent a "toolkit" concept.
+1. **Network congestion** - 14 concurrent HTTP requests competing for bandwidth
+2. **Audio buffer starvation** - Howler.js HTML5 mode streams audio, and with 14 streams, some may not buffer fast enough
+3. **Synchronization stress** - The drift correction algorithm runs on 14 tracks simultaneously
+4. **Memory pressure** - More audio data being processed in parallel
 
-### File to Modify
-- `src/components/layout/MobileNav.tsx` - Change import and icon reference from `LayoutGrid` to `Wrench`
+### Current Loading Behavior Issues
 
----
-
-## Part 2: Debug Player Across All Songs
-
-### Issues Identified
-
-#### 1. React Ref Warning on StemTrack (Console Error)
-**Problem**: "Function components cannot be given refs" warning in TrainingMode
-- `StemTrack` is a function component but Framer Motion's `motion.div` wrapper in TrainingMode is attempting to pass a ref to it
-- This doesn't break functionality but generates console warnings
-
-**Solution**: Wrap `StemTrack` with `React.forwardRef` to properly handle refs from parent motion components.
-
-#### 2. WaveformDisplay Already Has forwardRef (Verified OK)
-The `WaveformDisplay` component already uses `React.forwardRef` correctly (line 117), so this is not the source of the issue.
-
-#### 3. Audio Loading Works Correctly (Verified)
-- Database has 5 songs with proper stem audio paths
-- Audio files exist in the correct directories
-- Network requests return 200 status for song data
-- The `useSongs` hook has proper caching (30 min staleTime, 1 hour gcTime)
-
-#### 4. Potential Issue: No Error Boundary for Audio Load Failures
-If an individual audio file fails to load, the player continues but the user gets no feedback about which stem failed.
-
-**Solution**: Add visual indication when a stem fails to load (already partially handled in `useAudioPlayer.ts` onloaderror callback, but no UI feedback).
-
-#### 5. hasRealAudio Logic Issue
-**Problem**: In `useAudioPlayer.ts` line 524, `hasRealAudio` returns `stemHowlsRef.current.length > 0`, but this only becomes true after stems are loaded. During initial render, it returns false even for songs with real audio, causing the simulated timer to briefly run.
-
-**Solution**: Derive `hasRealAudio` from the song data itself (checking if stems have URLs) rather than from the loaded Howl instances. This is actually already done correctly in TrainingMode via `songHasRealAudio` (line 236), but the hook also exposes `hasRealAudio` which can be misleading during loading.
+1. **No "ready to play" gate** - The play button enables as soon as `isLoaded` becomes true, but `isLoaded` is set when all stems have *started* loading, not when they're *ready to play*
+2. **Immediate playback** - Users can press play before audio has buffered enough data
+3. **Preloading doesn't wait for buffering** - The blob URL preload downloads the entire file, but Howler.js still needs to buffer it
+4. **Concurrent stem loading** - All 14 stems attempt to load simultaneously, causing bandwidth competition
 
 ---
 
 ## Implementation Plan
 
-### Step 1: Update Hub Icon
-**File**: `src/components/layout/MobileNav.tsx`
-- Replace `LayoutGrid` import with `Wrench`
-- Update the navItems array to use `Wrench` for Hub
+### Phase 1: Add Audio Buffer Readiness Detection
 
-### Step 2: Fix StemTrack forwardRef Warning
-**File**: `src/components/audio/StemTrack.tsx`
-- Wrap the component with `React.forwardRef`
-- Accept and forward the ref to the root GlassCard component
+**File: `src/hooks/useAudioPlayer.ts`**
 
-### Step 3: Improve hasRealAudio Reliability
-**File**: `src/hooks/useAudioPlayer.ts`
-- Add a state variable `songHasRealAudio` derived from `currentSong.stems` check
-- Return this boolean instead of checking stemHowlsRef length
-- This ensures correct behavior during the loading phase
+Add a `bufferedStemsCount` state and listen for Howler's `onplay` or check `duration()` availability to confirm each stem is truly ready:
 
-### Step 4: Add Failed Stem Indicator (Optional Enhancement)
-**File**: `src/hooks/useAudioPlayer.ts` and `src/components/audio/StemTrack.tsx`
-- Track which stems failed to load in the audio store
-- Display a subtle visual indicator on stems that failed
+1. Track how many stems have reported they can play smoothly
+2. Add a new `isBuffering` state that's true until a minimum threshold of stems are ready
+3. Only allow play when enough stems are buffered (at least the first 3-4 priority stems)
+
+**Changes:**
+- Add `bufferedCount` state tracking
+- Add `onplay` callback to Howl instances to detect when audio is actually playable
+- Create `isReadyToPlay` boolean that requires minimum buffer threshold
+- Expose `isBuffering` and `bufferedProgress` for UI feedback
+
+### Phase 2: Implement Staggered Stem Loading for High Stem Count Songs
+
+**File: `src/hooks/useAudioPlayer.ts`**
+
+For songs with 10+ stems, implement priority-based sequential loading:
+
+1. Load stems in batches based on priority (Master/Coaching first, then Instrumental, then others)
+2. Start playback after priority stems (first 3-4) are fully buffered
+3. Continue loading remaining stems in background during playback
+
+**Priority loading order:**
+1. Master/Coaching stems (position 0-1)
+2. Instrumental stem
+3. Lead vocal stems  
+4. Remaining harmony and other stems
+
+### Phase 3: Add Playback Buffer Threshold
+
+**File: `src/hooks/useAudioPlayer.ts`**
+
+Before allowing playback, check Howler's internal state:
+
+1. Verify duration is known (meaning metadata loaded)
+2. Add a small delay (200-300ms) after all stems report "loaded" to allow initial buffering
+3. For songs with 10+ stems, require higher buffer threshold before enabling play
+
+### Phase 4: Update TrainingMode UI for Better Loading Feedback
+
+**File: `src/pages/TrainingMode.tsx`**
+
+1. Show more detailed loading progress (e.g., "Loading 5/14 tracks...")
+2. Disable play button until `isReadyToPlay` is true (not just `isLoaded`)
+3. Add visual indication when audio is buffering mid-playback
+4. Show which stems are still loading during playback
+
+### Phase 5: Increase Sync Tolerance for High Stem Count
+
+**File: `src/hooks/useAudioPlayer.ts`**
+
+The current tolerance logic already scales with stem count, but we should:
+
+1. Increase tolerance for 14+ stems from 0.12s to 0.15s
+2. Reduce drift correction frequency for high stem counts (from 1000ms to 1500ms)
+3. Increase `SEEK_SYNC_DELAY_MS` dynamically based on stem count
+
+---
+
+## Technical Implementation Details
+
+### useAudioPlayer.ts Changes
+
+```text
+1. Add new state:
+   - bufferedStems: Set<string> - tracks which stems have buffered
+   - isBuffering: boolean - true while waiting for buffer threshold
+   - minimumBufferCount: number - calculated based on stem count
+
+2. Modify Howl creation:
+   - Add `onplay` callback to track buffer-ready state
+   - Stagger loading for 10+ stem songs
+
+3. Add new export:
+   - isReadyToPlay: boolean
+   - bufferingProgress: number (0-100)
+   - bufferedStemCount: number
+
+4. Increase sync tolerance:
+   - 14+ stems: 0.15s tolerance, 1500ms correction interval
+   - Increase SEEK_SYNC_DELAY_MS for high stem counts
+```
+
+### TrainingMode.tsx Changes
+
+```text
+1. Use `isReadyToPlay` instead of `isLoaded` for play button
+2. Show "Buffering X/14 tracks..." during loading
+3. Add subtle buffering indicator if audio stutters
+4. Conditionally disable transport controls while buffering
+```
+
+### audioPreloadStore.ts Optimization
+
+```text
+1. For songs with 10+ stems, preload in priority order
+2. Ensure priority stems (Master, Instrumental) finish first
+3. Update batch size from 3 to 2 for high-stem songs to reduce bandwidth competition
+```
 
 ---
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/components/layout/MobileNav.tsx` | Replace LayoutGrid with Wrench icon |
-| `src/components/audio/StemTrack.tsx` | Add React.forwardRef wrapper |
-| `src/hooks/useAudioPlayer.ts` | Improve hasRealAudio derivation logic |
+| File | Changes |
+|------|---------|
+| `src/hooks/useAudioPlayer.ts` | Add buffer tracking, staggered loading, readiness detection, increased tolerance |
+| `src/pages/TrainingMode.tsx` | Update UI for detailed loading state, use `isReadyToPlay` |
+| `src/stores/audioPreloadStore.ts` | Reduce concurrent requests for high-stem songs |
 
 ---
 
-## Expected Outcomes
-1. Hub navigation shows a wrench/toolkit icon instead of grid icon
-2. No more React ref warnings in console for StemTrack
-3. More reliable audio state detection during loading phase
-4. Player works consistently across all 5 songs in the database
+## Expected Improvements
+
+| Issue | Before | After |
+|-------|--------|-------|
+| Choppy playback on Testify V2 | Frequent stuttering | Smooth playback after buffer wait |
+| Play button timing | Available immediately | Available when audio ready |
+| Loading feedback | "Loading 45%" | "Buffering 5/14 tracks..." |
+| Sync tolerance (14 stems) | 0.12s | 0.15s |
+| Drift correction frequency | Every 1000ms | Every 1500ms for 14+ stems |
+| Concurrent network requests | 14 at once | 2-3 at once, staggered |
+
+---
+
+## Technical Considerations
+
+1. **Howler.js HTML5 mode** - Uses streaming which requires adequate buffer before playback
+2. **Mobile bandwidth** - More critical on mobile where bandwidth may be limited
+3. **Priority loading** - Master and Instrumental must be ready first since they define the timing
+4. **User feedback** - Clear indication that audio is preparing, not frozen
