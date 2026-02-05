@@ -102,6 +102,7 @@ export function useSongs() {
           )
         `)
         .order('title');
+        .order('display_order');
 
       if (error) {
         console.error('Error fetching songs:', error);

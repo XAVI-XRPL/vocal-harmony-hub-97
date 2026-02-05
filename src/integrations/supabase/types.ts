@@ -433,6 +433,7 @@ export type Database = {
           cover_art: string
           created_at: string
           difficulty: string
+          display_order: number | null
           duration: number
           full_mix_url: string | null
           genre: string
@@ -447,6 +448,7 @@ export type Database = {
           cover_art: string
           created_at?: string
           difficulty: string
+          display_order?: number | null
           duration: number
           full_mix_url?: string | null
           genre: string
@@ -461,6 +463,7 @@ export type Database = {
           cover_art?: string
           created_at?: string
           difficulty?: string
+          display_order?: number | null
           duration?: number
           full_mix_url?: string | null
           genre?: string
