@@ -1,159 +1,173 @@
 
-# Fix Choppy Audio for "12. Testify Version 2" & Full Song Loading
 
-## Problem Analysis
+# MP3 Optimization & Song Reordering Plan
 
-### Root Cause: "12. TESTIFY (VERSION 2)" Has 14 Stems
-This song has significantly more audio tracks than others (14 stems vs 6-12 for other songs). Loading and synchronizing 14 simultaneous audio streams causes:
+## Overview
 
-1. **Network congestion** - 14 concurrent HTTP requests competing for bandwidth
-2. **Audio buffer starvation** - Howler.js HTML5 mode streams audio, and with 14 streams, some may not buffer fast enough
-3. **Synchronization stress** - The drift correction algorithm runs on 14 tracks simultaneously
-4. **Memory pressure** - More audio data being processed in parallel
-
-### Current Loading Behavior Issues
-
-1. **No "ready to play" gate** - The play button enables as soon as `isLoaded` becomes true, but `isLoaded` is set when all stems have *started* loading, not when they're *ready to play*
-2. **Immediate playback** - Users can press play before audio has buffered enough data
-3. **Preloading doesn't wait for buffering** - The blob URL preload downloads the entire file, but Howler.js still needs to buffer it
-4. **Concurrent stem loading** - All 14 stems attempt to load simultaneously, causing bandwidth competition
+This plan addresses three goals:
+1. Add a song ordering system so "12. Testify Version 2" appears after song 3
+2. Optimize MP3 loading for faster playback on large stem songs
+3. Implement best practices for audio file delivery
 
 ---
 
-## Implementation Plan
+## Part 1: Add Song Ordering System
 
-### Phase 1: Add Audio Buffer Readiness Detection
+### Current State
+- Songs are fetched using `.order('title')` which sorts alphabetically
+- Song titles use number prefixes ("1.", "2.", "3.", "12.") but alphabetical sorting puts "12." after "1." and before "2."
+- There's no dedicated `order` column in the database
 
-**File: `src/hooks/useAudioPlayer.ts`**
+### Solution: Add Display Order Column
 
-Add a `bufferedStemsCount` state and listen for Howler's `onplay` or check `duration()` availability to confirm each stem is truly ready:
-
-1. Track how many stems have reported they can play smoothly
-2. Add a new `isBuffering` state that's true until a minimum threshold of stems are ready
-3. Only allow play when enough stems are buffered (at least the first 3-4 priority stems)
-
-**Changes:**
-- Add `bufferedCount` state tracking
-- Add `onplay` callback to Howl instances to detect when audio is actually playable
-- Create `isReadyToPlay` boolean that requires minimum buffer threshold
-- Expose `isBuffering` and `bufferedProgress` for UI feedback
-
-### Phase 2: Implement Staggered Stem Loading for High Stem Count Songs
-
-**File: `src/hooks/useAudioPlayer.ts`**
-
-For songs with 10+ stems, implement priority-based sequential loading:
-
-1. Load stems in batches based on priority (Master/Coaching first, then Instrumental, then others)
-2. Start playback after priority stems (first 3-4) are fully buffered
-3. Continue loading remaining stems in background during playback
-
-**Priority loading order:**
-1. Master/Coaching stems (position 0-1)
-2. Instrumental stem
-3. Lead vocal stems  
-4. Remaining harmony and other stems
-
-### Phase 3: Add Playback Buffer Threshold
-
-**File: `src/hooks/useAudioPlayer.ts`**
-
-Before allowing playback, check Howler's internal state:
-
-1. Verify duration is known (meaning metadata loaded)
-2. Add a small delay (200-300ms) after all stems report "loaded" to allow initial buffering
-3. For songs with 10+ stems, require higher buffer threshold before enabling play
-
-### Phase 4: Update TrainingMode UI for Better Loading Feedback
-
-**File: `src/pages/TrainingMode.tsx`**
-
-1. Show more detailed loading progress (e.g., "Loading 5/14 tracks...")
-2. Disable play button until `isReadyToPlay` is true (not just `isLoaded`)
-3. Add visual indication when audio is buffering mid-playback
-4. Show which stems are still loading during playback
-
-### Phase 5: Increase Sync Tolerance for High Stem Count
-
-**File: `src/hooks/useAudioPlayer.ts`**
-
-The current tolerance logic already scales with stem count, but we should:
-
-1. Increase tolerance for 14+ stems from 0.12s to 0.15s
-2. Reduce drift correction frequency for high stem counts (from 1000ms to 1500ms)
-3. Increase `SEEK_SYNC_DELAY_MS` dynamically based on stem count
-
----
-
-## Technical Implementation Details
-
-### useAudioPlayer.ts Changes
+**Step 1: Database Migration**
+Add a new `display_order` column to the `songs` table:
 
 ```text
-1. Add new state:
-   - bufferedStems: Set<string> - tracks which stems have buffered
-   - isBuffering: boolean - true while waiting for buffer threshold
-   - minimumBufferCount: number - calculated based on stem count
+ALTER TABLE songs ADD COLUMN display_order INTEGER;
 
-2. Modify Howl creation:
-   - Add `onplay` callback to track buffer-ready state
-   - Stagger loading for 10+ stem songs
+-- Set initial order values:
+-- 1. TESTIFY EXERCISE -> order 1
+-- 2. THROWBACK EXERCISE -> order 2  
+-- 3. DONT LEAVE EXERCISE -> order 3
+-- 4. TESTIFY (VERSION 2) -> order 4 (after song 3!)
+-- 5. BOUNCING ON A BLESSING -> REMOVE COMPLETELY WITH STEMS 
 
-3. Add new export:
-   - isReadyToPlay: boolean
-   - bufferingProgress: number (0-100)
-   - bufferedStemCount: number
-
-4. Increase sync tolerance:
-   - 14+ stems: 0.15s tolerance, 1500ms correction interval
-   - Increase SEEK_SYNC_DELAY_MS for high stem counts
+UPDATE songs SET display_order = 1 WHERE id = 'testify-exercise';
+UPDATE songs SET display_order = 2 WHERE id = 'throwback-exercise';
+UPDATE songs SET display_order = 3 WHERE id = 'dont-leave-exercise';
+UPDATE songs SET display_order = 4 WHERE id = 'testify-v2';
+UPDATE songs SET display_order = 5 WHERE id = 'bouncing-on-a-blessing';
 ```
 
-### TrainingMode.tsx Changes
+**Step 2: Update useSongs Hook**
+Change the query from `.order('title')` to `.order('display_order')`:
 
 ```text
-1. Use `isReadyToPlay` instead of `isLoaded` for play button
-2. Show "Buffering X/14 tracks..." during loading
-3. Add subtle buffering indicator if audio stutters
-4. Conditionally disable transport controls while buffering
+File: src/hooks/useSongs.ts
+
+Change line 104:
+  .order('title')
+To:
+  .order('display_order')
 ```
 
-### audioPreloadStore.ts Optimization
+**Step 3: Update Song Titles (Optional)**
+Consider renaming titles to match new order:
+- "12. TESTIFY (VERSION 2)" becomes "4. TESTIFY (VERSION 2)"
 
+---
+
+## Part 2: MP3 Loading Optimization
+
+### Current Challenges
+- Large MP3 files (14 stems for Testify V2) compete for bandwidth
+- HTML5 streaming mode requires buffering before playback
+- No server-side compression or CDN optimization
+
+### Optimization Strategies
+
+**Strategy 1: Audio Format Recommendations (Manual Action Required)**
+
+MP3 files can be optimized before upload using these settings:
+- **Bitrate**: 128kbps for practice/exercise tracks (smaller files, acceptable quality)
+- **Bitrate**: 192kbps for final/showcase tracks (good quality)
+- **Sample Rate**: 44.1kHz (standard)
+- **Channels**: Mono for individual stems (halves file size!)
+- **Format**: Consider AAC/M4A for even better compression at same quality
+
+You would need to re-export your audio files with these settings using software like:
+- Audacity (free)
+- Adobe Audition
+- Logic Pro / GarageBand
+
+**Strategy 2: Progressive Loading Enhancement (Code Changes)**
+
+Improve the current loading system:
+
+1. **Pre-buffer check before play button enables**
+   - Already implemented in previous changes
+   
+2. **Increase preload priority for critical stems**
+   - Master/Coaching and Instrumental load first
+   - Already implemented
+
+3. **Add audio loading states to UI**
+   - Show individual stem loading progress
+   - Indicate when stems are buffered
+
+4. **Consider lazy-loading non-priority stems**
+   - Load harmonies/other stems after playback starts
+   - This reduces initial load time
+
+**Strategy 3: Blob URL Caching (Already Implemented)**
+
+The current `audioPreloadStore.ts` already:
+- Caches downloaded audio as blob URLs
+- Uses LRU eviction (max 4 songs)
+- Preloads priority stems first
+
+**Strategy 4: Add Loading Skeleton for Stems**
+
+Show visual feedback while each stem loads:
+- Gray shimmer effect on unloaded stems
+- Green checkmark when stem is ready
+- Amber warning if stem failed to load
+
+---
+
+## Part 3: Implementation Summary
+
+### Database Changes
+| Change | Description |
+|--------|-------------|
+| Add `display_order` column | Integer column for explicit ordering |
+| Set order values | Position Testify V2 as song 4 |
+
+### Code Changes
+
+| File | Change |
+|------|--------|
+| `src/hooks/useSongs.ts` | Change order clause from `title` to `display_order` |
+| `src/pages/TrainingMode.tsx` | Add per-stem loading indicators (optional) |
+
+### Manual Recommendations (For You to Do Outside Lovable)
+
+| Task | Tool | Impact |
+|------|------|--------|
+| Convert stems to mono | Audacity | 50% file size reduction |
+| Reduce bitrate to 128kbps | Any audio editor | 30-50% size reduction |
+| Convert to AAC/M4A | FFmpeg | 20-30% better compression |
+
+Example FFmpeg command for optimal compression:
 ```text
-1. For songs with 10+ stems, preload in priority order
-2. Ensure priority stems (Master, Instrumental) finish first
-3. Update batch size from 3 to 2 for high-stem songs to reduce bandwidth competition
+ffmpeg -i input.mp3 -ac 1 -b:a 128k -ar 44100 output.mp3
 ```
 
----
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/hooks/useAudioPlayer.ts` | Add buffer tracking, staggered loading, readiness detection, increased tolerance |
-| `src/pages/TrainingMode.tsx` | Update UI for detailed loading state, use `isReadyToPlay` |
-| `src/stores/audioPreloadStore.ts` | Reduce concurrent requests for high-stem songs |
+This converts to mono, 128kbps, 44.1kHz sample rate.
 
 ---
 
-## Expected Improvements
+## New Song Order After Changes
 
-| Issue | Before | After |
-|-------|--------|-------|
-| Choppy playback on Testify V2 | Frequent stuttering | Smooth playback after buffer wait |
-| Play button timing | Available immediately | Available when audio ready |
-| Loading feedback | "Loading 45%" | "Buffering 5/14 tracks..." |
-| Sync tolerance (14 stems) | 0.12s | 0.15s |
-| Drift correction frequency | Every 1000ms | Every 1500ms for 14+ stems |
-| Concurrent network requests | 14 at once | 2-3 at once, staggered |
+| Order | Title | Stem Count |
+|-------|-------|------------|
+| 1 | TESTIFY EXERCISE | 9 stems |
+| 2 | THROWBACK EXERCISE | 6 stems |
+| 3 | DONT LEAVE EXERCISE | 12 stems |
+| 4 | TESTIFY (VERSION 2) | 14 stems |
+| 5 | BOUNCING ON A BLESSING | 8 stems |
 
 ---
 
-## Technical Considerations
+## Technical Details
 
-1. **Howler.js HTML5 mode** - Uses streaming which requires adequate buffer before playback
-2. **Mobile bandwidth** - More critical on mobile where bandwidth may be limited
-3. **Priority loading** - Master and Instrumental must be ready first since they define the timing
-4. **User feedback** - Clear indication that audio is preparing, not frozen
+### Files to Modify
+1. **Database**: Add `display_order` column and set values
+2. `src/hooks/useSongs.ts`: Update order clause
+
+### Expected Improvements
+- Songs appear in intended order regardless of title
+- Loading experience feels smoother with better feedback
+- Future flexibility to reorder songs without renaming
+
