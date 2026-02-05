@@ -1,94 +1,191 @@
 
-# Plan: Audio Encoding Shell Script
 
-## Overview
-Create a shell script at `scripts/encode-audio.sh` that automates the FFmpeg encoding workflow for new exercises, following the project's **mixdown-first loading strategy**.
+## Analysis Summary
 
----
+### What I Found
 
-## What the Script Will Do
+**Testing Results:**
+- Preview URL (`lovableproject.com`): Training Mode works correctly - mixdown loads, stems load in background, playback works, no crashes
+- Console logs show successful audio loading: "Mixdown ready (353.1s)", "All stems loaded in background"
+- Play/pause, stem controls, and UI all function properly
 
-1. **Encode mixdown** at 192kbps stereo AAC (`.m4a`) for high-quality initial playback
-2. **Encode all stems** at 128kbps stereo AAC (`.m4a`) for bandwidth-efficient background loading
-3. **Optional mono mode** for stems (further reduces file size by ~50%)
-4. **Preserve originals** - outputs to a separate folder or alongside originals with new extension
-
----
-
-## Script Location
-
+**Console Warnings (Non-Fatal):**
+The following warnings appear but do NOT cause crashes:
 ```
-scripts/
-  encode-audio.sh       <-- NEW
+Warning: Function components cannot be given refs.
+Check the render method of `AppShell`.
 ```
+This appears for:
+- `AnimatePresence` children (page components)
+- `MobileNav` component
+
+**Root Cause of Original Crash:**
+The "Maximum update depth exceeded" error was caused by the audio engine triggering React state updates during render, creating an infinite loop. This was previously fixed by:
+1. Moving `currentTime`/`duration` syncing from render phase to `useEffect` hooks in `useAudioEngine.ts`
+2. Using `subscribeOnChange` instead of `subscribe` for `useSyncExternalStore`
 
 ---
 
-## Usage Examples
+## Remaining Issues to Fix
 
-```bash
-# Encode a single exercise folder
-./scripts/encode-audio.sh public/audio/my-new-exercise
+### 1. Fix `forwardRef` Warnings in AppShell
 
-# Encode with mono stems (smaller files)
-./scripts/encode-audio.sh --mono-stems public/audio/my-new-exercise
+**Problem:** `AnimatePresence` tries to pass refs to page components, but the page components don't support `forwardRef`.
 
-# Dry-run to see what would be encoded
-./scripts/encode-audio.sh --dry-run public/audio/my-new-exercise
-```
+**Solution:** Wrap page components in an intermediary `div` so refs attach to the wrapper, not the function component directly.
 
----
+**File:** `src/components/layout/AppShell.tsx`
 
-## Technical Details
-
-### Input Requirements
-- Expects a folder containing:
-  - `mixdown.wav` (or `master.wav` / `full-mix.wav`)
-  - `stem-*.wav` files (or any other `.wav` files treated as stems)
-
-### Output
-- `mixdown.m4a` at 192kbps stereo
-- `*.m4a` for each stem at 128kbps stereo (or mono with `--mono-stems`)
-
-### FFmpeg Commands Used
-
-```bash
-# Mixdown (192kbps stereo)
-ffmpeg -i mixdown.wav -c:a aac -b:a 192k -ac 2 mixdown.m4a
-
-# Stems (128kbps stereo)
-ffmpeg -i stem.wav -c:a aac -b:a 128k -ac 2 stem.m4a
-
-# Stems (128kbps mono - optional)
-ffmpeg -i stem.wav -c:a aac -b:a 128k -ac 1 stem.m4a
+**Change:**
+Replace the current pattern:
+```tsx
+<AnimatePresence mode="wait">
+  <motion.div key={location.pathname} ...>
+    {children}
+  </motion.div>
+</AnimatePresence>
 ```
 
+The `motion.div` already handles the ref for AnimatePresence. The warnings likely come from other AnimatePresence usages (line 60-62 for MiniPlayer, line 64 for MobileNav).
+
+For `MobileNav` (line 64):
+```tsx
+{!hideNav && <MobileNav />}
+```
+This is outside AnimatePresence, so shouldn't cause the warning. The issue is that AnimatePresence at lines 60-62 wraps `MiniPlayer` which IS a motion component.
+
+Actually, looking more closely, the warnings come from React Router's component rendering through `AnimatePresence`. The solution is to ensure the motion.div properly intercepts the ref.
+
+### 2. Add Cleanup on TrainingMode Unmount
+
+**Problem:** Audio continues playing when navigating away from Training Mode.
+
+**Solution:** Add a cleanup effect that stops playback when the component unmounts.
+
+**File:** `src/pages/TrainingMode.tsx`
+
+**Change:** Add a `useEffect` cleanup:
+```tsx
+useEffect(() => {
+  return () => {
+    // Stop audio when leaving Training Mode
+    if (songHasRealAudio) {
+      webAudioEngine.pause();
+    }
+  };
+}, []);
+```
+
+### 3. Prevent Double Song Loading
+
+**Problem:** Console logs show the song loading twice in some cases:
+```
+"Mixdown-first loading strategy" appears twice
+"Song loaded: testify-exercise" appears twice
+```
+
+**Root Cause:** The `useAudioEngine` hook may be triggering song load twice due to React Strict Mode or dependency array issues.
+
+**Solution:** Add a guard in the loading effect to prevent duplicate loads.
+
+**File:** `src/hooks/useAudioEngine.ts`
+
+**Change:** Improve the song loading effect to check if already loading.
+
 ---
 
-## Script Features
+## Implementation Plan
 
-| Feature | Description |
-|---------|-------------|
-| Auto-detect mixdown | Looks for `mixdown.wav`, `master.wav`, or `full-mix.wav` |
-| Skip existing | Won't re-encode if `.m4a` already exists (use `--force` to override) |
-| Progress output | Shows encoding progress with file names |
-| Error handling | Exits cleanly if FFmpeg not installed or files missing |
-| Cross-platform | Works on macOS and Linux |
+### Step 1: Fix AnimatePresence ref warnings in AppShell (optional, cosmetic)
+
+The warnings don't cause crashes, but they clutter the console. We can wrap components passed to AnimatePresence in a container that properly handles refs.
+
+```tsx
+// No change needed - motion.div already handles refs
+// The warnings may be from development mode only
+```
+
+### Step 2: Add unmount cleanup in TrainingMode
+
+```tsx
+// Add near other useEffects in TrainingMode.tsx
+useEffect(() => {
+  return () => {
+    // Clean up audio when leaving Training Mode
+    if (hasRealAudio) {
+      webAudioEngine.stop();
+    }
+  };
+}, [hasRealAudio]);
+```
+
+### Step 3: Prevent duplicate song loads
+
+```tsx
+// In useAudioEngine.ts, add loading guard
+const isLoadingRef = useRef(false);
+
+useEffect(() => {
+  if (!currentSong || currentSong.id === prevSongIdRef.current) return;
+  if (isLoadingRef.current) return; // Skip if already loading
+  
+  isLoadingRef.current = true;
+  prevSongIdRef.current = currentSong.id;
+  
+  // ... existing loading logic ...
+  
+  webAudioEngine.loadSong(songConfig).finally(() => {
+    isLoadingRef.current = false;
+  });
+}, [currentSong?.id]);
+```
 
 ---
 
-## Files to Create
+## Technical Notes
 
-| File | Purpose |
-|------|---------|
-| `scripts/encode-audio.sh` | Main encoding script |
-| `docs/audio-encoding.md` | Documentation for the encoding workflow (optional) |
+### Why the Original Crash Happened
 
----
+The `useSyncExternalStore` hook in React requires:
+1. `getSnapshot` to return a referentially stable value
+2. `subscribe` to NOT call the listener immediately (or React thinks the store changed and re-renders, causing an infinite loop)
 
-## Implementation Notes
+The fix was to use `subscribeOnChange` which doesn't call the listener on subscription, only on actual changes.
 
-- The script will be POSIX-compatible (`#!/bin/bash`)
-- Includes a help flag (`--help`) with usage instructions
-- Will validate FFmpeg is installed before running
-- Outputs colored terminal messages for clarity
+### Audio Engine Architecture
+
+```text
+User Action (Play) -> initAudioEngine() -> AudioContext.resume() -> webAudioEngine.play()
+                                                                           |
+                                                                           v
+                                                            Creates AudioBufferSourceNodes
+                                                                           |
+                                                                           v
+                                                            Starts time tracking (RAF)
+                                                                           |
+                                                                           v
+                                                            Updates state -> notifyListeners
+                                                                           |
+                                                                           v
+                                                            useSyncExternalStore picks up change
+                                                                           |
+                                                                           v
+                                                            useEffect syncs to Zustand store
+```
+
+### Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/pages/TrainingMode.tsx` | Add unmount cleanup effect |
+| `src/hooks/useAudioEngine.ts` | Add loading guard to prevent duplicates |
+
+### Testing Checklist
+
+After implementation, verify:
+1. Navigate to Training Mode - no blank screen
+2. Press Play - audio plays
+3. Navigate away - audio stops
+4. Re-enter Training Mode - fresh session starts
+5. Check console - no "Maximum update depth" errors
+
