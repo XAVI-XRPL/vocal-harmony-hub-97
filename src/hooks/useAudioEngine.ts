@@ -53,7 +53,7 @@ interface UseAudioEngineReturn {
 }
 
 export function useAudioEngine(): UseAudioEngineReturn {
-  const { currentSong, updateCurrentTime, setDuration } = useAudioStore();
+  const currentSong = useAudioStore((state) => state.currentSong);
   
   // Track if we have real audio stems
   const hasRealAudio = currentSong?.stems.some(stem => stem.url && stem.url.length > 0) ?? false;
@@ -65,22 +65,22 @@ export function useAudioEngine(): UseAudioEngineReturn {
     () => webAudioEngine.getState()
   );
   
-  // Keep audio store in sync with engine state
+  // Keep audio store in sync with engine state (non-reactive to avoid infinite loops)
   const prevTimeRef = useRef<number>(0);
+  const prevDurationRef = useRef<number>(0);
   
-  useEffect(() => {
-    // Only update if time has actually changed significantly (avoid React queue errors)
-    if (Math.abs(engineState.currentTime - prevTimeRef.current) > 0.05) {
-      prevTimeRef.current = engineState.currentTime;
-      updateCurrentTime(engineState.currentTime);
-    }
-  }, [engineState.currentTime, updateCurrentTime]);
+  // Sync time/duration using refs to avoid triggering re-renders that cause loops
+  // This runs on every render but only calls store methods when values actually change
+  if (Math.abs(engineState.currentTime - prevTimeRef.current) > 0.05) {
+    prevTimeRef.current = engineState.currentTime;
+    // Use getState() to avoid reactive subscription
+    useAudioStore.getState().updateCurrentTime(engineState.currentTime);
+  }
   
-  useEffect(() => {
-    if (engineState.duration > 0) {
-      setDuration(engineState.duration);
-    }
-  }, [engineState.duration, setDuration]);
+  if (engineState.duration > 0 && engineState.duration !== prevDurationRef.current) {
+    prevDurationRef.current = engineState.duration;
+    useAudioStore.getState().setDuration(engineState.duration);
+  }
   
   // Load song when currentSong changes
   const prevSongIdRef = useRef<string | null>(null);
