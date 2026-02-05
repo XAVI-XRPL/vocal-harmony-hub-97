@@ -25,6 +25,9 @@ interface UseAudioEngineReturn {
   totalStemCount: number;
   stemLoadProgress: StemLoadProgress[];
   hasRealAudio: boolean;
+  mixdownReady: boolean;
+  allStemsReady: boolean;
+  mixdownProgress: number;
   
   // Controls
   init: () => Promise<void>;
@@ -125,10 +128,12 @@ export function useAudioEngine(): UseAudioEngineReturn {
     : 0;
   
   const isLoaded = engineState.playbackState !== 'idle' && engineState.playbackState !== 'loading';
+  // Can play if mixdown is ready (even if still loading stems) or if fully ready
   const isReadyToPlay = engineState.playbackState === 'ready' || 
                         engineState.playbackState === 'playing' || 
-                        engineState.playbackState === 'paused';
-  const isBuffering = engineState.playbackState === 'loading';
+                        engineState.playbackState === 'paused' ||
+                        engineState.mixdownReady;
+  const isBuffering = engineState.playbackState === 'loading' && !engineState.mixdownReady;
   const isPlaying = engineState.playbackState === 'playing';
   
   // Control callbacks
@@ -228,6 +233,9 @@ export function useAudioEngine(): UseAudioEngineReturn {
     totalStemCount: totalStems,
     stemLoadProgress: engineState.stemLoadProgress,
     hasRealAudio,
+    mixdownReady: engineState.mixdownReady,
+    allStemsReady: engineState.allStemsReady,
+    mixdownProgress: engineState.mixdownProgress,
     
     // Controls
     init,
