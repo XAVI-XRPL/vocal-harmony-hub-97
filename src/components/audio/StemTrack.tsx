@@ -28,15 +28,44 @@ interface StemTrackProps {
   loopStart?: number;
   loopEnd?: number;
   isLooping?: boolean;
+  // Optional engine-backed callbacks (if provided, these override store actions)
+  onVolumeChange?: (stemId: string, volume: number) => void;
+  onMuteToggle?: (stemId: string) => void;
+  onSoloToggle?: (stemId: string) => void;
 }
 
 export const StemTrack = forwardRef<HTMLDivElement, StemTrackProps>(
-  ({ stem, currentTime, duration, onSeek, loopStart = 0, loopEnd = 0, isLooping = false }, ref) => {
+  ({ stem, currentTime, duration, onSeek, loopStart = 0, loopEnd = 0, isLooping = false, onVolumeChange, onMuteToggle, onSoloToggle }, ref) => {
     const stemStates = useAudioStore((state) => state.stemStates);
-    const setStemVolume = useAudioStore((state) => state.setStemVolume);
-    const toggleStemMute = useAudioStore((state) => state.toggleStemMute);
-    const toggleStemSolo = useAudioStore((state) => state.toggleStemSolo);
+    const setStemVolumeStore = useAudioStore((state) => state.setStemVolume);
+    const toggleStemMuteStore = useAudioStore((state) => state.toggleStemMute);
+    const toggleStemSoloStore = useAudioStore((state) => state.toggleStemSolo);
     const isPlaying = useAudioStore((state) => state.isPlaying);
+
+    // Use engine callbacks if provided, otherwise fall back to store
+    const handleVolumeChange = (volume: number) => {
+      if (onVolumeChange) {
+        onVolumeChange(stem.id, volume);
+      } else {
+        setStemVolumeStore(stem.id, volume);
+      }
+    };
+
+    const handleMuteToggle = () => {
+      if (onMuteToggle) {
+        onMuteToggle(stem.id);
+      } else {
+        toggleStemMuteStore(stem.id);
+      }
+    };
+
+    const handleSoloToggle = () => {
+      if (onSoloToggle) {
+        onSoloToggle(stem.id);
+      } else {
+        toggleStemSoloStore(stem.id);
+      }
+    };
 
     const stemState = stemStates.find((s) => s.stemId === stem.id);
     const effectiveVolume = useEffectiveStemVolume(stem.id);
@@ -79,7 +108,7 @@ export const StemTrack = forwardRef<HTMLDivElement, StemTrackProps>(
           {/* Solo button */}
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onClick={() => toggleStemSolo(stem.id)}
+            onClick={handleSoloToggle}
             className={cn(
               "w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0",
               "transition-all duration-200",
@@ -107,7 +136,7 @@ export const StemTrack = forwardRef<HTMLDivElement, StemTrackProps>(
           {/* Mute button */}
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onClick={() => toggleStemMute(stem.id)}
+            onClick={handleMuteToggle}
             className={cn(
               "w-8 h-8 rounded-lg border flex items-center justify-center flex-shrink-0",
               "transition-all duration-200",
@@ -127,7 +156,7 @@ export const StemTrack = forwardRef<HTMLDivElement, StemTrackProps>(
           <div className="flex-1 min-w-0">
             <GlassSlider
               value={volume}
-              onChange={(v) => setStemVolume(stem.id, v)}
+              onChange={handleVolumeChange}
               color={stem.color}
               size="sm"
               disabled={isMuted}

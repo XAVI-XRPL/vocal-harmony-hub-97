@@ -147,27 +147,38 @@ class WebAudioEngine {
   // ============= Public API =============
   
   /**
-   * Initialize the AudioContext. MUST be called from a user gesture (click/tap).
+   * Ensure AudioContext and master gain node exist (no resume).
+   * Safe to call during background loading.
    */
-  async init(): Promise<void> {
-    if (this.audioContext?.state === 'running') {
-      return;
-    }
-    
+  private ensureContextCreated(): void {
     if (!this.audioContext) {
       this.audioContext = new AudioContext();
       
       // Create master gain
       this.masterGainNode = this.audioContext.createGain();
       this.masterGainNode.connect(this.audioContext.destination);
+      
+      console.log('🎵 AudioContext created');
     }
+  }
+  
+  /**
+   * Resume AudioContext. MUST be called from a user gesture (click/tap).
+   */
+  private async ensureContextRunning(): Promise<void> {
+    this.ensureContextCreated();
     
-    // Resume if suspended (mobile requirement)
-    if (this.audioContext.state === 'suspended') {
-      await this.audioContext.resume();
+    if (this.audioContext!.state === 'suspended') {
+      await this.audioContext!.resume();
+      console.log('🎵 AudioContext resumed');
     }
-    
-    console.log('🎵 WebAudioEngine initialized');
+  }
+  
+  /**
+   * Initialize the AudioContext. MUST be called from a user gesture (click/tap).
+   */
+  async init(): Promise<void> {
+    await this.ensureContextRunning();
   }
   
   /**
@@ -203,7 +214,8 @@ class WebAudioEngine {
     });
     
     try {
-      await this.ensureContext();
+      // Create context (no resume required for loading)
+      this.ensureContextCreated();
       
       // If we have a mixdown URL, use mixdown-first strategy
       if (config.mixdownUrl) {
@@ -255,7 +267,8 @@ class WebAudioEngine {
       return;
     }
     
-    this.ensureContext();
+    // Ensure context is running (play() should only be called after init())
+    this.ensureContextCreated();
     
     // Determine what to play based on current mode
     if (this.state.audioMode === 'mixdown' && this.mixdownBuffer) {
