@@ -133,19 +133,14 @@ export default function TrainingMode() {
 
   // Toast notification when all stems are ready
   useEffect(() => {
-    let isMounted = true;
-    
-    if (allStemsReady && !prevAllStemsReadyRef.current && mixdownReady && isMounted) {
+    if (allStemsReady && !prevAllStemsReadyRef.current && mixdownReady) {
       toast.success("Stem Mixer Ready", {
         description: "All stems loaded. Individual track controls are now available.",
         duration: 4000,
       });
     }
+
     prevAllStemsReadyRef.current = allStemsReady;
-    
-    return () => {
-      isMounted = false;
-    };
   }, [allStemsReady, mixdownReady]);
 
   // Simulate playback timer for mock songs (no real audio)
