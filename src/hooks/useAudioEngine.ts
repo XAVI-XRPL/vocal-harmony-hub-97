@@ -86,9 +86,14 @@ export function useAudioEngine(): UseAudioEngineReturn {
 
   // Load song when currentSong changes
   const prevSongIdRef = useRef<string | null>(null);
+  const isLoadingRef = useRef(false);
 
   useEffect(() => {
     if (!currentSong || currentSong.id === prevSongIdRef.current) return;
+    
+    // Prevent duplicate loads (React Strict Mode or dependency shifts)
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
 
     prevSongIdRef.current = currentSong.id;
 
@@ -96,6 +101,7 @@ export function useAudioEngine(): UseAudioEngineReturn {
     const stemsWithAudio = currentSong.stems.filter((stem) => stem.url && stem.url.length > 0);
     if (stemsWithAudio.length === 0) {
       console.log('No audio stems for this song');
+      isLoadingRef.current = false;
       return;
     }
 
@@ -114,7 +120,9 @@ export function useAudioEngine(): UseAudioEngineReturn {
 
     // Load song directly - don't call init() here as it needs user gesture
     // Loading can happen with AudioContext suspended
-    webAudioEngine.loadSong(songConfig);
+    webAudioEngine.loadSong(songConfig).finally(() => {
+      isLoadingRef.current = false;
+    });
 
     return () => {
       // Don't cleanup on unmount - let engine persist
