@@ -13,6 +13,9 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  Music,
+  Zap,
+  Check,
 } from "lucide-react";
 import { IconButton } from "@/components/ui/icon-button";
 import { GlassButton } from "@/components/ui/glass-button";
@@ -25,6 +28,7 @@ import { LoopControls } from "@/components/audio/LoopControls";
 import { LoopRegion } from "@/components/audio/LoopRegion";
 import { StudioBackground } from "@/components/layout/StudioBackground";
 import { AudioLoadingOverlay } from "@/components/audio/AudioLoadingOverlay";
+import { StemLoadingProgress } from "@/components/audio/StemLoadingProgress";
 import { useSong } from "@/hooks/useSongs";
 import { generateMockWaveform } from "@/data/mockSongs";
 import { useAudioStore } from "@/stores/audioStore";
@@ -77,6 +81,7 @@ export default function TrainingMode() {
     isBuffering,
     bufferedCount,
     totalStemCount,
+    stemLoadProgress,
     init: initAudioEngine,
     audioMode,
     mixdownReady,
@@ -290,6 +295,28 @@ export default function TrainingMode() {
             </div>
           </div>
           <div className="flex items-center gap-1">
+            {/* Audio Mode Badge */}
+            {songHasRealAudio && mixdownReady && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className={cn(
+                  "flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-semibold",
+                  audioMode === 'mixdown' && "bg-blue-500/20 text-blue-400",
+                  audioMode === 'crossfading' && "bg-purple-500/20 text-purple-400",
+                  audioMode === 'stems' && "bg-green-500/20 text-green-400"
+                )}
+              >
+                {audioMode === 'mixdown' && <Music className="w-3 h-3" />}
+                {audioMode === 'crossfading' && <Zap className="w-3 h-3" />}
+                {audioMode === 'stems' && <Check className="w-3 h-3" />}
+                <span>
+                  {audioMode === 'mixdown' && 'MIX'}
+                  {audioMode === 'crossfading' && '...'}
+                  {audioMode === 'stems' && 'STEMS'}
+                </span>
+              </motion.div>
+            )}
             {/* Loading indicator */}
             {songHasRealAudio && !isLoaded && (
               <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/20 text-primary text-xs">
@@ -302,7 +329,6 @@ export default function TrainingMode() {
                 </span>
               </div>
             )}
-            {/* Buffering indicator (shown when loaded but still buffering) */}
             {/* Buffering indicator (shown when loaded but still buffering) */}
             {songHasRealAudio && isLoaded && isBuffering && (
               <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-warning/20 text-warning text-xs">
@@ -426,6 +452,17 @@ export default function TrainingMode() {
             </div>
           </GlassCard>
         </motion.div>
+
+        {/* Stem Loading Progress - Show while stems are loading in background */}
+        {songHasRealAudio && mixdownReady && !allStemsReady && (
+          <StemLoadingProgress
+            stemLoadProgress={stemLoadProgress}
+            audioMode={audioMode}
+            allStemsReady={allStemsReady}
+            isPlaying={isPlaying}
+            mixdownReady={mixdownReady}
+          />
+        )}
 
         {/* Tempo & Loop Controls - Expandable */}
         <motion.div
