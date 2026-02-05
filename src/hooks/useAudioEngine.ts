@@ -112,10 +112,9 @@ export function useAudioEngine(): UseAudioEngineReturn {
       duration: currentSong.duration,
     };
 
-    // Initialize and load
-    webAudioEngine.init().then(() => {
-      webAudioEngine.loadSong(songConfig);
-    });
+    // Load song directly - don't call init() here as it needs user gesture
+    // Loading can happen with AudioContext suspended
+    webAudioEngine.loadSong(songConfig);
 
     return () => {
       // Don't cleanup on unmount - let engine persist

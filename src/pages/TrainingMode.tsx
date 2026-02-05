@@ -89,6 +89,17 @@ export default function TrainingMode() {
     mixdownReady,
     mixdownProgress,
     allStemsReady,
+    // Engine control functions
+    togglePlayPause: engineTogglePlayPause,
+    setPlaybackRate: engineSetPlaybackRate,
+    setLoop: engineSetLoop,
+    toggleLoop: engineToggleLoop,
+    clearLoop: engineClearLoop,
+    stop: engineStop,
+    setStemVolume: engineSetStemVolume,
+    setStemMuted: engineSetStemMuted,
+    setStemSolo: engineSetStemSolo,
+    setMasterMuted: engineSetMasterMuted,
   } = useAudioEngine();
 
   // Practice session tracking
@@ -105,17 +116,108 @@ export default function TrainingMode() {
     playbackRate,
     stemStates,
     setCurrentSong,
-    togglePlayPause,
+    togglePlayPause: storeTogglePlayPause,
     seek,
-    setLoop,
-    toggleLoop,
-    clearLoop,
-    setPlaybackRate,
+    setLoop: storeSetLoop,
+    toggleLoop: storeToggleLoop,
+    clearLoop: storeClearLoop,
+    setPlaybackRate: storeSetPlaybackRate,
     resetMixer,
     resetAll,
-    toggleMasterMute,
+    toggleMasterMute: storeToggleMasterMute,
     updateCurrentTime,
+    setStemVolume: storeSetStemVolume,
+    toggleStemMute: storeToggleStemMute,
+    toggleStemSolo: storeToggleStemSolo,
   } = useAudioStore();
+
+  // Determine whether to use engine or store based on real audio
+  const songHasRealAudio = song?.stems.some(stem => stem.url && stem.url.length > 0) ?? false;
+
+  // Unified handlers that route to engine or store
+  const handlePlayPause = async () => {
+    if (songHasRealAudio) {
+      await initAudioEngine(); // User gesture - safe to resume AudioContext
+      engineTogglePlayPause();
+    } else {
+      storeTogglePlayPause();
+    }
+  };
+
+  const handlePlaybackRateChange = (rate: number) => {
+    if (songHasRealAudio) {
+      engineSetPlaybackRate(rate);
+    } else {
+      storeSetPlaybackRate(rate);
+    }
+  };
+
+  const handleToggleLoop = () => {
+    if (songHasRealAudio) {
+      engineToggleLoop();
+    } else {
+      storeToggleLoop();
+    }
+  };
+
+  const handleClearLoop = () => {
+    if (songHasRealAudio) {
+      engineClearLoop();
+    } else {
+      storeClearLoop();
+    }
+  };
+
+  const handleSetLoop = (start: number, end: number) => {
+    if (songHasRealAudio) {
+      engineSetLoop(start, end);
+    } else {
+      storeSetLoop(start, end);
+    }
+  };
+
+  const handleMasterMuteToggle = () => {
+    if (songHasRealAudio) {
+      const newMuted = !allMuted;
+      engineSetMasterMuted(newMuted);
+    } else {
+      storeToggleMasterMute();
+    }
+  };
+
+  const handleReset = () => {
+    resetAll();
+    if (songHasRealAudio) {
+      engineStop();
+    }
+  };
+
+  // Stem control handlers for engine
+  const handleStemVolumeChange = (stemId: string, volume: number) => {
+    if (songHasRealAudio) {
+      engineSetStemVolume(stemId, volume);
+    } else {
+      storeSetStemVolume(stemId, volume);
+    }
+  };
+
+  const handleStemMuteToggle = (stemId: string) => {
+    if (songHasRealAudio) {
+      const stemState = stemStates.find(s => s.stemId === stemId);
+      engineSetStemMuted(stemId, !stemState?.isMuted);
+    } else {
+      storeToggleStemMute(stemId);
+    }
+  };
+
+  const handleStemSoloToggle = (stemId: string) => {
+    if (songHasRealAudio) {
+      const stemState = stemStates.find(s => s.stemId === stemId);
+      engineSetStemSolo(stemId, !stemState?.isSolo);
+    } else {
+      storeToggleStemSolo(stemId);
+    }
+  };
 
   // Calculate master volume/mute from stem states
   const hasSoloedStems = stemStates.some(s => s.isSolo);
@@ -241,34 +343,31 @@ export default function TrainingMode() {
   };
 
   const handleSetLoopStart = () => {
-    setLoop(currentTime, loopEnd > currentTime ? loopEnd : duration);
+    handleSetLoop(currentTime, loopEnd > currentTime ? loopEnd : duration);
   };
 
   const handleSetLoopEnd = () => {
     if (currentTime > loopStart) {
-      setLoop(loopStart, currentTime);
+      handleSetLoop(loopStart, currentTime);
     }
   };
 
   // Handle drag-to-select loop region on waveform
   const handleLoopSelect = (start: number, end: number) => {
-    setLoop(start, end);
+    handleSetLoop(start, end);
   };
 
   // Handle dragging individual loop markers
   const handleLoopStartChange = (time: number) => {
-    setLoop(time, loopEnd);
+    handleSetLoop(time, loopEnd);
   };
 
   const handleLoopEndChange = (time: number) => {
-    setLoop(loopStart, time);
+    handleSetLoop(loopStart, time);
   };
 
   // Generate master waveform from all stems combined
   const masterWaveform = generateMockWaveform(200);
-
-  // Check if this song has real audio
-  const songHasRealAudio = song.stems.some(stem => stem.url && stem.url.length > 0);
 
   // Show loading overlay when audio needs to buffer
   // With mixdown-first strategy, dismiss overlay once mixdown is ready
@@ -372,12 +471,7 @@ export default function TrainingMode() {
               size="sm"
               className="h-8 px-2 text-xs"
               icon={<RotateCcw className="w-3.5 h-3.5" />}
-              onClick={() => {
-                resetAll();
-                if (hasRealAudio) {
-                  seekTo(0);
-                }
-              }}
+              onClick={handleReset}
             >
               Reset
             </GlassButton>
@@ -418,7 +512,7 @@ export default function TrainingMode() {
               {/* Master Mute Button */}
               <motion.button
                 whileTap={{ scale: 0.9 }}
-                onClick={toggleMasterMute}
+                onClick={handleMasterMuteToggle}
                 className={cn(
                   "w-7 h-7 rounded-lg border flex items-center justify-center transition-all",
                   allMuted
@@ -477,7 +571,7 @@ export default function TrainingMode() {
                   height={40}
                   onLoopStartChange={handleLoopStartChange}
                   onLoopEndChange={handleLoopEndChange}
-                  onClearLoop={clearLoop}
+                  onClearLoop={handleClearLoop}
                 />
               )}
             </div>
@@ -542,7 +636,7 @@ export default function TrainingMode() {
                 {/* Tempo Control */}
                 <TempoControl
                   playbackRate={playbackRate}
-                  onPlaybackRateChange={setPlaybackRate}
+                  onPlaybackRateChange={handlePlaybackRateChange}
                 />
 
                 {/* Loop Controls */}
@@ -554,8 +648,8 @@ export default function TrainingMode() {
                   isLooping={isLooping}
                   onSetLoopStart={handleSetLoopStart}
                   onSetLoopEnd={handleSetLoopEnd}
-                  onToggleLoop={toggleLoop}
-                  onClearLoop={clearLoop}
+                  onToggleLoop={handleToggleLoop}
+                  onClearLoop={handleClearLoop}
                 />
               </motion.div>
             )}
@@ -579,6 +673,9 @@ export default function TrainingMode() {
                 loopStart={loopStart}
                 loopEnd={loopEnd}
                 isLooping={isLooping}
+                onVolumeChange={handleStemVolumeChange}
+                onMuteToggle={handleStemMuteToggle}
+                onSoloToggle={handleStemSoloToggle}
               />
             </motion.div>
           ))}
@@ -625,11 +722,7 @@ export default function TrainingMode() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={async () => {
-                // CRITICAL: AudioContext must be initialized from user gesture for mobile
-                await initAudioEngine();
-                togglePlayPause();
-              }}
+              onClick={handlePlayPause}
               disabled={songHasRealAudio && !isReadyToPlay}
               className={cn(
                 "w-14 h-14 rounded-full flex items-center justify-center",
