@@ -96,6 +96,8 @@ export function useAudioPlayer() {
   const bufferedStemsRef = useRef<Set<string>>(new Set());
   // Track loaded stem count to avoid stale closure in timeout callbacks
   const loadedCountRef = useRef<number>(0);
+  // Track ready state to avoid stale closure in timeout callbacks
+  const isReadyToPlayRef = useRef<boolean>(false);
   
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -104,6 +106,11 @@ export function useAudioPlayer() {
   const [totalStemCount, setTotalStemCount] = useState(0);
   const [isBuffering, setIsBuffering] = useState(true);
   const [isReadyToPlay, setIsReadyToPlay] = useState(false);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    isReadyToPlayRef.current = isReadyToPlay;
+  }, [isReadyToPlay]);
 
   const {
     currentSong,
@@ -410,7 +417,8 @@ export function useAudioPlayer() {
     // Set a timeout to mark ready even if onplay hasn't fired for all stems
     // This handles cases where preloaded blob URLs don't fire onplay
     const readyTimeout = setTimeout(() => {
-      if (!isReadyToPlay && loadedCountRef.current >= minRequiredBuffered) {
+      // Use ref to get current isReadyToPlay value (avoids stale closure)
+      if (!isReadyToPlayRef.current && loadedCountRef.current >= minRequiredBuffered) {
         console.log(`Buffer ready timeout - marking ready with ${loadedCountRef.current} loaded stems`);
         setIsReadyToPlay(true);
         setIsBuffering(false);
