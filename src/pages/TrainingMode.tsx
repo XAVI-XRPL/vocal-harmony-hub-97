@@ -24,6 +24,7 @@ import { TempoControl } from "@/components/audio/TempoControl";
 import { LoopControls } from "@/components/audio/LoopControls";
 import { LoopRegion } from "@/components/audio/LoopRegion";
 import { StudioBackground } from "@/components/layout/StudioBackground";
+import { AudioLoadingOverlay } from "@/components/audio/AudioLoadingOverlay";
 import { useSong } from "@/hooks/useSongs";
 import { generateMockWaveform } from "@/data/mockSongs";
 import { useAudioStore } from "@/stores/audioStore";
@@ -244,9 +245,23 @@ export default function TrainingMode() {
   // Check if this song has real audio
   const songHasRealAudio = song.stems.some(stem => stem.url && stem.url.length > 0);
 
+  // Show loading overlay when audio needs to buffer
+  const showLoadingOverlay = songHasRealAudio && (!isLoaded || !isReadyToPlay);
+
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden">
       <StudioBackground />
+      
+      {/* Audio Loading Pre-screen */}
+      <AudioLoadingOverlay
+        isVisible={showLoadingOverlay}
+        loadingProgress={loadingProgress}
+        bufferedCount={bufferedCount}
+        totalStemCount={totalStemCount}
+        songTitle={song.title}
+        songArtist={song.artist}
+      />
+      
       {/* Header - Compact */}
       <div className="z-40 glass-card rounded-none border-x-0 border-t-0 flex-shrink-0">
         <div className="flex items-center justify-between h-12 px-3 safe-top">

@@ -43,7 +43,7 @@ const LOOP_RESET_DELAY_MS = 20;
 // Threshold for "high stem count" songs that need special handling
 const HIGH_STEM_COUNT_THRESHOLD = 10;
 // Minimum stems that must be buffered before playback can start
-const MIN_BUFFER_THRESHOLD_PERCENT = 0.5; // 50% of priority stems
+const MIN_BUFFER_THRESHOLD_PERCENT = 1.0; // 100% - require all stems before playback
 
 // Get sync tolerance based on stem count (more stems = slightly looser to avoid overcorrection)
 const getSyncTolerance = (stemCount: number): number => {
@@ -280,9 +280,8 @@ export function useAudioPlayer() {
     
     // Calculate minimum required buffered stems before playback
     const isHighStemCount = stemCount >= HIGH_STEM_COUNT_THRESHOLD;
-    const minRequiredBuffered = isHighStemCount 
-      ? Math.ceil(Math.min(4, stemCount) * MIN_BUFFER_THRESHOLD_PERCENT) + 2 // At least 4 priority stems
-      : Math.ceil(stemCount * 0.3); // 30% for normal songs
+    // Require ALL stems to be loaded before playback for smooth experience
+    const minRequiredBuffered = stemCount;
 
     // Check if stems are preloaded in cache
     const preloadStore = useAudioPreloadStore.getState();
@@ -418,12 +417,13 @@ export function useAudioPlayer() {
     // This handles cases where preloaded blob URLs don't fire onplay
     const readyTimeout = setTimeout(() => {
       // Use ref to get current isReadyToPlay value (avoids stale closure)
-      if (!isReadyToPlayRef.current && loadedCountRef.current >= minRequiredBuffered) {
+      // Only mark ready when ALL stems are loaded
+      if (!isReadyToPlayRef.current && loadedCountRef.current >= stemCount) {
         console.log(`Buffer ready timeout - marking ready with ${loadedCountRef.current} loaded stems`);
         setIsReadyToPlay(true);
         setIsBuffering(false);
       }
-    }, isHighStemCount ? 1500 : 800);
+    }, isHighStemCount ? 3000 : 2000);
     
     return () => clearTimeout(readyTimeout);
   }, [cleanup, setDuration]);
