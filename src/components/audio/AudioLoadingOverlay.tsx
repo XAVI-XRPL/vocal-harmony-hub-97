@@ -1,6 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Music2, Volume2, Waves, CheckCircle } from "lucide-react";
+import { Loader2, Music2, Volume2, Waves, CheckCircle, Radio } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,9 @@ interface AudioLoadingOverlayProps {
   songTitle?: string;
   songArtist?: string;
   audioMode?: 'mixdown' | 'crossfading' | 'stems';
+  mixdownReady?: boolean;
+  mixdownProgress?: number;
+  allStemsReady?: boolean;
 }
 
 export function AudioLoadingOverlay({
@@ -21,29 +24,54 @@ export function AudioLoadingOverlay({
   totalStemCount,
   songTitle,
   songArtist,
-  audioMode = 'stems',
+  audioMode = 'mixdown',
+  mixdownReady = false,
+  mixdownProgress = 0,
+  allStemsReady = false,
 }: AudioLoadingOverlayProps) {
-  // Calculate phase based on progress
-  const isLoadingFiles = loadingProgress < 100;
-  
-  // Phase messaging based on Web Audio loading
+  // Phase messaging based on mixdown-first loading strategy
   let phase = "Loading audio...";
-  let phaseDetail = "Preparing stems for playback";
+  let phaseDetail = "Preparing for playback";
+  let showStemProgress = false;
   
-  if (bufferedCount === 0) {
-    phase = "Initializing...";
-    phaseDetail = "Setting up audio engine";
-  } else if (isLoadingFiles) {
-    phase = "Decoding stems...";
-    phaseDetail = `${bufferedCount} of ${totalStemCount} tracks decoded`;
-  } else {
+  if (!mixdownReady && mixdownProgress < 100) {
+    // Phase 1: Loading mixdown
+    phase = "Loading full mix...";
+    phaseDetail = "Getting ready for instant playback";
+  } else if (mixdownReady && !allStemsReady) {
+    // Phase 2: Mixdown ready, stems loading in background
+    // This phase is usually not visible since we dismiss overlay when mixdown is ready
+    phase = "Ready to play!";
+    phaseDetail = `Loading stems in background (${bufferedCount}/${totalStemCount})`;
+    showStemProgress = true;
+  } else if (audioMode === 'crossfading') {
+    // Phase 3: Crossfading
+    phase = "Activating stems...";
+    phaseDetail = "Crossfading to individual tracks";
+  } else if (allStemsReady) {
+    // Phase 4: All ready
     phase = "Almost ready...";
     phaseDetail = "Preparing synchronized playback";
+  } else if (bufferedCount === 0) {
+    phase = "Initializing...";
+    phaseDetail = "Setting up audio engine";
+  } else {
+    phase = "Decoding stems...";
+    phaseDetail = `${bufferedCount} of ${totalStemCount} tracks decoded`;
+    showStemProgress = true;
   }
   
-  const progress = totalStemCount > 0
-    ? (bufferedCount / totalStemCount) * 100
-    : loadingProgress;
+  // Calculate progress
+  let progress: number;
+  if (!mixdownReady) {
+    // Show mixdown progress
+    progress = mixdownProgress;
+  } else if (showStemProgress && totalStemCount > 0) {
+    // Show stem progress
+    progress = (bufferedCount / totalStemCount) * 100;
+  } else {
+    progress = loadingProgress;
+  }
 
   return (
     <AnimatePresence>
@@ -79,14 +107,18 @@ export function AudioLoadingOverlay({
             transition={{ delay: 0.1, type: "spring", stiffness: 200 }}
             className="relative z-10 flex flex-col items-center gap-6 px-8 max-w-sm w-full"
           >
-            {/* Icon with Web Audio waveform animation */}
+            {/* Icon with animation */}
             <motion.div
               className="relative"
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
             >
               <div className="w-20 h-20 rounded-2xl gradient-bg flex items-center justify-center shadow-lg shadow-primary/30">
-                <Waves className="w-10 h-10 text-primary-foreground" />
+                {mixdownReady ? (
+                  <Radio className="w-10 h-10 text-primary-foreground" />
+                ) : (
+                  <Waves className="w-10 h-10 text-primary-foreground" />
+                )}
               </div>
               {/* Loading spinner around icon */}
               <motion.div
@@ -119,26 +151,27 @@ export function AudioLoadingOverlay({
 
               <Progress value={progress} className="h-2" />
 
-              {/* Stem counter with detail */}
-              {totalStemCount > 0 && (
-                <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                  <Volume2 className="w-3 h-3" />
-                  <span>{phaseDetail}</span>
-                </div>
-              )}
+              {/* Detail text */}
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                <Volume2 className="w-3 h-3" />
+                <span>{phaseDetail}</span>
+              </div>
             </div>
 
-            {/* Web Audio API indicator */}
+            {/* Status indicator */}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
               <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               <span className="text-xs text-primary font-medium">
-                Web Audio Engine
+                {mixdownReady ? "Mixdown-First Loading" : "Web Audio Engine"}
               </span>
             </div>
 
-            {/* Preparing hint */}
+            {/* Hint */}
             <p className="text-xs text-muted-foreground text-center">
-              Decoding audio for sample-accurate sync...
+              {mixdownReady 
+                ? "Full mix ready – stems loading in background"
+                : "Loading full mix for instant playback..."
+              }
             </p>
           </motion.div>
         </motion.div>

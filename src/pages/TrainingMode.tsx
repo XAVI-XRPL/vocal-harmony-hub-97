@@ -79,6 +79,9 @@ export default function TrainingMode() {
     totalStemCount,
     init: initAudioEngine,
     audioMode,
+    mixdownReady,
+    mixdownProgress,
+    allStemsReady,
   } = useAudioEngine();
 
   // Practice session tracking
@@ -249,7 +252,8 @@ export default function TrainingMode() {
   const songHasRealAudio = song.stems.some(stem => stem.url && stem.url.length > 0);
 
   // Show loading overlay when audio needs to buffer
-  const showLoadingOverlay = songHasRealAudio && (!isLoaded || !isReadyToPlay);
+  // With mixdown-first strategy, dismiss overlay once mixdown is ready
+  const showLoadingOverlay = songHasRealAudio && !mixdownReady && !isReadyToPlay;
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden">
@@ -263,6 +267,10 @@ export default function TrainingMode() {
         totalStemCount={totalStemCount}
         songTitle={song.title}
         songArtist={song.artist}
+        audioMode={audioMode}
+        mixdownReady={mixdownReady}
+        mixdownProgress={mixdownProgress}
+        allStemsReady={allStemsReady}
       />
       
       {/* Header - Compact */}

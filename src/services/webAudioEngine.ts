@@ -2,8 +2,12 @@
  * Web Audio API Engine
  * 
  * A singleton service that manages sample-accurate multi-stem audio playback
- * using the Web Audio API. Replaces Howler.js/HTML5 Audio for better mobile
- * performance and zero-drift synchronization.
+ * using the Web Audio API. Implements a mixdown-first loading strategy:
+ * 
+ * Phase 1: Load and play mixdown immediately (~1-2 seconds)
+ * Phase 2: Background-load all stems while mixdown plays
+ * Phase 3: Crossfade from mixdown to stems (200ms)
+ * Phase 4: Stem mixer fully active
  * 
  * Architecture:
  * - Single AudioContext (one clock = no drift)
@@ -33,7 +37,9 @@ export interface EngineState {
   currentTime: number;
   duration: number;
   mixdownProgress: number; // 0-100
+  mixdownReady: boolean;
   stemLoadProgress: StemLoadProgress[];
+  allStemsReady: boolean;
   isLooping: boolean;
   loopStart: number;
   loopEnd: number;
@@ -70,6 +76,10 @@ interface StemData {
   isSolo: boolean;
 }
 
+// ============= Constants =============
+
+const CROSSFADE_DURATION = 0.2; // 200ms crossfade
+
 // ============= Singleton Engine =============
 
 class WebAudioEngine {
@@ -94,7 +104,9 @@ class WebAudioEngine {
     currentTime: 0,
     duration: 0,
     mixdownProgress: 0,
+    mixdownReady: false,
     stemLoadProgress: [],
+    allStemsReady: false,
     isLooping: false,
     loopStart: 0,
     loopEnd: 0,
@@ -115,9 +127,13 @@ class WebAudioEngine {
   
   // Current song config
   private currentSongId: string | null = null;
+  private currentSongConfig: SongConfig | null = null;
   
   // Wake Lock
   private wakeLock: WakeLockSentinel | null = null;
+  
+  // Background loading promise
+  private backgroundLoadPromise: Promise<void> | null = null;
   
   private constructor() {}
   
@@ -155,7 +171,8 @@ class WebAudioEngine {
   }
   
   /**
-   * Load a song with optional mixdown-first strategy.
+   * Load a song with mixdown-first strategy.
+   * If mixdownUrl is provided, it plays immediately while stems load in background.
    */
   async loadSong(config: SongConfig): Promise<void> {
     // Abort any pending loads
@@ -163,6 +180,7 @@ class WebAudioEngine {
     this.cleanup();
     
     this.currentSongId = config.songId;
+    this.currentSongConfig = config;
     this.abortController = new AbortController();
     
     // Initialize stem progress tracking
@@ -179,26 +197,35 @@ class WebAudioEngine {
       currentTime: 0,
       duration: config.duration || 0,
       mixdownProgress: 0,
+      mixdownReady: false,
       stemLoadProgress: stemProgress,
+      allStemsReady: false,
     });
     
     try {
       await this.ensureContext();
       
-      // Strategy: Load all stems (no separate mixdown in this implementation)
-      // Could be enhanced to load mixdown first if URLs are provided
-      await this.loadAllStems(config.stems);
-      
-      // Get duration from first loaded buffer
-      const firstStem = Array.from(this.stems.values()).find(s => s.buffer);
-      if (firstStem?.buffer) {
-        this.updateState({ duration: firstStem.buffer.duration });
+      // If we have a mixdown URL, use mixdown-first strategy
+      if (config.mixdownUrl) {
+        console.log('📻 Mixdown-first loading strategy');
+        await this.loadMixdownFirst(config);
+      } else {
+        // Fallback: load all stems (no mixdown available)
+        console.log('🎹 Loading all stems (no mixdown)');
+        await this.loadAllStems(config.stems);
+        
+        // Get duration from first loaded buffer
+        const firstStem = Array.from(this.stems.values()).find(s => s.buffer);
+        if (firstStem?.buffer) {
+          this.updateState({ duration: firstStem.buffer.duration });
+        }
+        
+        this.updateState({
+          playbackState: 'ready',
+          audioMode: 'stems',
+          allStemsReady: true,
+        });
       }
-      
-      this.updateState({
-        playbackState: 'ready',
-        audioMode: 'stems',
-      });
       
       console.log(`✓ Song loaded: ${config.songId}`);
     } catch (error) {
@@ -216,13 +243,30 @@ class WebAudioEngine {
    * Start or resume playback.
    */
   play(): void {
-    if (this.state.playbackState !== 'ready' && this.state.playbackState !== 'paused') {
+    // Can play in 'ready' or 'paused' state
+    // Also allow playing if mixdown is ready (even if stems aren't)
+    const canPlay = 
+      this.state.playbackState === 'ready' || 
+      this.state.playbackState === 'paused' ||
+      (this.state.playbackState === 'loading' && this.state.mixdownReady);
+    
+    if (!canPlay) {
       console.warn('Cannot play: not ready or paused');
       return;
     }
     
     this.ensureContext();
-    this.createAndStartSources(this.state.currentTime);
+    
+    // Determine what to play based on current mode
+    if (this.state.audioMode === 'mixdown' && this.mixdownBuffer) {
+      this.createAndStartMixdownSource(this.state.currentTime);
+    } else if (this.state.audioMode === 'stems' || this.state.allStemsReady) {
+      this.createAndStartStemSources(this.state.currentTime);
+    } else if (this.mixdownBuffer) {
+      // Fallback to mixdown if stems not ready
+      this.createAndStartMixdownSource(this.state.currentTime);
+    }
+    
     this.updateState({ playbackState: 'playing' });
     this.startTimeTracking();
     this.acquireWakeLock();
@@ -258,7 +302,13 @@ class WebAudioEngine {
     if (this.state.playbackState === 'playing') {
       // Stop current sources and restart at new position
       this.stopAllSources();
-      this.createAndStartSources(clampedTime);
+      
+      if (this.state.audioMode === 'stems' && this.state.allStemsReady) {
+        this.createAndStartStemSources(clampedTime);
+      } else if (this.mixdownBuffer) {
+        this.createAndStartMixdownSource(clampedTime);
+      }
+      
       this.updateState({ currentTime: clampedTime });
     } else {
       // Just update the position
@@ -273,8 +323,10 @@ class WebAudioEngine {
     this.stopAllSources();
     this.stopTimeTracking();
     
+    const isReady = this.stems.size > 0 || this.mixdownBuffer !== null;
+    
     this.updateState({
-      playbackState: this.stems.size > 0 ? 'ready' : 'idle',
+      playbackState: isReady ? 'ready' : 'idle',
       currentTime: 0,
     });
     
@@ -362,7 +414,12 @@ class WebAudioEngine {
     const clampedRate = Math.max(0.5, Math.min(2, rate));
     this.updateState({ playbackRate: clampedRate });
     
-    // Update all active source nodes
+    // Update mixdown source if playing
+    if (this.mixdownSourceNode) {
+      this.mixdownSourceNode.playbackRate.value = clampedRate;
+    }
+    
+    // Update all active stem source nodes
     this.stems.forEach(stem => {
       if (stem.sourceNode) {
         stem.sourceNode.playbackRate.value = clampedRate;
@@ -428,6 +485,8 @@ class WebAudioEngine {
     }
     
     this.currentSongId = null;
+    this.currentSongConfig = null;
+    this.backgroundLoadPromise = null;
     
     this.updateState({
       playbackState: 'idle',
@@ -435,7 +494,9 @@ class WebAudioEngine {
       currentTime: 0,
       duration: 0,
       mixdownProgress: 0,
+      mixdownReady: false,
       stemLoadProgress: [],
+      allStemsReady: false,
     });
   }
   
@@ -446,23 +507,245 @@ class WebAudioEngine {
     return this.audioContext?.state === 'running';
   }
   
-  // ============= Private Methods =============
+  // ============= Mixdown-First Loading =============
   
-  private async ensureContext(): Promise<void> {
-    if (!this.audioContext) {
-      await this.init();
+  /**
+   * Phase 1: Load and play mixdown immediately
+   * Phase 2: Background load all stems
+   * Phase 3: Crossfade to stems when ready
+   */
+  private async loadMixdownFirst(config: SongConfig): Promise<void> {
+    if (!config.mixdownUrl || !this.audioContext || !this.masterGainNode) {
+      throw new Error('Mixdown URL or AudioContext not available');
     }
-    if (this.audioContext?.state === 'suspended') {
-      await this.audioContext.resume();
+    
+    // Create mixdown gain node
+    this.mixdownGainNode = this.audioContext.createGain();
+    this.mixdownGainNode.connect(this.masterGainNode);
+    
+    // Phase 1: Load mixdown
+    console.log('📻 Phase 1: Loading mixdown...');
+    try {
+      const response = await fetch(config.mixdownUrl, {
+        signal: this.abortController?.signal,
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status} loading mixdown`);
+      }
+      
+      // Track download progress
+      const contentLength = response.headers.get('content-length');
+      const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+      let receivedBytes = 0;
+      
+      const reader = response.body?.getReader();
+      const chunks: Uint8Array[] = [];
+      
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          chunks.push(value);
+          receivedBytes += value.length;
+          
+          if (totalBytes > 0) {
+            const progress = Math.round((receivedBytes / totalBytes) * 80);
+            this.updateState({ mixdownProgress: progress });
+          }
+        }
+      }
+      
+      // Combine chunks into single array buffer
+      const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+      const arrayBuffer = new ArrayBuffer(totalLength);
+      const uint8Array = new Uint8Array(arrayBuffer);
+      let offset = 0;
+      for (const chunk of chunks) {
+        uint8Array.set(chunk, offset);
+        offset += chunk.length;
+      }
+      
+      this.updateState({ mixdownProgress: 90 });
+      
+      // Decode mixdown
+      this.mixdownBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+      
+      // Update state - mixdown is ready!
+      this.updateState({
+        mixdownProgress: 100,
+        mixdownReady: true,
+        playbackState: 'ready',
+        duration: this.mixdownBuffer.duration,
+      });
+      
+      console.log(`✓ Mixdown ready (${this.mixdownBuffer.duration.toFixed(1)}s)`);
+      
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') throw error;
+      console.error('Failed to load mixdown:', error);
+      // Fall back to loading stems directly
+      await this.loadAllStems(config.stems);
+      return;
     }
+    
+    // Phase 2: Background load stems
+    console.log('📻 Phase 2: Loading stems in background...');
+    this.backgroundLoadPromise = this.loadStemsInBackground(config.stems);
+    
+    // Don't await - let stems load in background
+    this.backgroundLoadPromise.then(() => {
+      console.log('✓ All stems loaded in background');
+      
+      // If currently playing mixdown, crossfade to stems
+      if (this.state.playbackState === 'playing' && this.state.audioMode === 'mixdown') {
+        this.crossfadeToStems();
+      } else {
+        // Just mark stems as ready
+        this.updateState({
+          audioMode: 'stems',
+          allStemsReady: true,
+        });
+      }
+    }).catch(error => {
+      if ((error as Error).name !== 'AbortError') {
+        console.error('Background stem loading failed:', error);
+      }
+    });
   }
+  
+  /**
+   * Load all stems in parallel in the background.
+   */
+  private async loadStemsInBackground(stems: StemConfig[]): Promise<void> {
+    if (!this.audioContext || !this.masterGainNode) {
+      throw new Error('AudioContext not initialized');
+    }
+    
+    const loadPromises = stems.map(async (stemConfig) => {
+      try {
+        // Create gain node for this stem
+        const gainNode = this.audioContext!.createGain();
+        gainNode.gain.value = 0; // Start muted - will fade in during crossfade
+        gainNode.connect(this.masterGainNode!);
+        
+        // Initialize stem data
+        const stemData: StemData = {
+          id: stemConfig.id,
+          name: stemConfig.name,
+          buffer: null,
+          sourceNode: null,
+          gainNode,
+          volume: 0.8,
+          isMuted: false,
+          isSolo: false,
+        };
+        this.stems.set(stemConfig.id, stemData);
+        
+        // Fetch audio file
+        const response = await fetch(stemConfig.url, {
+          signal: this.abortController?.signal,
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const arrayBuffer = await response.arrayBuffer();
+        
+        // Update progress to show download complete
+        this.updateStemProgress(stemConfig.id, 80, false);
+        
+        // Decode audio data
+        const audioBuffer = await this.audioContext!.decodeAudioData(arrayBuffer);
+        
+        stemData.buffer = audioBuffer;
+        this.updateStemProgress(stemConfig.id, 100, true);
+        
+        console.log(`✓ Stem loaded: ${stemConfig.name}`);
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') throw error;
+        
+        console.error(`Failed to load stem ${stemConfig.name}:`, error);
+        this.updateStemProgress(stemConfig.id, 0, false, (error as Error).message);
+      }
+    });
+    
+    await Promise.all(loadPromises);
+    
+    // Verify at least some stems loaded
+    const loadedCount = Array.from(this.stems.values()).filter(s => s.buffer).length;
+    if (loadedCount === 0) {
+      throw new Error('No stems could be loaded');
+    }
+    
+    this.updateState({ allStemsReady: true });
+  }
+  
+  /**
+   * Phase 3: Crossfade from mixdown to stems.
+   * Uses AudioParam scheduling for sample-accurate transition.
+   */
+  private crossfadeToStems(): void {
+    if (!this.audioContext || !this.mixdownGainNode) {
+      console.warn('Cannot crossfade: context or mixdown not available');
+      return;
+    }
+    
+    const currentTime = this.getCurrentTime();
+    const contextTime = this.audioContext.currentTime;
+    
+    console.log(`🔀 Phase 3: Crossfading to stems at ${currentTime.toFixed(2)}s`);
+    
+    this.updateState({ audioMode: 'crossfading' });
+    
+    // Start all stem sources at current position (with gain at 0)
+    this.stems.forEach(stem => {
+      if (!stem.buffer || !this.audioContext) return;
+      
+      const source = this.audioContext.createBufferSource();
+      source.buffer = stem.buffer;
+      source.playbackRate.value = this.state.playbackRate;
+      source.connect(stem.gainNode);
+      
+      // Start at current playback position
+      source.start(0, currentTime);
+      
+      stem.sourceNode = source;
+      
+      // Schedule gain ramp up
+      stem.gainNode.gain.setValueAtTime(0, contextTime);
+      stem.gainNode.gain.linearRampToValueAtTime(stem.volume, contextTime + CROSSFADE_DURATION);
+    });
+    
+    // Schedule mixdown fade out
+    this.mixdownGainNode.gain.setValueAtTime(1, contextTime);
+    this.mixdownGainNode.gain.linearRampToValueAtTime(0, contextTime + CROSSFADE_DURATION);
+    
+    // After crossfade, stop mixdown and update state
+    setTimeout(() => {
+      if (this.mixdownSourceNode) {
+        try {
+          this.mixdownSourceNode.stop();
+        } catch (e) {}
+        this.mixdownSourceNode.disconnect();
+        this.mixdownSourceNode = null;
+      }
+      
+      this.updateState({ audioMode: 'stems' });
+      console.log('✓ Crossfade complete - stem mixer active');
+    }, CROSSFADE_DURATION * 1000 + 50); // Small buffer after fade
+  }
+  
+  // ============= Fallback: Load All Stems =============
   
   private async loadAllStems(stems: StemConfig[]): Promise<void> {
     if (!this.audioContext || !this.masterGainNode) {
       throw new Error('AudioContext not initialized');
     }
     
-    const loadPromises = stems.map(async (stemConfig, index) => {
+    const loadPromises = stems.map(async (stemConfig) => {
       try {
         // Create gain node for this stem
         const gainNode = this.audioContext!.createGain();
@@ -517,6 +800,8 @@ class WebAudioEngine {
     if (loadedCount === 0) {
       throw new Error('No stems could be loaded');
     }
+    
+    this.updateState({ allStemsReady: true });
   }
   
   private updateStemProgress(stemId: string, progress: number, loaded: boolean, error?: string): void {
@@ -526,7 +811,41 @@ class WebAudioEngine {
     this.updateState({ stemLoadProgress: newProgress });
   }
   
-  private createAndStartSources(startOffset: number): void {
+  // ============= Playback Control =============
+  
+  private createAndStartMixdownSource(startOffset: number): void {
+    if (!this.audioContext || !this.mixdownBuffer || !this.mixdownGainNode) return;
+    
+    // Record when we started playing
+    this.playStartTime = this.audioContext.currentTime;
+    this.playStartOffset = startOffset;
+    
+    // Create new source for mixdown
+    const source = this.audioContext.createBufferSource();
+    source.buffer = this.mixdownBuffer;
+    source.playbackRate.value = this.state.playbackRate;
+    source.connect(this.mixdownGainNode);
+    
+    // Ensure mixdown gain is at 1
+    this.mixdownGainNode.gain.value = 1;
+    
+    source.onended = () => {
+      if (this.state.playbackState === 'playing' && this.state.audioMode === 'mixdown') {
+        const currentTime = this.getCurrentTime();
+        if (currentTime >= this.state.duration - 0.1) {
+          this.stop();
+        }
+      }
+    };
+    
+    this.mixdownSourceNode = source;
+    source.start(0, startOffset);
+    
+    // Start loop checking
+    this.startLoopChecking();
+  }
+  
+  private createAndStartStemSources(startOffset: number): void {
     if (!this.audioContext) return;
     
     // Record when we started playing
@@ -542,6 +861,9 @@ class WebAudioEngine {
       source.buffer = stem.buffer;
       source.playbackRate.value = this.state.playbackRate;
       source.connect(stem.gainNode);
+      
+      // Set proper gain based on solo/mute state
+      this.updateStemGain(stem);
       
       // Handle end of playback
       source.onended = () => {
@@ -570,6 +892,7 @@ class WebAudioEngine {
   }
   
   private stopAllSources(): void {
+    // Stop stem sources
     this.stems.forEach(stem => {
       if (stem.sourceNode) {
         try {
@@ -668,7 +991,14 @@ class WebAudioEngine {
       if (currentTime >= this.state.loopEnd - 0.05) {
         console.log('Loop: jumping back to start');
         this.stopAllSources();
-        this.createAndStartSources(this.state.loopStart);
+        
+        // Restart appropriate sources
+        if (this.state.audioMode === 'stems' && this.state.allStemsReady) {
+          this.createAndStartStemSources(this.state.loopStart);
+        } else if (this.mixdownBuffer) {
+          this.createAndStartMixdownSource(this.state.loopStart);
+        }
+        
         this.updateState({ currentTime: this.state.loopStart });
       }
     }, 50); // Check every 50ms for responsive looping
@@ -678,6 +1008,15 @@ class WebAudioEngine {
     if (this.loopCheckIntervalId) {
       clearInterval(this.loopCheckIntervalId);
       this.loopCheckIntervalId = null;
+    }
+  }
+  
+  private async ensureContext(): Promise<void> {
+    if (!this.audioContext) {
+      await this.init();
+    }
+    if (this.audioContext?.state === 'suspended') {
+      await this.audioContext.resume();
     }
   }
   
