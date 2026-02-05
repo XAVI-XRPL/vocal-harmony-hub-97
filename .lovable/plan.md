@@ -1,192 +1,143 @@
 
-
-# Web Audio API Engine Rewrite
+# Mixdown-First Loading Strategy
 
 ## Overview
 
-The uploaded document describes a complete rewrite of the audio playback system from Howler.js/HTML5 Audio to Web Audio API. This is necessary because:
-
-- **Mobile browsers throttle concurrent `<audio>` elements** - they're designed for one-at-a-time playback
-- **Each `<audio>` element has its own buffer, decode pipeline, and clock** - 14 of them competing causes choppiness
-- **HTML5 Audio has no sample-accurate sync** - stems drift apart over time
-- **Mobile Safari and Chrome aggressively suspend background audio elements**
-
-The solution uses Web Audio API which decodes all audio into raw PCM buffers in memory, then plays them through a single `AudioContext` with one clock. This provides zero drift, zero chop, and smooth playback on mobile.
+Implementing the mixdown-first loading strategy where a pre-mixed master audio file plays immediately while individual stems decode in the background. This provides near-instant playback (1-2 seconds) instead of waiting for all stems to load.
 
 ---
 
-## Architecture Changes
+## Uploaded Master Files
 
-### Current System (Howler.js)
+| Uploaded File | Song ID | Destination Path |
+|---------------|---------|------------------|
+| 1.TESTIFY-_MASTER.mp3 | testify-exercise | /audio/testify-exercise/master.mp3 |
+| 2.THROWBACK-_MASTER.mp3 | throwback-exercise | /audio/throwback-exercise/master.mp3 |
+| 3.DONT-LEAVE-_MASTER.mp3 | dont-leave-exercise | /audio/dont-leave-exercise/master.mp3 |
+| 12.TESTIFY_VERSION-2-_MASTER.mp3 | testify-v2 | /audio/testify-v2/master.mp3 |
+
+---
+
+## Implementation Steps
+
+### Step 1: Copy Master Files to Public Directory
+
+Copy all 4 uploaded master tracks to their respective song folders with standardized naming.
+
+### Step 2: Update Database
+
+Update the `full_mix_url` column for each song:
 
 ```text
-+-------------------+     +-------------------+
-|   Howl Instance   | ... |   Howl Instance   |  (14 instances)
-+-------------------+     +-------------------+
-         |                         |
-+-------------------+     +-------------------+
-|  <audio> element  | ... |  <audio> element  |  (14 elements)
-+-------------------+     +-------------------+
-         |                         |
-      Separate decode pipelines, clocks, buffers
-              = CHOPPY ON MOBILE
+UPDATE songs SET full_mix_url = '/audio/testify-exercise/master.mp3' WHERE id = 'testify-exercise';
+UPDATE songs SET full_mix_url = '/audio/throwback-exercise/master.mp3' WHERE id = 'throwback-exercise';
+UPDATE songs SET full_mix_url = '/audio/dont-leave-exercise/master.mp3' WHERE id = 'dont-leave-exercise';
+UPDATE songs SET full_mix_url = '/audio/testify-v2/master.mp3' WHERE id = 'testify-v2';
 ```
 
-### New System (Web Audio API)
+### Step 3: Update WebAudioEngine for Mixdown-First Strategy
+
+Modify `src/services/webAudioEngine.ts` to implement the 4-phase playback:
+
+**Phase 1: Load Mixdown First**
+- Fetch and decode the master file immediately
+- Start playback as soon as mixdown is ready (~1-2 seconds)
+
+**Phase 2: Background Stem Loading**
+- While mixdown plays, fetch and decode all individual stems
+- Track progress for UI feedback
+
+**Phase 3: Crossfade**
+- When all stems are decoded, perform a 200ms sample-accurate crossfade
+- Use AudioParam scheduling for smooth transition
+
+**Phase 4: Stem Mixer Active**
+- Solo/mute/volume controls now affect actual stems
+- User can mix individual tracks
+
+### Step 4: Update useAudioEngine Hook
+
+Modify `src/hooks/useAudioEngine.ts` to:
+- Pass `mixdownUrl` to the engine when loading songs
+- Expose `audioMode` state for UI feedback
+
+### Step 5: Update Loading Overlay
+
+Modify `src/components/audio/AudioLoadingOverlay.tsx` to:
+- Show "Loading full mix..." during Phase 1
+- Show "Playing full mix, loading stems..." during Phase 2
+- Display stem loading progress in background
+
+---
+
+## Technical Details
+
+### Crossfade Implementation
 
 ```text
-+---------------------+
-|     AudioContext    |  (ONE context = ONE clock)
-+---------------------+
-          |
-+---------------------+
-|     Master GainNode |
-+---------------------+
-    /         |         \
-+-------+  +-------+  +-------+
-| Stem  |  | Stem  |  | Stem  |   (14 AudioBufferSourceNodes)
-| Gain  |  | Gain  |  | Gain  |   (each has its own GainNode for volume/mute)
-+-------+  +-------+  +-------+
+                   ┌─────────────────────────────────┐
+   Mixdown Volume  │████████████████████████████████▁│  ← Fades out over 200ms
+                   └─────────────────────────────────┘
+                   ┌─────────────────────────────────┐
+   Stems Volume    │▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁████│  ← Fades in over 200ms
+                   └─────────────────────────────────┘
+                                                   ↑
+                                        Stems sync-start at same position
 ```
 
-### Playback Strategy
+### Key Engine Changes
 
-1. **Phase 1: Mixdown First** - Fetch and decode a pre-mixed full mix (3-5MB, plays in 1-2 seconds)
-2. **Phase 2: Background Stem Loading** - Download and decode individual stems while mixdown plays
-3. **Phase 3: Crossfade** - When all stems are decoded, crossfade from mixdown to stems (200ms)
-4. **Phase 4: Stem Mixer Active** - User can now solo/mute/adjust individual stems
+1. **New method: `loadMixdownFirst()`** - Fetches and decodes mixdown, starts playback immediately
+2. **New method: `startBackgroundStemLoading()`** - Loads stems in parallel while mixdown plays
+3. **New method: `crossfadeToStems()`** - Smooth 200ms transition using AudioParam scheduling
+4. **State tracking for `audioMode`** - 'mixdown' | 'crossfading' | 'stems'
 
----
+### Playback Flow
 
-## Implementation Plan
-
-### Step 1: Create Core Audio Engine Service
-
-**New file: `src/services/webAudioEngine.ts`**
-
-A singleton class that manages:
-- Single `AudioContext` instance (created on user gesture)
-- Mixdown `AudioBuffer` and playback
-- Per-stem `AudioBuffer`, `GainNode`, and `AudioBufferSourceNode`
-- Playback state machine: idle → loading → playing → paused
-- Audio mode: mixdown → crossfading → stems
-- Fetch with progress tracking and abort support
-- Blob cache for re-use
-
-Key methods:
-- `init()` - Create/resume AudioContext (must be called from click handler)
-- `loadSong(config)` - Load mixdown + stems
-- `play()` / `pause()` / `seek()` / `stop()`
-- `setStemVolume()` / `setStemMuted()`
-- `subscribe(listener)` - State change notifications
-
-### Step 2: Create React Hook Bridge
-
-**New file: `src/hooks/useAudioEngine.ts`**
-
-Bridges the WebAudioEngine to React component state:
-- Subscribes to engine state changes
-- Exposes all playback controls as callbacks
-- Returns reactive state (playbackState, currentTime, duration, stemLoadProgress, etc.)
-
-### Step 3: Update TrainingMode Page
-
-**Modified file: `src/pages/TrainingMode.tsx`**
-
-- Replace `useAudioPlayer()` with `useAudioEngine()`
-- Ensure play button calls `audioEngine.init()` directly in onClick handler (mobile requirement)
-- Update loading overlay to show mixdown vs stems loading phases
-- Show "Playing full mix" indicator while stems load in background
-
-### Step 4: Create New Stem Mixer Component
-
-**New file: `src/components/player/StemMixer.tsx`**
-
-- Per-stem loading progress indicators
-- Volume faders disabled until stems are decoded
-- Visual feedback for mixdown/crossfading/stems modes
-- Status indicator showing current audio mode
-
-### Step 5: Add Mobile Enhancements
-
-**Wake Lock API** - Prevent screen sleep during playback
-**Media Session API** - Lock screen controls on mobile
-
-### Step 6: Cleanup
-
-- Remove Howler.js dependency
-- Remove old `useAudioPlayer.ts` hook
-- Update `audioPreloadStore.ts` to work with new system
+```text
+User clicks PLAY
+      │
+      ▼
+┌─────────────────┐
+│ Load Mixdown    │  (3-5MB, ~1-2 sec)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Play Mixdown    │  ◄── User hears audio immediately!
+│ Load Stems BG   │  (continues in background)
+└────────┬────────┘
+         │ All stems loaded?
+         ▼
+┌─────────────────┐
+│ Crossfade 200ms │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Stem Mixer On   │  ◄── Solo/mute/volume now work!
+└─────────────────┘
+```
 
 ---
 
-## Files to Create
-
-| File | Purpose |
-|------|---------|
-| `src/services/webAudioEngine.ts` | Core Web Audio API engine |
-| `src/hooks/useAudioEngine.ts` | React hook bridge |
-| `src/components/player/StemMixer.tsx` | New stem mixer UI |
-| `src/components/player/PlayerControls.tsx` | Transport controls |
-
----
-
-## Files to Modify
+## Files to Change
 
 | File | Changes |
 |------|---------|
-| `src/pages/TrainingMode.tsx` | Replace useAudioPlayer with useAudioEngine |
-| `src/stores/audioStore.ts` | May need updates for new playback model |
-| `src/components/audio/AudioLoadingOverlay.tsx` | Add mixdown vs stems phase display |
+| `public/audio/*/master.mp3` | Add 4 new master files |
+| `src/services/webAudioEngine.ts` | Implement mixdown-first loading |
+| `src/hooks/useAudioEngine.ts` | Pass mixdownUrl, expose audioMode |
+| `src/components/audio/AudioLoadingOverlay.tsx` | Update loading states |
+| `src/pages/TrainingMode.tsx` | Optional: show "Playing full mix" indicator |
 
 ---
 
-## Files to Remove/Deprecate
+## Expected User Experience
 
-| File | Reason |
-|------|--------|
-| `src/hooks/useAudioPlayer.ts` | Replaced by useAudioEngine |
-
----
-
-## Technical Requirements
-
-### Critical Rules (from document)
-
-1. **NO HTML `<audio>` elements** for stem playback - all through `AudioContext`
-2. **AudioContext must be created on user gesture** - call `audioContext.resume()` inside onClick
-3. **Decode audio FULLY before playing** - use `decodeAudioData()` not `MediaElementSourceNode`
-4. **One GainNode per stem** - for volume/mute control
-5. **AudioBufferSourceNode is single-use** - create new one after stop/seek
-6. **Time tracking uses `AudioContext.currentTime`** - not `setInterval`
-7. **Crossfade must be sample-accurate** - use AudioParam scheduling
-
-### Browser Compatibility
-
-- Works on all modern browsers
-- Mobile Safari requires user gesture for AudioContext
-- Wake Lock API has good mobile support
-
----
-
-## Expected Benefits
-
-| Metric | Before (Howler.js) | After (Web Audio API) |
-|--------|-------------------|----------------------|
-| Mobile playback | Choppy, stuttering | Smooth |
-| Stem sync | Drifts over time | Sample-accurate |
-| Initial play time | Wait for all stems | Plays in 1-2 seconds |
-| Background audio | May suspend | Stays active |
-| Memory usage | Higher (14 decode pipelines) | Lower (shared context) |
-
----
-
-## Estimated Complexity
-
-This is a **significant rewrite** involving:
-- ~700 lines of new engine code
-- ~100 lines of new React hook
-- ~200 lines of new UI components
-- Updates to TrainingMode page
-- Testing on mobile devices required
-
+| Before | After |
+|--------|-------|
+| Wait 10-30 seconds for all stems | Playback starts in 1-2 seconds |
+| See loading progress for all stems | Hear music while stems load |
+| Can't interact until fully loaded | Can pause/seek immediately |
+| Stems ready when playback starts | Stems ready after ~10-20 seconds |
