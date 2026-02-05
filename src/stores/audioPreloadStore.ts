@@ -215,8 +215,13 @@ export const useAudioPreloadStore = create<AudioPreloadState>((set, get) => ({
     const loadedStems: StemCache[] = [];
     let loadedCount = 0;
     
-    // Preload stems in priority order (3 concurrent requests for larger stem counts)
-    const CONCURRENT_REQUESTS = 3;
+    // Reduce concurrent requests for high stem count songs to prevent bandwidth competition
+    const isHighStemCount = sortedStems.length >= 10;
+    const CONCURRENT_REQUESTS = isHighStemCount ? 2 : 3;
+    
+    if (isHighStemCount) {
+      console.log(`High stem count song (${sortedStems.length}) - using ${CONCURRENT_REQUESTS} concurrent requests`);
+    }
     
     for (let i = 0; i < sortedStems.length; i += CONCURRENT_REQUESTS) {
       const batch = sortedStems.slice(i, i + CONCURRENT_REQUESTS);

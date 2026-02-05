@@ -66,7 +66,16 @@ export default function TrainingMode() {
   const [showControls, setShowControls] = React.useState(false);
 
   // Audio player hook for real audio
-  const { isLoaded, loadingProgress, seekTo, hasRealAudio } = useAudioPlayer();
+  const { 
+    isLoaded, 
+    loadingProgress, 
+    seekTo, 
+    hasRealAudio,
+    isReadyToPlay,
+    isBuffering,
+    bufferedCount,
+    totalStemCount,
+  } = useAudioPlayer();
 
   // Practice session tracking
   usePracticeSession(song?.id);
@@ -257,9 +266,22 @@ export default function TrainingMode() {
           <div className="flex items-center gap-1">
             {/* Loading indicator */}
             {songHasRealAudio && !isLoaded && (
-              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/20 text-primary text-xs">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/20 text-primary text-xs">
                 <Loader2 className="w-3 h-3 animate-spin" />
-                <span>{Math.round(loadingProgress)}%</span>
+                <span>
+                  {totalStemCount > 0 
+                    ? `${bufferedCount}/${totalStemCount}` 
+                    : `${Math.round(loadingProgress)}%`
+                  }
+                </span>
+              </div>
+            )}
+            {/* Buffering indicator (shown when loaded but still buffering) */}
+            {/* Buffering indicator (shown when loaded but still buffering) */}
+            {songHasRealAudio && isLoaded && isBuffering && (
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-warning/20 text-warning text-xs">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                <span>Buffering {bufferedCount}/{totalStemCount}</span>
               </div>
             )}
             <GlassButton
@@ -304,7 +326,7 @@ export default function TrainingMode() {
                 <div className="w-1.5 h-1.5 rounded-full gradient-bg" />
                 <span className="text-xs font-medium">Master</span>
                 {songHasRealAudio && isLoaded && (
-                  <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-green-500/20 text-green-500">
+                  <span className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-primary/20 text-primary">
                     LIVE
                   </span>
                 )}
@@ -510,11 +532,11 @@ export default function TrainingMode() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={togglePlayPause}
-              disabled={songHasRealAudio && !isLoaded}
+              disabled={songHasRealAudio && !isReadyToPlay}
               className={cn(
                 "w-14 h-14 rounded-full flex items-center justify-center",
                 "gradient-bg shadow-xl relative",
-                songHasRealAudio && !isLoaded && "opacity-50"
+                songHasRealAudio && !isReadyToPlay && "opacity-50 cursor-not-allowed"
               )}
             >
               {/* Pulsing ring when playing */}
@@ -529,6 +551,25 @@ export default function TrainingMode() {
                     duration: 1.5,
                     repeat: Infinity,
                     ease: "easeInOut",
+                  }}
+                />
+              )}
+              
+              {/* Buffering indicator on play button */}
+              {songHasRealAudio && !isReadyToPlay && isLoaded && (
+                <motion.div
+                  className="absolute inset-0 rounded-full border-2 border-warning/50"
+                  animate={{
+                    rotate: 360,
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "linear",
+                  }}
+                  style={{
+                    borderTopColor: 'transparent',
+                    borderLeftColor: 'transparent',
                   }}
                 />
               )}
