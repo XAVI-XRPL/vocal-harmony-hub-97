@@ -80,26 +80,52 @@ export function StemLoadingProgress({
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{ 
+        opacity: 1, 
+        y: 0,
+        backgroundColor: allStemsReady 
+          ? ['transparent', 'rgba(34,197,94,0.1)', 'transparent'] 
+          : undefined
+      }}
+      transition={{ 
+        duration: 0.3,
+        backgroundColor: allStemsReady ? { duration: 0.6 } : undefined
+      }}
       className="flex-shrink-0 mb-2"
     >
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <div className="glass-card rounded-xl overflow-hidden">
           <CollapsibleTrigger asChild>
             <button className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/10 transition-colors">
-              {/* Left: Mode badge */}
+              {/* Left: Mode badge with enhanced transition animation */}
               <div className="flex items-center gap-3">
                 <motion.div
+                  key={audioMode}
+                  initial={{ scale: 0.9, opacity: 0, y: -5 }}
+                  animate={{ 
+                    scale: 1, 
+                    opacity: 1, 
+                    y: 0,
+                    boxShadow: audioMode === 'stems' 
+                      ? ['0 0 0 0 rgba(34,197,94,0.4)', '0 0 30px 8px rgba(34,197,94,0.6)', '0 0 0 0 rgba(34,197,94,0)']
+                      : modeConfig.pulse 
+                      ? ['0 0 0 0 currentColor', '0 0 0 4px transparent', '0 0 0 0 currentColor']
+                      : undefined
+                  }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 400, 
+                    damping: 20,
+                    boxShadow: audioMode === 'stems' 
+                      ? { duration: 0.8, repeat: 1 }
+                      : { duration: 1.5, repeat: Infinity }
+                  }}
                   className={cn(
                     "flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold",
                     modeConfig.className
                   )}
-                  animate={modeConfig.pulse ? { 
-                    boxShadow: ['0 0 0 0 currentColor', '0 0 0 4px transparent', '0 0 0 0 currentColor']
-                  } : {}}
-                  transition={{ duration: 1.5, repeat: Infinity }}
                 >
-                  <ModeIcon className="w-3 h-3" />
+                  <ModeIcon className={cn("w-3 h-3", audioMode === 'crossfading' && "animate-pulse")} />
                   {modeConfig.label}
                 </motion.div>
                 
