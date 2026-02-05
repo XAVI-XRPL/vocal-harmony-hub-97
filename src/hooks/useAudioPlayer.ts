@@ -94,6 +94,8 @@ export function useAudioPlayer() {
   const wasPlayingRef = useRef(false);
   // Track buffered stems for readiness detection
   const bufferedStemsRef = useRef<Set<string>>(new Set());
+  // Track loaded stem count to avoid stale closure in timeout callbacks
+  const loadedCountRef = useRef<number>(0);
   
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -261,6 +263,9 @@ export function useAudioPlayer() {
     const stemCount = stemsWithAudio.length;
     setTotalStemCount(stemCount);
     
+    // Reset loaded count ref for new song
+    loadedCountRef.current = 0;
+    
     // Sort stems by priority for loading
     const sortedStems = [...stemsWithAudio].sort((a, b) => 
       getStemLoadPriority(a) - getStemLoadPriority(b)
@@ -281,7 +286,6 @@ export function useAudioPlayer() {
       console.log(`⚡ Using preloaded cache for "${song.title}"`);
     }
 
-    let loadedCount = 0;
     let bufferedReady = 0;
     const totalStems = stemCount;
     
@@ -310,27 +314,37 @@ export function useAudioPlayer() {
         preload: true,
         volume: 0.8,
         onload: () => {
-          loadedCount++;
-          setLoadingProgress((loadedCount / totalStems) * 100);
+          loadedCountRef.current++;
+          setLoadingProgress((loadedCountRef.current / totalStems) * 100);
+          
+          // Update buffered count on load for accurate UI feedback
+          setBufferedCount(loadedCountRef.current);
           
           // When first stem loads, set duration
-          if (loadedCount === 1) {
+          if (loadedCountRef.current === 1) {
             const duration = howl.duration();
             if (duration > 0) {
               setDuration(duration);
             }
           }
           
+          // Check if we've met the minimum buffer threshold immediately on load
+          if (loadedCountRef.current >= minRequiredBuffered && !isReadyToPlay) {
+            console.log(`✓ Buffer threshold met on load: ${loadedCountRef.current}/${totalStems} stems ready`);
+            setIsReadyToPlay(true);
+            setIsBuffering(false);
+          }
+          
           // For high stem count songs, load next batch when current batch finishes
-          if (isHighStemCount && loadedCount < totalStems) {
+          if (isHighStemCount && loadedCountRef.current < totalStems) {
             const currentBatchEnd = currentBatch * loadBatchSize;
-            if (loadedCount >= currentBatchEnd && loadedCount < totalStems) {
+            if (loadedCountRef.current >= currentBatchEnd && loadedCountRef.current < totalStems) {
               // Load next batch
               loadNextBatch();
             }
           }
           
-          if (loadedCount === totalStems) {
+          if (loadedCountRef.current === totalStems) {
             setIsLoaded(true);
             if (isPreloaded) {
               console.log('⚡ All stems loaded from cache!');
@@ -356,18 +370,18 @@ export function useAudioPlayer() {
         },
         onloaderror: (id, error) => {
           console.error(`Error loading stem ${stem.name}:`, error);
-          loadedCount++;
-          setLoadingProgress((loadedCount / totalStems) * 100);
+          loadedCountRef.current++;
+          setLoadingProgress((loadedCountRef.current / totalStems) * 100);
           
           // For high stem count songs, continue loading next batch even on error
-          if (isHighStemCount && loadedCount < totalStems) {
+          if (isHighStemCount && loadedCountRef.current < totalStems) {
             const currentBatchEnd = currentBatch * loadBatchSize;
-            if (loadedCount >= currentBatchEnd && loadedCount < totalStems) {
+            if (loadedCountRef.current >= currentBatchEnd && loadedCountRef.current < totalStems) {
               loadNextBatch();
             }
           }
           
-          if (loadedCount === totalStems) {
+          if (loadedCountRef.current === totalStems) {
             setIsLoaded(true);
           }
         },
@@ -396,8 +410,8 @@ export function useAudioPlayer() {
     // Set a timeout to mark ready even if onplay hasn't fired for all stems
     // This handles cases where preloaded blob URLs don't fire onplay
     const readyTimeout = setTimeout(() => {
-      if (!isReadyToPlay && loadedCount >= minRequiredBuffered) {
-        console.log(`Buffer ready timeout - marking ready with ${loadedCount} loaded stems`);
+      if (!isReadyToPlay && loadedCountRef.current >= minRequiredBuffered) {
+        console.log(`Buffer ready timeout - marking ready with ${loadedCountRef.current} loaded stems`);
         setIsReadyToPlay(true);
         setIsBuffering(false);
       }
