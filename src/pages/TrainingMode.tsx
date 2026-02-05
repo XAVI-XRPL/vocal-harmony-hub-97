@@ -28,8 +28,9 @@ import { AudioLoadingOverlay } from "@/components/audio/AudioLoadingOverlay";
 import { useSong } from "@/hooks/useSongs";
 import { generateMockWaveform } from "@/data/mockSongs";
 import { useAudioStore } from "@/stores/audioStore";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { useAudioEngine } from "@/hooks/useAudioEngine";
 import { usePracticeSession } from "@/hooks/usePracticeSession";
+import { webAudioEngine } from "@/services/webAudioEngine";
 import { cn } from "@/lib/utils";
 
 const containerVariants = {
@@ -66,7 +67,7 @@ export default function TrainingMode() {
   const intervalRef = useRef<number | null>(null);
   const [showControls, setShowControls] = React.useState(false);
 
-  // Audio player hook for real audio
+  // Web Audio Engine hook for sample-accurate playback
   const { 
     isLoaded, 
     loadingProgress, 
@@ -76,7 +77,9 @@ export default function TrainingMode() {
     isBuffering,
     bufferedCount,
     totalStemCount,
-  } = useAudioPlayer();
+    init: initAudioEngine,
+    audioMode,
+  } = useAudioEngine();
 
   // Practice session tracking
   usePracticeSession(song?.id);
@@ -542,11 +545,15 @@ export default function TrainingMode() {
               label="Skip back 10 seconds"
             />
 
-            {/* Play/Pause */}
+            {/* Play/Pause - Must call init on user gesture for mobile */}
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={togglePlayPause}
+              onClick={async () => {
+                // CRITICAL: AudioContext must be initialized from user gesture for mobile
+                await initAudioEngine();
+                togglePlayPause();
+              }}
               disabled={songHasRealAudio && !isReadyToPlay}
               className={cn(
                 "w-14 h-14 rounded-full flex items-center justify-center",
