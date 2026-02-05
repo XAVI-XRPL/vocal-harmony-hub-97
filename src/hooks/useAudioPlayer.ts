@@ -9,14 +9,29 @@ interface StemHowl {
   howl: Howl;
 }
 
+// Stem priority for loading order
+const STEM_TYPE_PRIORITY: Record<string, number> = {
+  'coaching': 0,
+  'master': 0,
+  'instrumental': 1,
+  'lead': 2,
+  'vocal': 3,
+  'harmony': 4,
+  'keys': 5,
+  'drums': 6,
+  'bass': 7,
+  'guitar': 8,
+  'other': 9,
+};
+
 // Delay to allow HTML5 audio buffers to stabilize after seeking (increased for 12+ stem songs)
-const SEEK_SYNC_DELAY_MS = 200;
+const SEEK_SYNC_DELAY_BASE_MS = 200;
 // Maximum acceptable drift between stems (in seconds)
 const SYNC_TOLERANCE_SEC = 0.08;
 // Maximum retry attempts for sync correction
 const MAX_SYNC_RETRIES = 3;
 // Interval for checking drift during playback (ms)
-const DRIFT_CHECK_INTERVAL_MS = 1000;
+const DRIFT_CHECK_INTERVAL_BASE_MS = 1000;
 // Minimum drift required to trigger correction (reduced for tighter sync)
 const DRIFT_CORRECTION_THRESHOLD = 0.10;
 // Minimum time between corrections to allow stabilization
@@ -25,13 +40,43 @@ const MIN_CORRECTION_INTERVAL_MS = 2000;
 const LOOP_END_BUFFER_SEC = 0.05;
 // Delay for loop reset sync (ms)
 const LOOP_RESET_DELAY_MS = 20;
+// Threshold for "high stem count" songs that need special handling
+const HIGH_STEM_COUNT_THRESHOLD = 10;
+// Minimum stems that must be buffered before playback can start
+const MIN_BUFFER_THRESHOLD_PERCENT = 0.5; // 50% of priority stems
 
 // Get sync tolerance based on stem count (more stems = slightly looser to avoid overcorrection)
 const getSyncTolerance = (stemCount: number): number => {
-  if (stemCount > 12) return 0.12; // 14 stems
+  if (stemCount >= 14) return 0.15; // 14+ stems - highest tolerance
+  if (stemCount > 12) return 0.12;
   if (stemCount > 10) return 0.10;
   if (stemCount > 6) return 0.08;
   return 0.06;
+};
+
+// Get drift check interval based on stem count
+const getDriftCheckInterval = (stemCount: number): number => {
+  if (stemCount >= 14) return 1500; // Slower for 14+ stems
+  if (stemCount > 10) return 1200;
+  return DRIFT_CHECK_INTERVAL_BASE_MS;
+};
+
+// Get seek sync delay based on stem count
+const getSeekSyncDelay = (stemCount: number): number => {
+  if (stemCount >= 14) return 350;
+  if (stemCount > 10) return 280;
+  return SEEK_SYNC_DELAY_BASE_MS;
+};
+
+// Get stem priority for loading order
+const getStemLoadPriority = (stem: Stem): number => {
+  const nameLower = stem.name.toLowerCase();
+  if (nameLower.includes('coaching') || nameLower.includes('master')) return 0;
+  if (nameLower.includes('instrumental')) return 1;
+  if (nameLower.includes('lead')) return 2;
+  if (stem.type === 'vocal') return 3;
+  if (stem.type === 'harmony') return 4;
+  return STEM_TYPE_PRIORITY[stem.type] ?? 9;
 };
 
 export function useAudioPlayer() {
@@ -47,8 +92,16 @@ export function useAudioPlayer() {
   const seekResumeRef = useRef(false);
   // Flag to track previous playing state - prevents re-syncing when only loop values change
   const wasPlayingRef = useRef(false);
+  // Track buffered stems for readiness detection
+  const bufferedStemsRef = useRef<Set<string>>(new Set());
+  
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  // Buffer tracking state
+  const [bufferedCount, setBufferedCount] = useState(0);
+  const [totalStemCount, setTotalStemCount] = useState(0);
+  const [isBuffering, setIsBuffering] = useState(true);
+  const [isReadyToPlay, setIsReadyToPlay] = useState(false);
 
   const {
     currentSong,
@@ -181,8 +234,13 @@ export function useAudioPlayer() {
       howl.unload();
     });
     stemHowlsRef.current = [];
+    bufferedStemsRef.current = new Set();
     setIsLoaded(false);
     setLoadingProgress(0);
+    setBufferedCount(0);
+    setTotalStemCount(0);
+    setIsBuffering(true);
+    setIsReadyToPlay(false);
   }, []);
 
   // Load stems for a song
@@ -195,8 +253,24 @@ export function useAudioPlayer() {
     if (stemsWithAudio.length === 0) {
       console.log('No audio stems found for this song (mock song)');
       setIsLoaded(true);
+      setIsReadyToPlay(true);
+      setIsBuffering(false);
       return;
     }
+
+    const stemCount = stemsWithAudio.length;
+    setTotalStemCount(stemCount);
+    
+    // Sort stems by priority for loading
+    const sortedStems = [...stemsWithAudio].sort((a, b) => 
+      getStemLoadPriority(a) - getStemLoadPriority(b)
+    );
+    
+    // Calculate minimum required buffered stems before playback
+    const isHighStemCount = stemCount >= HIGH_STEM_COUNT_THRESHOLD;
+    const minRequiredBuffered = isHighStemCount 
+      ? Math.ceil(Math.min(4, stemCount) * MIN_BUFFER_THRESHOLD_PERCENT) + 2 // At least 4 priority stems
+      : Math.ceil(stemCount * 0.3); // 30% for normal songs
 
     // Check if stems are preloaded in cache
     const preloadStore = useAudioPreloadStore.getState();
@@ -208,9 +282,24 @@ export function useAudioPlayer() {
     }
 
     let loadedCount = 0;
-    const totalStems = stemsWithAudio.length;
+    let bufferedReady = 0;
+    const totalStems = stemCount;
+    
+    // For high stem count songs, load in batches
+    const loadBatchSize = isHighStemCount ? 2 : totalStems; // Load 2 at a time for high stem songs
+    let currentBatch = 0;
 
-    stemsWithAudio.forEach((stem) => {
+    const loadNextBatch = () => {
+      const startIdx = currentBatch * loadBatchSize;
+      const endIdx = Math.min(startIdx + loadBatchSize, totalStems);
+      
+      for (let i = startIdx; i < endIdx; i++) {
+        loadStem(sortedStems[i]);
+      }
+      currentBatch++;
+    };
+
+    const loadStem = (stem: Stem) => {
       // Use blob URL from cache if available, otherwise use original URL
       const cachedStem = cachedStems?.find(c => c.stemId === stem.id);
       const audioUrl = cachedStem?.blobUrl ?? stem.url;
@@ -232,6 +321,15 @@ export function useAudioPlayer() {
             }
           }
           
+          // For high stem count songs, load next batch when current batch finishes
+          if (isHighStemCount && loadedCount < totalStems) {
+            const currentBatchEnd = currentBatch * loadBatchSize;
+            if (loadedCount >= currentBatchEnd && loadedCount < totalStems) {
+              // Load next batch
+              loadNextBatch();
+            }
+          }
+          
           if (loadedCount === totalStems) {
             setIsLoaded(true);
             if (isPreloaded) {
@@ -241,10 +339,33 @@ export function useAudioPlayer() {
             }
           }
         },
+        onplay: () => {
+          // Track when a stem is ready to play (has enough buffer)
+          if (!bufferedStemsRef.current.has(stem.id)) {
+            bufferedStemsRef.current.add(stem.id);
+            bufferedReady++;
+            setBufferedCount(bufferedReady);
+            
+            // Check if we've met the minimum buffer threshold
+            if (bufferedReady >= minRequiredBuffered && !isReadyToPlay) {
+              console.log(`✓ Buffer threshold met: ${bufferedReady}/${totalStems} stems ready`);
+              setIsReadyToPlay(true);
+              setIsBuffering(false);
+            }
+          }
+        },
         onloaderror: (id, error) => {
           console.error(`Error loading stem ${stem.name}:`, error);
           loadedCount++;
           setLoadingProgress((loadedCount / totalStems) * 100);
+          
+          // For high stem count songs, continue loading next batch even on error
+          if (isHighStemCount && loadedCount < totalStems) {
+            const currentBatchEnd = currentBatch * loadBatchSize;
+            if (loadedCount >= currentBatchEnd && loadedCount < totalStems) {
+              loadNextBatch();
+            }
+          }
           
           if (loadedCount === totalStems) {
             setIsLoaded(true);
@@ -261,7 +382,28 @@ export function useAudioPlayer() {
       });
 
       stemHowlsRef.current.push({ stemId: stem.id, howl });
-    });
+    };
+
+    // Start loading stems (in batches for high stem count songs)
+    if (isHighStemCount) {
+      console.log(`High stem count song (${stemCount} stems) - loading in batches of ${loadBatchSize}`);
+      loadNextBatch();
+    } else {
+      // Load all at once for normal songs
+      sortedStems.forEach(loadStem);
+    }
+    
+    // Set a timeout to mark ready even if onplay hasn't fired for all stems
+    // This handles cases where preloaded blob URLs don't fire onplay
+    const readyTimeout = setTimeout(() => {
+      if (!isReadyToPlay && loadedCount >= minRequiredBuffered) {
+        console.log(`Buffer ready timeout - marking ready with ${loadedCount} loaded stems`);
+        setIsReadyToPlay(true);
+        setIsBuffering(false);
+      }
+    }, isHighStemCount ? 1500 : 800);
+    
+    return () => clearTimeout(readyTimeout);
   }, [cleanup, setDuration]);
 
   // Load song when it changes
@@ -368,7 +510,8 @@ export function useAudioPlayer() {
       animationFrameRef.current = requestAnimationFrame(updateTime);
       
       // Start drift correction interval
-      driftCheckIntervalRef.current = setInterval(correctDrift, DRIFT_CHECK_INTERVAL_MS);
+      const driftInterval = getDriftCheckInterval(stemHowlsRef.current.length);
+      driftCheckIntervalRef.current = setInterval(correctDrift, driftInterval);
     } else {
       // Reset playing state tracking when paused
       wasPlayingRef.current = false;
@@ -443,6 +586,8 @@ export function useAudioPlayer() {
     }
 
     isSeekingRef.current = true;
+    const stemCount = stemHowlsRef.current.length;
+    const seekSyncDelay = getSeekSyncDelay(stemCount);
 
     // Check if currently playing
     const wasPlaying = stemHowlsRef.current.some(({ howl }) => howl.playing());
@@ -501,7 +646,7 @@ export function useAudioPlayer() {
 
           isSeekingRef.current = false;
         }
-      }, SEEK_SYNC_DELAY_MS);
+      }, seekSyncDelay);
     };
     
     attemptSync(0);
@@ -526,5 +671,11 @@ export function useAudioPlayer() {
     loadingProgress,
     seekTo,
     hasRealAudio: songHasRealAudio,
+    // Buffer readiness tracking
+    isReadyToPlay,
+    isBuffering,
+    bufferedCount,
+    totalStemCount,
+    bufferingProgress: totalStemCount > 0 ? (bufferedCount / totalStemCount) * 100 : 0,
   };
 }
