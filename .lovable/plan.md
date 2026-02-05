@@ -1,82 +1,80 @@
 
-# Replace Testify Exercise MP3s with Optimized AAC Files
+# Replace Throwback Exercise Audio Files
 
 ## Overview
 
-You've uploaded 9 AAC files to replace the MP3 stems for "1. TESTIFY EXERCISE". AAC files offer better compression at the same quality, which should result in smoother playback and faster loading.
+You've uploaded 6 audio files (3 AAC, 3 MP3) to replace the stems for "2. THROWBACK EXERCISE". I'll replace all existing MP3s with your new files.
+
+---
+
+## File Mapping
+
+| Uploaded File | Destination | Format |
+|---------------|-------------|--------|
+| 2.-THROWBACK-EXERCISE-RAab-Coaching-2.mp3 | public/audio/throwback-exercise/raab-coaching.mp3 | MP3 |
+| 2-THROWBACK-EXERCISE-INSTRUMENTAL-1.aac | public/audio/throwback-exercise/instrumental.aac | AAC |
+| 2-THROWBACK-EXERCISE-Piano-2.mp3 | public/audio/throwback-exercise/piano.mp3 | MP3 |
+| 2.-THROWBACK-EXERCISE-Guitar-2.mp3 | public/audio/throwback-exercise/guitar.mp3 | MP3 |
+| 2-THROWBACK-EXERCISE-RAab--1.aac | public/audio/throwback-exercise/raab-exercise.aac | AAC |
+| 2-THROWBACK-EXERCISE-JLEVY-1.aac | public/audio/throwback-exercise/jlevy-exercise-1.aac | AAC |
 
 ---
 
 ## What Will Be Done
 
-### Step 1: Copy AAC Files to Project
+### Step 1: Copy New Audio Files
 
-Copy all 9 uploaded AAC files to the `public/audio/testify-exercise/` folder with clean filenames:
-
-| Uploaded File | Destination |
-|---------------|-------------|
-| 1-TESTIFY-_RAab-Coaching.aac | public/audio/testify-exercise/raab-coaching.aac |
-| 1-TESTIFY-Instrumental.aac | public/audio/testify-exercise/instrumental.aac |
-| 1-TESTIFY-EXERCISE-PIANO.aac | public/audio/testify-exercise/piano.aac |
-| 1-TESTIFY-EXERCISE-Guitar.aac | public/audio/testify-exercise/guitar.aac |
-| 1-TESTIFY-RAab-EXERCISE.aac | public/audio/testify-exercise/raab-exercise.aac |
-| 1-TESTIFY-JLEVY-EXERCISE-1.aac | public/audio/testify-exercise/jlevy-exercise-1.aac |
-| 1-TESTIFY-RAab-HARMONY-2.aac | public/audio/testify-exercise/raab-harmony-2.aac |
-| 1-TESTIFY-JLEVY-HARMONY-2.aac | public/audio/testify-exercise/jlevy-harmony-2.aac |
-| 1-TESTIFY-RAab-HARMONY-3.aac | public/audio/testify-exercise/raab-harmony-3.aac |
+Copy all 6 uploaded files to `public/audio/throwback-exercise/` with clean filenames.
 
 ### Step 2: Update Database Paths
 
-Update all 9 stem records to point to the new `.aac` files:
+Update the 3 stems that are changing from MP3 to AAC format:
 
 ```text
-UPDATE stems SET audio_path = '/audio/testify-exercise/raab-coaching.aac' WHERE id = 'testify-raab-coaching';
-UPDATE stems SET audio_path = '/audio/testify-exercise/instrumental.aac' WHERE id = 'testify-instrumental';
-UPDATE stems SET audio_path = '/audio/testify-exercise/piano.aac' WHERE id = 'testify-piano';
-UPDATE stems SET audio_path = '/audio/testify-exercise/guitar.aac' WHERE id = 'testify-guitar';
-UPDATE stems SET audio_path = '/audio/testify-exercise/raab-exercise.aac' WHERE id = 'testify-raab-exercise';
-UPDATE stems SET audio_path = '/audio/testify-exercise/jlevy-exercise-1.aac' WHERE id = 'testify-jlevy-exercise';
-UPDATE stems SET audio_path = '/audio/testify-exercise/raab-harmony-2.aac' WHERE id = 'testify-raab-harmony-2';
-UPDATE stems SET audio_path = '/audio/testify-exercise/jlevy-harmony-2.aac' WHERE id = 'testify-jlevy-harmony-2';
-UPDATE stems SET audio_path = '/audio/testify-exercise/raab-harmony-3.aac' WHERE id = 'testify-raab-harmony-3';
+UPDATE stems SET audio_path = '/audio/throwback-exercise/instrumental.aac' 
+  WHERE id = 'throwback-instrumental';
+
+UPDATE stems SET audio_path = '/audio/throwback-exercise/raab-exercise.aac' 
+  WHERE id = 'throwback-raab-exercise';
+
+UPDATE stems SET audio_path = '/audio/throwback-exercise/jlevy-exercise-1.aac' 
+  WHERE id = 'throwback-jlevy-exercise';
 ```
 
-### Step 3: Remove Old MP3 Files
+The MP3 files (raab-coaching, piano, guitar) keep the same paths since format is unchanged.
 
-Delete the original 9 MP3 files from `public/audio/testify-exercise/`:
-- guitar.mp3
-- instrumental.mp3
-- jlevy-exercise-1.mp3
-- jlevy-harmony-2.mp3
-- piano.mp3
-- raab-coaching.mp3
-- raab-exercise.mp3
-- raab-harmony-2.mp3
-- raab-harmony-3.mp3
+### Step 3: Remove Old Files
+
+Delete the old versions of files being replaced:
+- instrumental.mp3 (replaced by .aac)
+- raab-exercise.mp3 (replaced by .aac)
+- jlevy-exercise-1.mp3 (replaced by .aac)
 
 ---
 
-## Expected Benefits
+## Current vs New Stems
 
-| Metric | Before (MP3) | After (AAC) |
-|--------|--------------|-------------|
-| File Format | MP3 | AAC |
-| Compression | Less efficient | 20-30% smaller at same quality |
-| Load Time | Slower | Faster |
-| Playback | May buffer | Smoother |
+| Stem | Before | After |
+|------|--------|-------|
+| RAab Coaching | raab-coaching.mp3 | raab-coaching.mp3 (updated) |
+| Instrumental | instrumental.mp3 | instrumental.aac |
+| Piano | piano.mp3 | piano.mp3 (updated) |
+| Guitar | guitar.mp3 | guitar.mp3 (updated) |
+| RAab Exercise | raab-exercise.mp3 | raab-exercise.aac |
+| JLevy Exercise | jlevy-exercise-1.mp3 | jlevy-exercise-1.aac |
 
 ---
 
 ## Files Changed
 
-| Action | Files |
-|--------|-------|
-| Add | 9 AAC files to `public/audio/testify-exercise/` |
-| Delete | 9 MP3 files from `public/audio/testify-exercise/` |
-| Database | Update 9 stem `audio_path` values |
+| Action | Count | Details |
+|--------|-------|---------|
+| Add | 6 | New audio files to public/audio/throwback-exercise/ |
+| Delete | 3 | Old MP3s replaced by AAC versions |
+| Database | 3 | Update audio_path for AAC conversions |
 
 ---
 
-## No Code Changes Required
+## Note on Mixed Formats
 
-The audio player already supports AAC format through Howler.js, so no code modifications are needed - just file replacement and database updates.
+You've provided 3 AAC and 3 MP3 files. If you have AAC versions of the remaining 3 tracks (RAab Coaching, Piano, Guitar), I can update those as well for consistent optimization. Otherwise, I'll use the files as provided.
