@@ -1,143 +1,132 @@
 
-# Mixdown-First Loading Strategy
+# Visual Mixdown/Stems Mode Indicator with Collapsible Stem Loading Progress
 
 ## Overview
 
-Implementing the mixdown-first loading strategy where a pre-mixed master audio file plays immediately while individual stems decode in the background. This provides near-instant playback (1-2 seconds) instead of waiting for all stems to load.
+Adding a visual indicator to show when playing mixdown vs stems, and a collapsible section that displays individual stem loading progress in the background while the full mix plays. This gives users clear feedback about:
+
+1. What audio mode they're hearing (mixdown or individual stems)
+2. Background stem loading progress per-track
+3. When stem mixing controls will become fully available
 
 ---
 
-## Uploaded Master Files
+## New Component: StemLoadingProgress
 
-| Uploaded File | Song ID | Destination Path |
-|---------------|---------|------------------|
-| 1.TESTIFY-_MASTER.mp3 | testify-exercise | /audio/testify-exercise/master.mp3 |
-| 2.THROWBACK-_MASTER.mp3 | throwback-exercise | /audio/throwback-exercise/master.mp3 |
-| 3.DONT-LEAVE-_MASTER.mp3 | dont-leave-exercise | /audio/dont-leave-exercise/master.mp3 |
-| 12.TESTIFY_VERSION-2-_MASTER.mp3 | testify-v2 | /audio/testify-v2/master.mp3 |
+**File: `src/components/audio/StemLoadingProgress.tsx`**
+
+A collapsible panel that shows:
+- Audio mode badge (Full Mix / Stems Active)
+- Per-stem loading progress bars with stem names
+- Visual checkmarks when stems are decoded
+- Auto-collapse when all stems are ready
+
+---
+
+## UI Design
+
+### Audio Mode Indicator
+
+```text
+┌─────────────────────────────────────────────────────┐
+│ ▶ PLAYING FULL MIX           [Stems: 5/12 loading] │
+│   └── Tap to expand stem progress                  │
+└─────────────────────────────────────────────────────┘
+
+Expanded:
+┌─────────────────────────────────────────────────────┐
+│ ▶ PLAYING FULL MIX                          ▲      │
+├─────────────────────────────────────────────────────┤
+│  ✓ Master            ████████████████████   100%   │
+│  ✓ Lead Vocals       ████████████████████   100%   │
+│  ◌ Backing Vocals    ██████████░░░░░░░░░░    50%   │
+│  ◌ Instrumental      ████░░░░░░░░░░░░░░░░    20%   │
+│  ◌ Coaching          ░░░░░░░░░░░░░░░░░░░░     0%   │
+│  ...                                               │
+├─────────────────────────────────────────────────────┤
+│  Stem controls will activate once all tracks load  │
+└─────────────────────────────────────────────────────┘
+
+When stems ready:
+┌─────────────────────────────────────────────────────┐
+│ ♪ STEMS ACTIVE                    [14/14 ready] ✓  │
+└─────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Implementation Steps
 
-### Step 1: Copy Master Files to Public Directory
+### Step 1: Create StemLoadingProgress Component
 
-Copy all 4 uploaded master tracks to their respective song folders with standardized naming.
+New file with:
+- Collapsible panel using Radix Collapsible
+- Audio mode badge (different colors for mixdown vs stems)
+- Per-stem progress bars using stem colors
+- Checkmark icons for loaded stems
+- Subtle animation for loading progress
 
-### Step 2: Update Database
+### Step 2: Update TrainingMode Page
 
-Update the `full_mix_url` column for each song:
+Add the new component:
+- Position below the Master waveform card
+- Only visible when song has real audio AND not all stems are ready
+- Auto-collapse when stems become ready
+- Allow manual expand/collapse
 
-```text
-UPDATE songs SET full_mix_url = '/audio/testify-exercise/master.mp3' WHERE id = 'testify-exercise';
-UPDATE songs SET full_mix_url = '/audio/throwback-exercise/master.mp3' WHERE id = 'throwback-exercise';
-UPDATE songs SET full_mix_url = '/audio/dont-leave-exercise/master.mp3' WHERE id = 'dont-leave-exercise';
-UPDATE songs SET full_mix_url = '/audio/testify-v2/master.mp3' WHERE id = 'testify-v2';
-```
+### Step 3: Update Header Indicator
 
-### Step 3: Update WebAudioEngine for Mixdown-First Strategy
-
-Modify `src/services/webAudioEngine.ts` to implement the 4-phase playback:
-
-**Phase 1: Load Mixdown First**
-- Fetch and decode the master file immediately
-- Start playback as soon as mixdown is ready (~1-2 seconds)
-
-**Phase 2: Background Stem Loading**
-- While mixdown plays, fetch and decode all individual stems
-- Track progress for UI feedback
-
-**Phase 3: Crossfade**
-- When all stems are decoded, perform a 200ms sample-accurate crossfade
-- Use AudioParam scheduling for smooth transition
-
-**Phase 4: Stem Mixer Active**
-- Solo/mute/volume controls now affect actual stems
-- User can mix individual tracks
-
-### Step 4: Update useAudioEngine Hook
-
-Modify `src/hooks/useAudioEngine.ts` to:
-- Pass `mixdownUrl` to the engine when loading songs
-- Expose `audioMode` state for UI feedback
-
-### Step 5: Update Loading Overlay
-
-Modify `src/components/audio/AudioLoadingOverlay.tsx` to:
-- Show "Loading full mix..." during Phase 1
-- Show "Playing full mix, loading stems..." during Phase 2
-- Display stem loading progress in background
+Enhance the existing header loading indicator:
+- Show "Full Mix" badge when in mixdown mode
+- Show "Stems" badge when crossfaded to stems
+- Add pulsing animation during crossfade
 
 ---
 
-## Technical Details
+## Files to Create
 
-### Crossfade Implementation
-
-```text
-                   ┌─────────────────────────────────┐
-   Mixdown Volume  │████████████████████████████████▁│  ← Fades out over 200ms
-                   └─────────────────────────────────┘
-                   ┌─────────────────────────────────┐
-   Stems Volume    │▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁████│  ← Fades in over 200ms
-                   └─────────────────────────────────┘
-                                                   ↑
-                                        Stems sync-start at same position
-```
-
-### Key Engine Changes
-
-1. **New method: `loadMixdownFirst()`** - Fetches and decodes mixdown, starts playback immediately
-2. **New method: `startBackgroundStemLoading()`** - Loads stems in parallel while mixdown plays
-3. **New method: `crossfadeToStems()`** - Smooth 200ms transition using AudioParam scheduling
-4. **State tracking for `audioMode`** - 'mixdown' | 'crossfading' | 'stems'
-
-### Playback Flow
-
-```text
-User clicks PLAY
-      │
-      ▼
-┌─────────────────┐
-│ Load Mixdown    │  (3-5MB, ~1-2 sec)
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Play Mixdown    │  ◄── User hears audio immediately!
-│ Load Stems BG   │  (continues in background)
-└────────┬────────┘
-         │ All stems loaded?
-         ▼
-┌─────────────────┐
-│ Crossfade 200ms │
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Stem Mixer On   │  ◄── Solo/mute/volume now work!
-└─────────────────┘
-```
+| File | Purpose |
+|------|---------|
+| `src/components/audio/StemLoadingProgress.tsx` | Collapsible stem progress panel |
 
 ---
 
-## Files to Change
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `public/audio/*/master.mp3` | Add 4 new master files |
-| `src/services/webAudioEngine.ts` | Implement mixdown-first loading |
-| `src/hooks/useAudioEngine.ts` | Pass mixdownUrl, expose audioMode |
-| `src/components/audio/AudioLoadingOverlay.tsx` | Update loading states |
-| `src/pages/TrainingMode.tsx` | Optional: show "Playing full mix" indicator |
+| `src/pages/TrainingMode.tsx` | Add StemLoadingProgress, update header indicator |
 
 ---
 
-## Expected User Experience
+## Component Props
 
-| Before | After |
-|--------|-------|
-| Wait 10-30 seconds for all stems | Playback starts in 1-2 seconds |
-| See loading progress for all stems | Hear music while stems load |
-| Can't interact until fully loaded | Can pause/seek immediately |
-| Stems ready when playback starts | Stems ready after ~10-20 seconds |
+```text
+interface StemLoadingProgressProps {
+  stemLoadProgress: StemLoadProgress[];
+  audioMode: 'mixdown' | 'crossfading' | 'stems';
+  allStemsReady: boolean;
+  isPlaying: boolean;
+}
+```
+
+---
+
+## Visual States
+
+| State | Mode Badge | Progress Panel |
+|-------|------------|----------------|
+| Loading mixdown | "LOADING..." (yellow) | Hidden |
+| Playing mixdown, stems loading | "FULL MIX" (blue) | Shows progress |
+| Crossfading | "SWITCHING..." (purple pulse) | Shows 100% |
+| Stems active | "STEMS ACTIVE" (green) | Collapsed, shows checkmark |
+
+---
+
+## Expected Result
+
+Users will see:
+1. A clear badge showing they're hearing the "Full Mix" while stems load
+2. An expandable section showing each stem's loading progress
+3. Smooth transition badge change when stems become active
+4. Stem controls visually activate after crossfade completes
