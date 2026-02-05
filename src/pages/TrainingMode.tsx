@@ -245,6 +245,15 @@ export default function TrainingMode() {
     prevAllStemsReadyRef.current = allStemsReady;
   }, [allStemsReady, mixdownReady]);
 
+  // Cleanup: stop audio when leaving Training Mode
+  useEffect(() => {
+    return () => {
+      if (songHasRealAudio) {
+        webAudioEngine.pause();
+      }
+    };
+  }, [songHasRealAudio]);
+
   // Simulate playback timer for mock songs (no real audio)
   useEffect(() => {
     // Only use simulated timer if no real audio is loaded
