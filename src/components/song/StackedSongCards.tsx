@@ -30,8 +30,9 @@ function StackedCard({ song, index, totalCards }: { song: Song; index: number; t
     offset: ["start start", "end start"],
   });
 
-  const targetScale = 1 - (totalCards - index) * 0.035;
+  const targetScale = 1 - (totalCards - index) * 0.05;
   const scale = useTransform(scrollYProgress, [0, 1], [1, targetScale]);
+  const opacity = useTransform(scrollYProgress, [0, 0.6, 1], [1, 0.85, 0.6]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -60,7 +61,7 @@ function StackedCard({ song, index, totalCards }: { song: Song; index: number; t
   return (
     <div
       ref={containerRef}
-      className="h-[70vh] md:h-[65vh] flex items-start justify-center"
+      className="h-[80vh] md:h-[70vh] flex items-start justify-center"
       style={{
         position: "sticky",
         top: 0,
@@ -75,7 +76,8 @@ function StackedCard({ song, index, totalCards }: { song: Song; index: number; t
         )}
         style={{
           scale,
-          top: `calc(120px + ${index * 24}px)`,
+          opacity,
+          top: `calc(120px + ${index * 32}px)`,
           transformOrigin: "center top",
         }}
       >
