@@ -13,6 +13,15 @@ export interface Stem {
   waveformData?: number[];
 }
 
+export type StemGroupLoadBehavior = 'immediate' | 'lazy';
+
+export interface StemGroup {
+  id: string;
+  name: string;
+  loadBehavior: StemGroupLoadBehavior;
+  stems: Stem[];
+}
+
 export interface Song {
   id: string;
   title: string;
@@ -23,6 +32,7 @@ export interface Song {
   key?: string;
   fullMixUrl: string;
   stems: Stem[];
+  stemGroups: StemGroup[];
   difficulty: Difficulty;
   genre: string;
   isPremium: boolean;
