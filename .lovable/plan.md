@@ -1,115 +1,30 @@
 
-# Fix: Training Player Stuck Loading
+# Fix: Play Button Disabled Before First Tap
 
 ## Problem Analysis
 
-When opening an exercise, the player appears stuck. The user sees the Training Mode UI with stems but audio doesn't play when tapping the Play button.
-
-### Root Cause
-
-After the previous fix to defer `AudioContext` creation to a user gesture (fixing mobile crashes), there are two issues:
-
-1. **Missing Error Handling**: The `handlePlayPause` function doesn't catch errors from `initAudioEngine()`. If the AudioContext creation or resume fails, the function throws but the UI is left in a broken state with `hasStartedPlayback=true` but `mixdownReady=false`.
-
-2. **Play Button Logic After Init**: After `await initAudioEngine()` completes, `engineTogglePlayPause()` is called. However, the `togglePlayPause` callback uses `isPlaying` from a stale closure (the value at render time, not after loading). This causes a potential state mismatch.
-
-3. **No User Feedback**: When the user opens an exercise, there's no indication they need to tap Play to start loading. The old behavior auto-loaded on mount.
-
-### Console Evidence
-
-The logs show:
-```
-📋 Song prepared: testify-exercise (waiting for user gesture)
+The Play button is **disabled** because of the check on line 754:
+```tsx
+disabled={songHasRealAudio && !isReadyToPlay}
 ```
 
-But NOT:
-```
-🎵 AudioContext created
-📻 Mixdown-first loading strategy
-```
+When the song is only "prepared" (configuration stored, no audio loaded yet):
+- `playbackState` = `'idle'`
+- `mixdownReady` = `false`
+- Therefore `isReadyToPlay` = `false`
+- Button is disabled = **true**
 
-This confirms `init()` is either not being called or failing silently.
+This creates a deadlock: the user cannot tap Play to trigger `init()` because the button is disabled waiting for audio that will never load until Play is tapped.
 
----
+## Root Cause
+
+The deferred loading strategy introduced a new state: "prepared but not loaded". The button's disabled logic doesn't account for this state.
 
 ## Solution
 
-### Step 1: Add Error Handling to handlePlayPause
-
-Wrap the async operations in try/catch and provide user feedback on failure.
-
-```typescript
-// src/pages/TrainingMode.tsx
-
-const handlePlayPause = async () => {
-  if (songHasRealAudio) {
-    setHasStartedPlayback(true);
-    try {
-      await initAudioEngine();
-      // After init, directly call play since we know we want to start
-      webAudioEngine.play();
-      useAudioStore.getState().play();
-    } catch (error) {
-      console.error('Failed to initialize audio:', error);
-      setHasStartedPlayback(false); // Reset to allow retry
-      toast.error("Failed to load audio", {
-        description: "Please try again",
-      });
-    }
-  } else {
-    storeTogglePlayPause();
-  }
-};
-```
-
-### Step 2: Simplify Play Logic After Init
-
-The current flow calls `engineTogglePlayPause()` which uses a stale `isPlaying` value. Since we just initialized, we know:
-- The engine is ready (`playbackState === 'ready'`)  
-- We want to play (not pause)
-
-So call `play()` directly instead of toggle.
-
-### Step 3: Add Console Logs for Debugging
-
-Add more logging in the `init()` function to help debug issues:
-
-```typescript
-// src/services/webAudioEngine.ts
-
-async init(): Promise<void> {
-  console.log('🎵 init() called');
-  await this.ensureContextRunning();
-  console.log('🎵 AudioContext running');
-  
-  if (this.isPrepared()) {
-    console.log('🎵 Song is prepared, loading...');
-    await this.loadSong();
-  } else {
-    console.log('🎵 Song not prepared, skipping load');
-  }
-}
-```
-
-### Step 4: Fix ensureContextRunning Error Handling
-
-The `resume()` call might fail on some browsers. Add proper error handling:
-
-```typescript
-private async ensureContextRunning(): Promise<void> {
-  this.ensureContextCreated();
-  
-  if (this.audioContext!.state === 'suspended') {
-    try {
-      await this.audioContext!.resume();
-      console.log('🎵 AudioContext resumed');
-    } catch (error) {
-      console.error('Failed to resume AudioContext:', error);
-      throw new Error('Cannot start audio. Please try again.');
-    }
-  }
-}
-```
+Update the disabled logic to allow tapping Play when the song is prepared (idle) but has stems configured. The button should only be disabled when:
+1. Audio is actively loading (after user initiated playback), OR
+2. Something is genuinely wrong (no stems at all)
 
 ---
 
@@ -117,88 +32,107 @@ private async ensureContextRunning(): Promise<void> {
 
 | File | Changes |
 |------|---------|
-| `src/pages/TrainingMode.tsx` | Add try/catch to `handlePlayPause`, call `play()` directly after init |
-| `src/services/webAudioEngine.ts` | Add debug logging to `init()`, add error handling to `ensureContextRunning()` |
+| `src/pages/TrainingMode.tsx` | Update Play button disabled logic to allow click when song is prepared |
+| `src/hooks/useAudioEngine.ts` | Add `isPrepared` flag to return value for clearer state tracking |
 
 ---
 
 ## Implementation Details
 
-### TrainingMode.tsx Changes
+### 1. `src/hooks/useAudioEngine.ts`
+
+Add a new `isPrepared` flag that indicates the song is configured and ready for initialization:
 
 ```typescript
-// Replace the handlePlayPause function (around line 139)
+// Add to interface (around line 27)
+isPrepared: boolean;
 
-const handlePlayPause = async () => {
-  if (songHasRealAudio) {
-    if (!mixdownReady) {
-      // First play - need to initialize
-      setHasStartedPlayback(true);
-      try {
-        await initAudioEngine();
-        // Successfully initialized - start playback
-        webAudioEngine.play();
-        useAudioStore.getState().play();
-      } catch (error) {
-        console.error('Failed to initialize audio:', error);
-        setHasStartedPlayback(false);
-        toast.error("Couldn't load audio", {
-          description: "Please try again or check your connection",
-        });
-      }
-    } else {
-      // Already initialized - just toggle
-      engineTogglePlayPause();
-    }
-  } else {
-    storeTogglePlayPause();
-  }
-};
+// Add to hook (around line 133)
+const isPrepared = engineState.playbackState === 'idle' && engineState.stemLoadProgress.length > 0;
 ```
 
-### webAudioEngine.ts Changes
+### 2. `src/pages/TrainingMode.tsx`
+
+Update the destructured return from `useAudioEngine` to include `isPrepared`, then fix the disabled logic:
 
 ```typescript
-// Update init() method (around line 180)
-
-async init(): Promise<void> {
-  console.log('🎵 Initializing audio engine...');
-  
-  try {
-    await this.ensureContextRunning();
-  } catch (error) {
-    console.error('🎵 Failed to start AudioContext:', error);
-    throw error;
-  }
-  
-  if (this.isPrepared()) {
-    console.log('🎵 Loading prepared song...');
-    await this.loadSong();
-  } else {
-    console.log('🎵 No song prepared, skipping load');
-  }
-  
-  console.log('🎵 Audio engine initialized');
-}
-
-// Update ensureContextRunning() method (around line 168)
-
-private async ensureContextRunning(): Promise<void> {
-  this.ensureContextCreated();
-  
-  if (this.audioContext!.state === 'suspended') {
-    try {
-      await this.audioContext!.resume();
-      console.log('🎵 AudioContext resumed (state:', this.audioContext!.state, ')');
-    } catch (error) {
-      console.error('🎵 AudioContext.resume() failed:', error);
-      throw new Error('Audio playback blocked. Please tap the play button.');
-    }
-  } else {
-    console.log('🎵 AudioContext already running (state:', this.audioContext!.state, ')');
-  }
-}
+// Line 78-104: Add isPrepared to destructured values
+const { 
+  isLoaded, 
+  loadingProgress, 
+  seekTo, 
+  hasRealAudio,
+  isReadyToPlay,
+  isBuffering,
+  bufferedCount,
+  totalStemCount,
+  stemLoadProgress,
+  init: initAudioEngine,
+  audioMode,
+  mixdownReady,
+  mixdownProgress,
+  allStemsReady,
+  isPrepared,  // ADD THIS
+  // ... rest
+} = useAudioEngine();
 ```
+
+Update the Play button disabled logic (around line 754):
+
+```typescript
+// OLD (broken):
+disabled={songHasRealAudio && !isReadyToPlay}
+
+// NEW (fixed):
+// Allow click when prepared (idle with stems) or ready to play
+// Only disable when actively loading and mixdown not ready yet
+disabled={songHasRealAudio && hasStartedPlayback && !mixdownReady}
+```
+
+This means:
+- **Before first tap**: `hasStartedPlayback=false` - Button enabled
+- **After tap, while loading**: `hasStartedPlayback=true && !mixdownReady` - Button disabled
+- **After mixdown ready**: `mixdownReady=true` - Button enabled
+
+---
+
+## Flow After Fix
+
+```text
+User navigates to /training/throwback-exercise
+         ↓
+useEffect fires → prepareSong() called
+         ↓
+playbackState = 'idle', stemLoadProgress.length > 0
+isPrepared = true, isReadyToPlay = false
+         ↓
+Button disabled = songHasRealAudio && hasStartedPlayback && !mixdownReady
+                = true && false && true
+                = false  ← BUTTON ENABLED ✓
+         ↓
+User taps Play button
+         ↓
+handlePlayPause() called → setHasStartedPlayback(true)
+         ↓
+Button disabled = true && true && true = true ← LOADING STATE
+         ↓
+initAudioEngine() → loadSong() → mixdownReady = true
+         ↓
+Button disabled = true && true && false = false ← ENABLED AGAIN
+```
+
+---
+
+## Alternative Simpler Fix
+
+If we want a minimal change, we can just update the disabled condition directly without adding `isPrepared`:
+
+```typescript
+// Line 754: Change to only disable during active loading
+disabled={songHasRealAudio && hasStartedPlayback && !mixdownReady}
+```
+
+This single line change fixes the issue without adding new state tracking.
 
 ---
 
@@ -206,20 +140,18 @@ private async ensureContextRunning(): Promise<void> {
 
 After implementation:
 
-1. **Desktop**: Open exercise → Tap Play → Audio should load and play
-2. **Mobile Safari**: Open exercise → Tap Play → Audio should load and play (no crash)
-3. **Mobile Chrome**: Same as Safari
-4. **Error case**: Disable network → Tap Play → Should show error toast
-5. **Retry**: After error, tap Play again → Should attempt to load again
-6. **Console**: Verify new debug logs appear when tapping Play
+1. Navigate to exercise page - Play button should be **enabled** (gradient visible)
+2. Tap Play - button should briefly disable, show loading overlay
+3. After mixdown loads - button should enable, audio should play
+4. Tap Pause - audio pauses, button shows Play icon
+5. Tap Play again - audio resumes immediately (no loading)
 
 ---
 
-## Why This Fixes the Issue
+## Summary
 
 | Before | After |
 |--------|-------|
-| `initAudioEngine()` errors are uncaught | Errors caught and shown to user |
-| UI stuck with `hasStartedPlayback=true` on error | State reset on error, allows retry |
-| `engineTogglePlayPause()` uses stale `isPlaying` | Directly call `play()` after successful init |
-| No logging to debug init issues | Comprehensive logging in init flow |
+| Button disabled when `!isReadyToPlay` | Button enabled when prepared |
+| User cannot tap Play | User can tap Play to start loading |
+| Deadlock - audio never loads | Audio loads on first tap |
