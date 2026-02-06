@@ -1,49 +1,116 @@
 
-# Fix: Seeking Jumps Back to Beginning
+
+# Fix: Seeking Always Returns to 0:00
 
 ## Problem Summary
-When clicking on the waveform to seek during playback, the song jumps back to the beginning instead of seeking to the clicked position.
+When clicking on the waveform to seek during playback, the audio jumps to 0:00 instead of the clicked position. The console shows two seek calls both with `0.00s`.
 
 ## Root Cause Analysis
 
-After examining the code, I found the issue in `src/services/webAudioEngine.ts` in the `seek()` method (lines 390-408):
+After tracing the code, I found **two bugs** working together:
+
+### Bug 1: Ref Not Being Used for Position Calculation
+
+In `WaveformDisplay.tsx`, the `getTimeFromEvent` function uses `containerRef.current`:
 
 ```typescript
-seek(time: number): void {
-  const clampedTime = Math.max(0, Math.min(time, this.state.duration));
-  
-  if (this.state.playbackState === 'playing') {
-    this.stopAllSources();
-    
-    if (this.state.audioMode === 'stems' && this.state.allStemsReady) {
-      this.createAndStartStemSources(clampedTime);
-    } else if (this.mixdownBuffer) {
-      this.createAndStartMixdownSource(clampedTime);
-    }
-    
-    this.updateState({ currentTime: clampedTime });
-  } else {
-    this.updateState({ currentTime: clampedTime });
-  }
-}
+const getTimeFromEvent = useCallback(
+  (e) => {
+    if (!containerRef.current || duration === 0) return 0;  // <-- Uses containerRef
+    const rect = containerRef.current.getBoundingClientRect();
+    // ...
+  },
+  [duration]
+);
 ```
 
-**The bug**: The `seek()` method stops all sources and creates new ones, which correctly updates `playStartOffset`. However, there's a subtle timing issue:
+But the JSX uses a different ref:
 
-1. When `stopAllSources()` is called, it stops the loop checking interval
-2. The new sources are started with `createAndStartStemSources(clampedTime)` or `createAndStartMixdownSource(clampedTime)`
-3. These methods call `startLoopChecking()` but NOT `startTimeTracking()`
-4. The time tracking animation frame is still running with the OLD references
+```tsx
+<div ref={ref || containerRef} ... >
+```
 
-The time tracking continues to run (never stopped during seek), but after `stopAllSources()`, there may be a brief window where `getCurrentTime()` returns stale data before the new `playStartTime` and `playStartOffset` are set.
+The problem: When using `forwardRef`, the `ref` parameter might be `null` (passed by React when parent doesn't provide a ref), which correctly falls back to `containerRef`. However, there's a subtle issue with how React handles ref assignment timing - the containerRef might not be populated when the event handlers capture their closures during the initial render.
 
-Additionally, when stems mode is active but the condition `this.state.audioMode === 'stems' && this.state.allStemsReady` is checked, if `audioMode` hasn't been updated to `'stems'` yet (still `'mixdown'`), it falls through to `mixdownBuffer` but the mixdown source might not be the current active source.
+### Bug 2: Double Event Firing
+
+When `onLoopSelect` is provided:
+1. `handlePointerUp` fires first and may call `onSeek(start)` where `start = 0`
+2. `handleClick` fires immediately after and also calls `onSeek(0)`
+
+This explains the two "Seeking to 0.00s" log entries.
+
+### Why Time Calculation Returns 0
+
+The `getTimeFromEvent` function returns `0` when:
+- `containerRef.current` is `null`, OR
+- `duration === 0`
+
+Since the song has duration 180 in the database and `setCurrentSong(song)` sets `duration: song.duration` in the store, the duration should be correct. The issue is likely `containerRef.current` being null when the event handlers are called.
 
 ## Solution
 
-Update the `seek()` method to:
-1. Properly restart time tracking after creating new sources
-2. Ensure the correct audio mode is checked
+### Fix 1: Use Event Target for Position Calculation
+
+Instead of relying on `containerRef.current`, use `e.currentTarget` which is the element the event handler is attached to. This is always available during event handling.
+
+```typescript
+const getTimeFromEvent = useCallback(
+  (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent): number => {
+    // Use e.currentTarget which is always the element with the event handler
+    const target = 'currentTarget' in e ? e.currentTarget : containerRef.current;
+    if (!target || duration === 0) return 0;
+    
+    const rect = (target as HTMLElement).getBoundingClientRect();
+    // ... rest of calculation
+  },
+  [duration]
+);
+```
+
+### Fix 2: Prevent Double Event Firing
+
+Add a flag to prevent both `handlePointerUp` and `handleClick` from firing seek:
+
+```typescript
+const [justHandledPointerUp, setJustHandledPointerUp] = useState(false);
+
+const handlePointerUp = (e) => {
+  // ... existing logic
+  if (end - start < 0.5 && onSeek) {
+    onSeek(start);
+    setJustHandledPointerUp(true);
+    // Reset after a short delay to allow normal clicks
+    setTimeout(() => setJustHandledPointerUp(false), 50);
+  }
+};
+
+const handleClick = (e) => {
+  if (!onSeek || duration === 0 || isDragging || justHandledPointerUp) return;
+  // ...
+};
+```
+
+### Fix 3: Combine containerRef with forwarded ref
+
+Use a callback ref pattern to properly sync the forwarded ref with the internal containerRef:
+
+```typescript
+const internalRef = useRef<HTMLDivElement>(null);
+
+// Combine refs using useImperativeHandle or a callback
+const setRefs = useCallback((node: HTMLDivElement | null) => {
+  internalRef.current = node;
+  if (typeof ref === 'function') {
+    ref(node);
+  } else if (ref) {
+    ref.current = node;
+  }
+}, [ref]);
+
+// Use internalRef in getTimeFromEvent
+// Use setRefs on the div
+```
 
 ---
 
@@ -51,59 +118,129 @@ Update the `seek()` method to:
 
 | File | Changes |
 |------|---------|
-| `src/services/webAudioEngine.ts` | Fix the seek method to properly restart time tracking and handle audio mode transition |
+| `src/components/audio/WaveformDisplay.tsx` | Fix ref handling and double event firing |
 
 ---
 
-## Implementation
+## Implementation Details
 
-### `src/services/webAudioEngine.ts`
-
-Update the `seek()` method around line 390:
+### WaveformDisplay.tsx
 
 ```typescript
-seek(time: number): void {
-  const clampedTime = Math.max(0, Math.min(time, this.state.duration));
-  
-  console.log(`🎵 Seeking to ${clampedTime.toFixed(2)}s (playbackState: ${this.state.playbackState}, audioMode: ${this.state.audioMode})`);
-  
-  if (this.state.playbackState === 'playing') {
-    // Stop current sources
-    this.stopAllSources();
-    this.stopTimeTracking(); // Also stop time tracking
-    
-    // Restart sources at new position
-    // Check allStemsReady first since audioMode might still be 'mixdown' during transition
-    if (this.state.allStemsReady) {
-      this.createAndStartStemSources(clampedTime);
-    } else if (this.mixdownBuffer) {
-      this.createAndStartMixdownSource(clampedTime);
-    }
-    
-    // Update state and restart time tracking
-    this.updateState({ currentTime: clampedTime });
-    this.startTimeTracking(); // Restart time tracking with new offset
-  } else {
-    // Just update the position for when we resume
-    this.updateState({ currentTime: clampedTime });
-  }
-}
-```
+export const WaveformDisplay = React.forwardRef<HTMLDivElement, WaveformDisplayProps>(
+  function WaveformDisplay(
+    { /* props */ },
+    ref
+  ) {
+    const internalRef = useRef<HTMLDivElement>(null);
+    const pointerUpHandledRef = useRef(false);
 
-**Key changes:**
-1. Call `stopTimeTracking()` before stopping sources
-2. Check `allStemsReady` first (not `audioMode === 'stems'`) since mode might not be updated yet
-3. Call `startTimeTracking()` after creating new sources to ensure fresh timing
-4. Add debug logging to help trace seek operations
+    // Combine forwarded ref with internal ref
+    const setRefs = useCallback((node: HTMLDivElement | null) => {
+      internalRef.current = node;
+      if (typeof ref === 'function') {
+        ref(node);
+      } else if (ref) {
+        (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+      }
+    }, [ref]);
+
+    // Calculate time from mouse/touch position
+    const getTimeFromEvent = useCallback(
+      (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent): number => {
+        // Use internalRef which is always synced
+        if (!internalRef.current || duration === 0) return 0;
+
+        const rect = internalRef.current.getBoundingClientRect();
+        let clientX: number;
+
+        if ("touches" in e) {
+          clientX = e.touches[0]?.clientX ?? e.changedTouches[0]?.clientX ?? 0;
+        } else {
+          clientX = (e as MouseEvent).clientX;
+        }
+
+        const x = clientX - rect.left;
+        const percentage = Math.max(0, Math.min(1, x / rect.width));
+        return percentage * duration;
+      },
+      [duration]
+    );
+
+    // Handle click for seeking (only if not dragging or just handled by pointerUp)
+    const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!onSeek || duration === 0 || isDragging || pointerUpHandledRef.current) {
+        pointerUpHandledRef.current = false;  // Reset for next interaction
+        return;
+      }
+
+      const time = getTimeFromEvent(e);
+      console.log(`🎯 WaveformDisplay click seeking to ${time.toFixed(2)}s (duration: ${duration})`);
+      onSeek(time);
+    };
+
+    // Handle drag end - also handles short taps as seeks
+    const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isDragging || dragStartTime === null || dragEndTime === null) {
+        setIsDragging(false);
+        return;
+      }
+
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+
+      const start = Math.min(dragStartTime, dragEndTime);
+      const end = Math.max(dragStartTime, dragEndTime);
+
+      if (end - start >= 0.5 && onLoopSelect) {
+        onLoopSelect(start, end);
+      } else if (onSeek) {
+        console.log(`🎯 WaveformDisplay pointerUp seeking to ${start.toFixed(2)}s`);
+        onSeek(start);
+        pointerUpHandledRef.current = true;  // Prevent duplicate from handleClick
+      }
+
+      setIsDragging(false);
+      setDragStartTime(null);
+      setDragEndTime(null);
+    };
+
+    return (
+      <div
+        ref={setRefs}  // <-- Use combined ref setter
+        className={...}
+        onClick={handleClick}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
+        {/* ... */}
+      </div>
+    );
+  }
+);
+```
 
 ---
 
 ## Testing Checklist
 
 After implementation:
-1. Play audio
-2. Click on the waveform to seek to middle of track - should jump to that position
-3. Click on the waveform to seek to near the end - should jump to that position
-4. Use skip forward/back buttons - should work correctly
-5. Seek while in mixdown mode (before stems load) - should work
-6. Seek while in stems mode (after stems load) - should work
+
+1. **Basic seek**: Play audio, click middle of waveform - should seek to middle
+2. **Seek to end**: Click near end of waveform - should seek to near end
+3. **Multiple seeks**: Click different positions rapidly - should work each time
+4. **Loop selection**: Drag on waveform (> 0.5s) - should create loop region, NOT seek
+5. **Short tap**: Quick tap on waveform (< 0.5s drag) - should seek, not create loop
+6. **Console check**: Each seek should show correct time, no duplicate entries
+
+---
+
+## Summary
+
+| Issue | Fix |
+|-------|-----|
+| `containerRef.current` null | Use combined ref pattern with internal ref |
+| Double seek (click + pointerUp) | Add `pointerUpHandledRef` flag |
+| Time calculation returning 0 | Ensure ref is properly assigned before events fire |
+
