@@ -1,29 +1,45 @@
 
-# Fix Library Card Scrolling on Mobile
+# Add Cinematic Backgrounds to Vocal Health and Stage Prep Pages
 
-## Problem
-The stacked cards on the Library page feel "stuck" when scrolling on mobile because the scroll containers (`h-[55vh]`) are too short. This means the browser runs out of scrollable space quickly, and cards pile up before the user can naturally scroll through them. The tight `16px` per-card offset compounds this.
+## Overview
+Add the uploaded images as themed backgrounds for two pages:
+- **Image 1** (honey tea / vocal booth) --> Vocal Health page
+- **Image 2** (mic on stage) --> Stage Prep page
 
-## Changes
+Both will follow the same pattern used by existing background components (slow-zoom animation, dark overlays for readability).
 
-**File: `src/components/song/StackedSongCards.tsx`**
+## Steps
 
-1. **Increase scroll container height** from `h-[55vh] md:h-[50vh]` to `h-[75vh] md:h-[65vh]` -- gives each card enough scroll runway so the transition between cards feels smooth and natural rather than jumpy.
+### 1. Copy uploaded images into the project
+- Copy `user-uploads://image-26.png` to `src/assets/vocal-health-bg.png`
+- Copy `user-uploads://image-27.png` to `src/assets/stage-prep-bg.png`
 
-2. **Increase per-card top offset** from `16px` to `24px` -- provides a slightly bigger visible "peek" of stacked cards behind the current one, making it clearer there are more cards to scroll to.
+### 2. Create `src/components/layout/VocalHealthBackground.tsx`
+A new background component following the same pattern as `VocalNotesDeskBackground`:
+- Full-screen fixed image with `object-cover` and `animate-slow-zoom`
+- Dark overlay at ~35% opacity to keep it subtle and not too bright
+- Gradient overlay from top to bottom for readability
 
-3. **Increase bottom spacer** from `h-[10vh]` to `h-[25vh]` -- ensures the last card has enough room to fully display and doesn't get cut off at the bottom of the page.
+### 3. Create `src/components/layout/StagePrepBackground.tsx`
+Same pattern as above, using the stage mic image.
 
-4. **Reduce scale intensity** from `0.05` to `0.04` per card -- the more aggressive scaling was making deeply stacked cards shrink too much, contributing to the cramped feel.
+### 4. Update `src/pages/VocalHealth.tsx`
+- Import and use the new `VocalHealthBackground` component
+- Replace the existing `<div className="fixed inset-0 medical-bg" />` and its overlay div with the new background component
+
+### 5. Update `src/pages/StagePrep.tsx`
+- Import and use the new `StagePrepBackground` component
+- Replace the existing `<div className="fixed inset-0 backstage-bg" />` and its overlay div with the new background component
 
 ## Technical Details
 
-| Property | Current | New |
-|----------|---------|-----|
-| Container height (mobile) | `55vh` | `75vh` |
-| Container height (desktop) | `50vh` | `65vh` |
-| Per-card top offset | `16px` | `24px` |
-| Bottom spacer | `10vh` | `25vh` |
-| Scale factor per card | `0.05` | `0.04` |
+Each background component will render:
+```
+<div className="fixed inset-0 -z-10 overflow-hidden">
+  <img src={bg} className="absolute inset-0 w-full h-full object-cover animate-slow-zoom" />
+  <div className="absolute inset-0 bg-background/35" />
+  <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background/70" />
+</div>
+```
 
-These values give the sticky-scroll mechanic the breathing room it needs. Each card gets ~75% of the viewport to scroll through before the next one starts stacking, which produces a smooth, natural card-by-card reveal.
+The pages will swap their inline background divs for these components, keeping the content `z-10` layer unchanged.
