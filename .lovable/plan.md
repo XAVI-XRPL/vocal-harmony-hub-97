@@ -1,148 +1,51 @@
 
 
-# RVMT Mobile Performance Optimization
+# Swap Exercise Cover Art Images
 
-## Summary
+## What Changes
 
-Apply the highest-impact optimizations from the performance guide to prevent mobile browser crashes and improve load times. Focused on memory management, code splitting, and error resilience.
+Replace the current stock/placeholder cover images for 3 exercises with the uploaded custom artwork. The 4th exercise (12. TESTIFY V2) will be updated once you upload its cover image.
 
----
+## Image Mapping
 
-## Changes
+| Exercise | Uploaded Image | Description |
+|----------|---------------|-------------|
+| 1. TESTIFY EXERCISE | image-20.png | Studio microphone, blue tones |
+| 2. THROWBACK EXERCISE | image-21.png | Cassette tape, headphones, whiskey |
+| 3. DONT LEAVE EXERCISE | image-22.png | Desert, Leaning Tower of Pisa |
+| 12. TESTIFY (VERSION 2) | Waiting for upload | Will show with lock overlay in demo mode |
 
-### 1. Enhanced Audio Engine Cleanup (Memory Management)
+## Steps
 
-**File: `src/services/webAudioEngine.ts`**
+### 1. Copy images to public folder
 
-The current `cleanup()` method disconnects gain nodes and clears the stems Map, but does NOT:
-- Null out `stem.buffer` (the decoded AudioBuffer -- ~40MB each)
-- Close the AudioContext (keeps ~10MB alive)
-- Cancel in-flight fetches
+Copy the 3 uploaded images to `public/images/exercises/`:
+- `user-uploads://image-20.png` -> `public/images/exercises/testify-cover.png`
+- `user-uploads://image-21.png` -> `public/images/exercises/throwback-cover.png`
+- `user-uploads://image-22.png` -> `public/images/exercises/dont-leave-cover.png`
 
-Update `cleanup()` to explicitly release AudioBuffer references, close the AudioContext, and reset all tracking state. Also add abort logic.
+Using `public/` instead of `src/assets/` because `cover_art` is stored as a URL in the database and rendered dynamically -- it needs a stable, predictable URL path.
 
-```typescript
-cleanup(): void {
-  this.stopAllSources();
-  this.stopTimeTracking();
-  this.releaseWakeLock();
-  
-  // Abort any in-flight fetches
-  this.abortController?.abort();
-  this.abortController = null;
-  
-  // Release AudioBuffer references (big memory win)
-  this.stems.forEach(stem => {
-    stem.buffer = null;
-    stem.sourceNode?.disconnect();
-    stem.sourceNode = null;
-    stem.gainNode?.disconnect();
-  });
-  this.stems.clear();
-  
-  // Clear mixdown
-  this.mixdownBuffer = null;
-  // ... existing mixdown cleanup ...
-  
-  // Close AudioContext to fully release resources
-  if (this.audioContext && this.audioContext.state !== 'closed') {
-    this.audioContext.close();
-    this.audioContext = null;
-    this.masterGainNode = null;
-  }
-  
-  // Reset tracking
-  this.currentSongId = null;
-  this.currentSongConfig = null;
-  this.backgroundLoadPromise = null;
-  this.stemGroupMap.clear();
-  // ... reset state ...
-}
+### 2. Update database cover_art URLs
+
+Update the `songs` table to point to the new local images:
+
+```sql
+UPDATE songs SET cover_art = '/images/exercises/testify-cover.png' WHERE id = 'testify-exercise';
+UPDATE songs SET cover_art = '/images/exercises/throwback-cover.png' WHERE id = 'throwback-exercise';
+UPDATE songs SET cover_art = '/images/exercises/dont-leave-cover.png' WHERE id = 'dont-leave-exercise';
 ```
 
-**File: `src/pages/TrainingMode.tsx`**
+### 3. No code changes needed
 
-Update the existing unmount cleanup (line 270-276) to call full `cleanup()` instead of just `pause()`:
+The `SongCard` component already renders `song.coverArt` as an `<img src>`. The lock overlay for Testify V2 is already implemented from the previous change. Once you upload the V2 cover image, we'll add it the same way.
 
-```typescript
-useEffect(() => {
-  return () => {
-    console.log("[TrainingMode] Cleanup - releasing audio memory");
-    webAudioEngine.cleanup();
-  };
-}, []);
-```
+## Files
 
-This ensures AudioBuffers (~120-400MB) are released when navigating away.
-
----
-
-### 2. Lazy Route Loading (Bundle Size)
-
-**File: `src/App.tsx`**
-
-Convert heavy page imports to `React.lazy()` with `Suspense`. This splits the bundle so pages like TrainingMode, VocalHealth, StagePrep, and VocalRiderStore only load when navigated to.
-
-```typescript
-import { lazy, Suspense } from "react";
-
-// Eagerly loaded (needed immediately)
-import Home from "./pages/Home";
-import Library from "./pages/Library";
-
-// Lazy loaded (loaded on navigation)
-const TrainingMode = lazy(() => import("./pages/TrainingMode"));
-const VocalHealth = lazy(() => import("./pages/VocalHealth"));
-const StagePrep = lazy(() => import("./pages/StagePrep"));
-const VocalRiderStore = lazy(() => import("./pages/VocalRiderStore"));
-const Hub = lazy(() => import("./pages/Hub"));
-const Profile = lazy(() => import("./pages/Profile"));
-const Progress = lazy(() => import("./pages/Progress"));
-const Subscription = lazy(() => import("./pages/Subscription"));
-const Playlists = lazy(() => import("./pages/Playlists"));
-const PlaylistDetail = lazy(() => import("./pages/PlaylistDetail"));
-const SongDetail = lazy(() => import("./pages/SongDetail"));
-```
-
-Wrap routes in `Suspense` with a lightweight loading fallback (spinner).
-
----
-
-### 3. Error Boundary (Crash Resilience)
-
-**New file: `src/components/ErrorBoundary.tsx`**
-
-Create a React error boundary component that catches render errors and shows a "Something went wrong / Reload" screen instead of a white screen crash.
-
-Wrap the main app content in `App.tsx` with this boundary.
-
----
-
-### 4. Lazy Image Loading
-
-**File: `src/components/song/SongCard.tsx`**
-
-Add `loading="lazy"` and `decoding="async"` to cover art images so they don't load until scrolled into view. This reduces initial page load memory.
-
----
-
-## What This Achieves
-
-| Optimization | Impact |
-|-------------|--------|
-| AudioBuffer cleanup on unmount | Frees ~120-400MB when leaving TrainingMode |
-| AudioContext.close() | Releases system audio resources |
-| Lazy route loading | Reduces initial JS bundle by ~40-60% |
-| Error boundary | Prevents full white-screen crashes |
-| Lazy image loading | Reduces initial memory by deferring off-screen images |
-
-## Files Modified
-
-| File | Change |
-|------|--------|
-| `src/services/webAudioEngine.ts` | Enhanced cleanup() with buffer nulling and context close |
-| `src/pages/TrainingMode.tsx` | Call cleanup() instead of pause() on unmount |
-| `src/App.tsx` | Lazy load routes with React.lazy + Suspense |
-| `src/components/ErrorBoundary.tsx` | New error boundary component |
-| `src/components/song/SongCard.tsx` | Add loading="lazy" to images |
+| Action | Path |
+|--------|------|
+| Copy | `public/images/exercises/testify-cover.png` |
+| Copy | `public/images/exercises/throwback-cover.png` |
+| Copy | `public/images/exercises/dont-leave-cover.png` |
+| Database update | 3 UPDATE statements on `songs.cover_art` |
 
