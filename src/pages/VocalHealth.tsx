@@ -10,6 +10,7 @@ import { mockDoctors } from "@/data/mockDoctors";
 import { mockVenues } from "@/data/mockVenues";
 import { US_STATES, type StateData } from "@/data/usStateData";
 import { Input } from "@/components/ui/input";
+import { VocalHealthBackground } from "@/components/layout/VocalHealthBackground";
 
 export default function VocalHealth() {
   const navigate = useNavigate();
@@ -70,11 +71,7 @@ export default function VocalHealth() {
 
   return (
     <div className="relative min-h-screen">
-      {/* Medical Theme Background */}
-      <div className="fixed inset-0 medical-bg" />
-      
-      {/* Overlay */}
-      <div className="fixed inset-0 bg-gradient-to-b from-background/50 via-background/70 to-background/95" />
+      <VocalHealthBackground />
 
       {/* Content */}
       <div className="relative z-10">
