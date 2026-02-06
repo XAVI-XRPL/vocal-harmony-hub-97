@@ -1,38 +1,18 @@
 
-# Add Library Background Image
+# Tighten Stacking Card Spacing
 
-## What Changes
+## Problem
+The cards have too much vertical space between them (`h-[80vh]` container height and `32px` per-card offset), so they don't feel like they're stacking tightly on scroll.
 
-Add the uploaded acoustic foam studio wall image as the thematic background for the Library page, following the same pattern used by other page backgrounds (Stadium, Studio, Records Wall, Vocal Notes Desk).
+## Changes
 
-## Steps
+**File: `src/components/song/StackedSongCards.tsx`**
 
-### 1. Copy image to assets
+1. **Reduce container height** from `h-[80vh] md:h-[70vh]` to `h-[55vh] md:h-[50vh]` -- this controls how much you scroll before the next card starts covering the current one. Lower = tighter stacking.
 
-Copy `user-uploads://image-23.png` to `src/assets/library-background.png`
+2. **Reduce per-card top offset** from `index * 32px` to `index * 16px` -- this controls the visible "peek" of stacked cards behind the front card. Smaller = cards sit nearly on top of each other.
 
-Using `src/assets/` (not `public/`) because background components import images as ES6 modules (matching the pattern in `StudioBackground.tsx`, `RecordsWallBackground.tsx`, etc.).
+3. **Reduce bottom spacer** from `h-[20vh]` to `h-[10vh]` to match the tighter layout.
 
-### 2. Create `LibraryBackground` component
-
-**New file: `src/components/layout/LibraryBackground.tsx`**
-
-Follow the exact pattern from `StudioBackground.tsx`:
-- Fixed position, full-screen, `-z-10`
-- `object-cover` image with `animate-slow-zoom` (30-second subtle zoom)
-- Dark overlay (`bg-background/50`) for card readability
-- Gradient overlay from top/bottom for color blending
-
-### 3. Add background to Library page
-
-**Modified: `src/pages/Library.tsx`**
-
-Import and render `<LibraryBackground />` at the top of the page, similar to how other pages use their themed backgrounds.
-
-## Files
-
-| Action | File |
-|--------|------|
-| Copy | `src/assets/library-background.png` |
-| Create | `src/components/layout/LibraryBackground.tsx` |
-| Modify | `src/pages/Library.tsx` (add background import + render) |
+## Result
+Cards will stack on top of each other much more quickly as you scroll, creating the tight overlapping deck effect.
