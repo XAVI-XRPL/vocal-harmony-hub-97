@@ -1,116 +1,35 @@
 
-
-# Fix: Seeking Always Returns to 0:00
+# Fix: Sequential Stem Loading to Prevent Memory Crashes
 
 ## Problem Summary
-When clicking on the waveform to seek during playback, the audio jumps to 0:00 instead of the clicked position. The console shows two seek calls both with `0.00s`.
+The app crashes when loading stems because all 9+ stems are fetched and decoded simultaneously:
+- Each 4-minute stereo stem decodes to ~40MB of raw PCM audio
+- 9 stems x 40MB = 360MB memory spike
+- Mobile browsers run out of memory and crash
 
-## Root Cause Analysis
+## Root Cause
 
-After tracing the code, I found **two bugs** working together:
-
-### Bug 1: Ref Not Being Used for Position Calculation
-
-In `WaveformDisplay.tsx`, the `getTimeFromEvent` function uses `containerRef.current`:
+In `src/services/webAudioEngine.ts`, both stem loading methods use `Promise.all()`:
 
 ```typescript
-const getTimeFromEvent = useCallback(
-  (e) => {
-    if (!containerRef.current || duration === 0) return 0;  // <-- Uses containerRef
-    const rect = containerRef.current.getBoundingClientRect();
-    // ...
-  },
-  [duration]
-);
+// loadStemsInBackground() - Line 740
+const loadPromises = stems.map(async (stemConfig) => { ... });
+await Promise.all(loadPromises);
+
+// loadAllStems() - Line 862  
+const loadPromises = stems.map(async (stemConfig) => { ... });
+await Promise.all(loadPromises);
 ```
 
-But the JSX uses a different ref:
-
-```tsx
-<div ref={ref || containerRef} ... >
-```
-
-The problem: When using `forwardRef`, the `ref` parameter might be `null` (passed by React when parent doesn't provide a ref), which correctly falls back to `containerRef`. However, there's a subtle issue with how React handles ref assignment timing - the containerRef might not be populated when the event handlers capture their closures during the initial render.
-
-### Bug 2: Double Event Firing
-
-When `onLoopSelect` is provided:
-1. `handlePointerUp` fires first and may call `onSeek(start)` where `start = 0`
-2. `handleClick` fires immediately after and also calls `onSeek(0)`
-
-This explains the two "Seeking to 0.00s" log entries.
-
-### Why Time Calculation Returns 0
-
-The `getTimeFromEvent` function returns `0` when:
-- `containerRef.current` is `null`, OR
-- `duration === 0`
-
-Since the song has duration 180 in the database and `setCurrentSong(song)` sets `duration: song.duration` in the store, the duration should be correct. The issue is likely `containerRef.current` being null when the event handlers are called.
+This fires 9+ fetch + decode operations at once, overwhelming memory.
 
 ## Solution
 
-### Fix 1: Use Event Target for Position Calculation
-
-Instead of relying on `containerRef.current`, use `e.currentTarget` which is the element the event handler is attached to. This is always available during event handling.
-
-```typescript
-const getTimeFromEvent = useCallback(
-  (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent): number => {
-    // Use e.currentTarget which is always the element with the event handler
-    const target = 'currentTarget' in e ? e.currentTarget : containerRef.current;
-    if (!target || duration === 0) return 0;
-    
-    const rect = (target as HTMLElement).getBoundingClientRect();
-    // ... rest of calculation
-  },
-  [duration]
-);
-```
-
-### Fix 2: Prevent Double Event Firing
-
-Add a flag to prevent both `handlePointerUp` and `handleClick` from firing seek:
-
-```typescript
-const [justHandledPointerUp, setJustHandledPointerUp] = useState(false);
-
-const handlePointerUp = (e) => {
-  // ... existing logic
-  if (end - start < 0.5 && onSeek) {
-    onSeek(start);
-    setJustHandledPointerUp(true);
-    // Reset after a short delay to allow normal clicks
-    setTimeout(() => setJustHandledPointerUp(false), 50);
-  }
-};
-
-const handleClick = (e) => {
-  if (!onSeek || duration === 0 || isDragging || justHandledPointerUp) return;
-  // ...
-};
-```
-
-### Fix 3: Combine containerRef with forwarded ref
-
-Use a callback ref pattern to properly sync the forwarded ref with the internal containerRef:
-
-```typescript
-const internalRef = useRef<HTMLDivElement>(null);
-
-// Combine refs using useImperativeHandle or a callback
-const setRefs = useCallback((node: HTMLDivElement | null) => {
-  internalRef.current = node;
-  if (typeof ref === 'function') {
-    ref(node);
-  } else if (ref) {
-    ref.current = node;
-  }
-}, [ref]);
-
-// Use internalRef in getTimeFromEvent
-// Use setRefs on the div
-```
+Replace parallel loading with sequential loading using `for...of` loops:
+1. Load stems ONE AT A TIME
+2. Add small delay between stems for garbage collection
+3. Clear previous song's buffers before loading new song
+4. Add progress tracking per stem
 
 ---
 
@@ -118,129 +37,338 @@ const setRefs = useCallback((node: HTMLDivElement | null) => {
 
 | File | Changes |
 |------|---------|
-| `src/components/audio/WaveformDisplay.tsx` | Fix ref handling and double event firing |
+| `src/services/webAudioEngine.ts` | Replace `Promise.all` with sequential `for...of` loop in both loading methods |
 
 ---
 
 ## Implementation Details
 
-### WaveformDisplay.tsx
+### 1. Update `loadStemsInBackground()` (Lines 735-798)
+
+Replace the parallel `Promise.all` pattern with sequential loading:
 
 ```typescript
-export const WaveformDisplay = React.forwardRef<HTMLDivElement, WaveformDisplayProps>(
-  function WaveformDisplay(
-    { /* props */ },
-    ref
-  ) {
-    const internalRef = useRef<HTMLDivElement>(null);
-    const pointerUpHandledRef = useRef(false);
-
-    // Combine forwarded ref with internal ref
-    const setRefs = useCallback((node: HTMLDivElement | null) => {
-      internalRef.current = node;
-      if (typeof ref === 'function') {
-        ref(node);
-      } else if (ref) {
-        (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
-      }
-    }, [ref]);
-
-    // Calculate time from mouse/touch position
-    const getTimeFromEvent = useCallback(
-      (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent): number => {
-        // Use internalRef which is always synced
-        if (!internalRef.current || duration === 0) return 0;
-
-        const rect = internalRef.current.getBoundingClientRect();
-        let clientX: number;
-
-        if ("touches" in e) {
-          clientX = e.touches[0]?.clientX ?? e.changedTouches[0]?.clientX ?? 0;
-        } else {
-          clientX = (e as MouseEvent).clientX;
-        }
-
-        const x = clientX - rect.left;
-        const percentage = Math.max(0, Math.min(1, x / rect.width));
-        return percentage * duration;
-      },
-      [duration]
-    );
-
-    // Handle click for seeking (only if not dragging or just handled by pointerUp)
-    const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!onSeek || duration === 0 || isDragging || pointerUpHandledRef.current) {
-        pointerUpHandledRef.current = false;  // Reset for next interaction
-        return;
-      }
-
-      const time = getTimeFromEvent(e);
-      console.log(`🎯 WaveformDisplay click seeking to ${time.toFixed(2)}s (duration: ${duration})`);
-      onSeek(time);
-    };
-
-    // Handle drag end - also handles short taps as seeks
-    const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
-      if (!isDragging || dragStartTime === null || dragEndTime === null) {
-        setIsDragging(false);
-        return;
-      }
-
-      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-
-      const start = Math.min(dragStartTime, dragEndTime);
-      const end = Math.max(dragStartTime, dragEndTime);
-
-      if (end - start >= 0.5 && onLoopSelect) {
-        onLoopSelect(start, end);
-      } else if (onSeek) {
-        console.log(`🎯 WaveformDisplay pointerUp seeking to ${start.toFixed(2)}s`);
-        onSeek(start);
-        pointerUpHandledRef.current = true;  // Prevent duplicate from handleClick
-      }
-
-      setIsDragging(false);
-      setDragStartTime(null);
-      setDragEndTime(null);
-    };
-
-    return (
-      <div
-        ref={setRefs}  // <-- Use combined ref setter
-        className={...}
-        onClick={handleClick}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-      >
-        {/* ... */}
-      </div>
-    );
+private async loadStemsInBackground(stems: StemConfig[]): Promise<void> {
+  if (!this.audioContext || !this.masterGainNode) {
+    throw new Error('AudioContext not initialized');
   }
-);
+  
+  const signal = this.abortController?.signal;
+  
+  // Load stems ONE AT A TIME (not in parallel!)
+  for (const stemConfig of stems) {
+    // Check if cancelled
+    if (signal?.aborted) {
+      console.log('[WebAudioEngine] Stem loading cancelled');
+      return;
+    }
+    
+    console.log(`[WebAudioEngine] Loading stem: ${stemConfig.name}`);
+    
+    try {
+      // Create gain node for this stem
+      const gainNode = this.audioContext!.createGain();
+      gainNode.gain.value = 0; // Start muted - will fade in during crossfade
+      gainNode.connect(this.masterGainNode!);
+      
+      // Initialize stem data
+      const stemData: StemData = {
+        id: stemConfig.id,
+        name: stemConfig.name,
+        buffer: null,
+        sourceNode: null,
+        gainNode,
+        volume: 0.8,
+        isMuted: false,
+        isSolo: false,
+      };
+      this.stems.set(stemConfig.id, stemData);
+      
+      // Fetch audio file with progress tracking
+      const response = await fetch(stemConfig.url, { signal });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      // Track download progress
+      const contentLength = response.headers.get('content-length');
+      const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+      let receivedBytes = 0;
+      const chunks: Uint8Array[] = [];
+      
+      if (response.body) {
+        const reader = response.body.getReader();
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (signal?.aborted) return;
+          
+          chunks.push(value);
+          receivedBytes += value.length;
+          
+          if (totalBytes > 0) {
+            const progress = Math.round((receivedBytes / totalBytes) * 80);
+            this.updateStemProgress(stemConfig.id, progress, false);
+          }
+        }
+      } else {
+        // Fallback if body streaming not supported
+        const buffer = await response.arrayBuffer();
+        chunks.push(new Uint8Array(buffer));
+        receivedBytes = buffer.byteLength;
+      }
+      
+      // Combine chunks
+      const combined = new Uint8Array(receivedBytes);
+      let offset = 0;
+      for (const chunk of chunks) {
+        combined.set(chunk, offset);
+        offset += chunk.length;
+      }
+      
+      if (signal?.aborted) return;
+      
+      // Decode audio data
+      console.log(`[WebAudioEngine] Decoding stem: ${stemConfig.name}`);
+      const audioBuffer = await this.audioContext!.decodeAudioData(combined.buffer.slice(0));
+      
+      stemData.buffer = audioBuffer;
+      this.updateStemProgress(stemConfig.id, 100, true);
+      
+      console.log(`[WebAudioEngine] ✓ Loaded: ${stemConfig.name}`);
+      
+      // Small delay between stems for garbage collector
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        console.log('[WebAudioEngine] Stem loading aborted');
+        return;
+      }
+      
+      console.error(`[WebAudioEngine] ✗ Failed: ${stemConfig.name}`, error);
+      this.updateStemProgress(stemConfig.id, 0, false, (error as Error).message);
+      // Continue loading other stems even if one fails
+    }
+  }
+  
+  // Verify at least some stems loaded
+  const loadedCount = Array.from(this.stems.values()).filter(s => s.buffer).length;
+  if (loadedCount === 0) {
+    throw new Error('No stems could be loaded');
+  }
+  
+  this.updateState({ allStemsReady: true });
+}
 ```
+
+### 2. Update `loadAllStems()` (Lines 857-919)
+
+Apply the same sequential pattern:
+
+```typescript
+private async loadAllStems(stems: StemConfig[]): Promise<void> {
+  if (!this.audioContext || !this.masterGainNode) {
+    throw new Error('AudioContext not initialized');
+  }
+  
+  const signal = this.abortController?.signal;
+  
+  // Load stems ONE AT A TIME (not in parallel!)
+  for (const stemConfig of stems) {
+    if (signal?.aborted) {
+      console.log('[WebAudioEngine] Stem loading cancelled');
+      return;
+    }
+    
+    console.log(`[WebAudioEngine] Loading stem: ${stemConfig.name}`);
+    
+    try {
+      // Create gain node for this stem
+      const gainNode = this.audioContext!.createGain();
+      gainNode.connect(this.masterGainNode!);
+      
+      // Initialize stem data
+      const stemData: StemData = {
+        id: stemConfig.id,
+        name: stemConfig.name,
+        buffer: null,
+        sourceNode: null,
+        gainNode,
+        volume: 0.8,
+        isMuted: false,
+        isSolo: false,
+      };
+      this.stems.set(stemConfig.id, stemData);
+      
+      // Fetch with progress tracking
+      const response = await fetch(stemConfig.url, { signal });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      // Track download progress
+      const contentLength = response.headers.get('content-length');
+      const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+      let receivedBytes = 0;
+      const chunks: Uint8Array[] = [];
+      
+      if (response.body) {
+        const reader = response.body.getReader();
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (signal?.aborted) return;
+          
+          chunks.push(value);
+          receivedBytes += value.length;
+          
+          if (totalBytes > 0) {
+            const progress = Math.round((receivedBytes / totalBytes) * 80);
+            this.updateStemProgress(stemConfig.id, progress, false);
+          }
+        }
+      } else {
+        const buffer = await response.arrayBuffer();
+        chunks.push(new Uint8Array(buffer));
+        receivedBytes = buffer.byteLength;
+      }
+      
+      // Combine chunks
+      const combined = new Uint8Array(receivedBytes);
+      let offset = 0;
+      for (const chunk of chunks) {
+        combined.set(chunk, offset);
+        offset += chunk.length;
+      }
+      
+      if (signal?.aborted) return;
+      
+      // Decode audio data
+      console.log(`[WebAudioEngine] Decoding stem: ${stemConfig.name}`);
+      const audioBuffer = await this.audioContext!.decodeAudioData(combined.buffer.slice(0));
+      
+      stemData.buffer = audioBuffer;
+      this.updateStemProgress(stemConfig.id, 100, true);
+      
+      console.log(`[WebAudioEngine] ✓ Loaded: ${stemConfig.name}`);
+      
+      // Small delay for garbage collector
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') {
+        console.log('[WebAudioEngine] Stem loading aborted');
+        return;
+      }
+      
+      console.error(`[WebAudioEngine] ✗ Failed: ${stemConfig.name}`, error);
+      this.updateStemProgress(stemConfig.id, 0, false, (error as Error).message);
+    }
+  }
+  
+  // Verify at least some stems loaded
+  const loadedCount = Array.from(this.stems.values()).filter(s => s.buffer).length;
+  if (loadedCount === 0) {
+    throw new Error('No stems could be loaded');
+  }
+  
+  this.updateState({ allStemsReady: true });
+}
+```
+
+### 3. Clear Buffers in `loadSong()` (Lines 255-330)
+
+Add memory cleanup before loading new song:
+
+```typescript
+async loadSong(config?: SongConfig): Promise<void> {
+  const songConfig = config || this.currentSongConfig;
+  if (!songConfig) {
+    console.warn('No song config to load');
+    return;
+  }
+  
+  // Abort any pending loads
+  this.abort();
+  
+  // Clear previous song's buffers to free memory
+  if (config && config.songId !== this.currentSongId) {
+    console.log('[WebAudioEngine] Clearing previous song buffers...');
+    this.cleanup();
+    this.currentSongId = config.songId;
+    this.currentSongConfig = config;
+    
+    // Force garbage collection opportunity
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  
+  // ... rest of method unchanged
+}
+```
+
+---
+
+## Memory Flow After Fix
+
+```text
+Before (CRASH):
+  Load stem 1 ──┬──> 40MB
+  Load stem 2 ──┼──> 40MB   ← All at once = 360MB spike
+  ...          ──┼──> ...
+  Load stem 9 ──┴──> 40MB
+
+After (SAFE):
+  Load stem 1 ──> 40MB ──> GC delay
+                          ↓
+  Load stem 2 ──────────> 40MB ──> GC delay
+                                   ↓
+  Load stem 3 ─────────────────> 40MB ──> ...
+  
+  (Memory stays ~80-120MB, never spikes to 360MB)
+```
+
+---
+
+## Expected Console Output After Fix
+
+```text
+[WebAudioEngine] Loading stem: Drums
+[WebAudioEngine] Decoding stem: Drums
+[WebAudioEngine] ✓ Loaded: Drums
+[WebAudioEngine] Loading stem: Bass
+[WebAudioEngine] Decoding stem: Bass
+[WebAudioEngine] ✓ Loaded: Bass
+[WebAudioEngine] Loading stem: Guitar
+...
+```
+
+Each stem loads completely before the next starts.
 
 ---
 
 ## Testing Checklist
 
 After implementation:
-
-1. **Basic seek**: Play audio, click middle of waveform - should seek to middle
-2. **Seek to end**: Click near end of waveform - should seek to near end
-3. **Multiple seeks**: Click different positions rapidly - should work each time
-4. **Loop selection**: Drag on waveform (> 0.5s) - should create loop region, NOT seek
-5. **Short tap**: Quick tap on waveform (< 0.5s drag) - should seek, not create loop
-6. **Console check**: Each seek should show correct time, no duplicate entries
+1. Open browser DevTools → Performance/Memory tab
+2. Watch memory usage as stems load
+3. Memory should climb gradually (step by step), not spike all at once
+4. Each stem should show "Loading..." then "✓" one at a time in console
+5. App should NOT crash on mobile
+6. All stems should eventually show as loaded
+7. Play button should work after stems are ready
 
 ---
 
 ## Summary
 
-| Issue | Fix |
-|-------|-----|
-| `containerRef.current` null | Use combined ref pattern with internal ref |
-| Double seek (click + pointerUp) | Add `pointerUpHandledRef` flag |
-| Time calculation returning 0 | Ensure ref is properly assigned before events fire |
-
+| Aspect | Before | After |
+|--------|--------|-------|
+| Loading Pattern | Parallel (`Promise.all`) | Sequential (`for...of`) |
+| Memory Spike | ~360MB at once | ~40-80MB gradual |
+| Mobile Stability | Crashes | Stable |
+| Load Time | Faster but crashes | Slightly slower but reliable |
