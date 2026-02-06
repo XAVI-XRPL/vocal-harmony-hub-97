@@ -72,6 +72,7 @@ export default function TrainingMode() {
   const intervalRef = useRef<number | null>(null);
   const prevAllStemsReadyRef = useRef(false);
   const [showControls, setShowControls] = React.useState(false);
+  const [hasStartedPlayback, setHasStartedPlayback] = React.useState(false);
 
   // Web Audio Engine hook for sample-accurate playback
   const { 
@@ -137,6 +138,7 @@ export default function TrainingMode() {
   // Unified handlers that route to engine or store
   const handlePlayPause = async () => {
     if (songHasRealAudio) {
+      setHasStartedPlayback(true); // Track that user initiated playback
       await initAudioEngine(); // User gesture - safe to resume AudioContext
       engineTogglePlayPause();
     } else {
@@ -380,7 +382,8 @@ export default function TrainingMode() {
 
   // Show loading overlay when audio needs to buffer
   // With mixdown-first strategy, dismiss overlay once mixdown is ready
-  const showLoadingOverlay = songHasRealAudio && !mixdownReady && !isReadyToPlay;
+  // Only show after user has initiated playback (tapped Play button)
+  const showLoadingOverlay = songHasRealAudio && hasStartedPlayback && !mixdownReady && !isReadyToPlay;
 
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden">
