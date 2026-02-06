@@ -1,30 +1,49 @@
 
-# Fix: Play Button Disabled Before First Tap
+# Fix: Seeking Jumps Back to Beginning
 
-## Problem Analysis
+## Problem Summary
+When clicking on the waveform to seek during playback, the song jumps back to the beginning instead of seeking to the clicked position.
 
-The Play button is **disabled** because of the check on line 754:
-```tsx
-disabled={songHasRealAudio && !isReadyToPlay}
+## Root Cause Analysis
+
+After examining the code, I found the issue in `src/services/webAudioEngine.ts` in the `seek()` method (lines 390-408):
+
+```typescript
+seek(time: number): void {
+  const clampedTime = Math.max(0, Math.min(time, this.state.duration));
+  
+  if (this.state.playbackState === 'playing') {
+    this.stopAllSources();
+    
+    if (this.state.audioMode === 'stems' && this.state.allStemsReady) {
+      this.createAndStartStemSources(clampedTime);
+    } else if (this.mixdownBuffer) {
+      this.createAndStartMixdownSource(clampedTime);
+    }
+    
+    this.updateState({ currentTime: clampedTime });
+  } else {
+    this.updateState({ currentTime: clampedTime });
+  }
+}
 ```
 
-When the song is only "prepared" (configuration stored, no audio loaded yet):
-- `playbackState` = `'idle'`
-- `mixdownReady` = `false`
-- Therefore `isReadyToPlay` = `false`
-- Button is disabled = **true**
+**The bug**: The `seek()` method stops all sources and creates new ones, which correctly updates `playStartOffset`. However, there's a subtle timing issue:
 
-This creates a deadlock: the user cannot tap Play to trigger `init()` because the button is disabled waiting for audio that will never load until Play is tapped.
+1. When `stopAllSources()` is called, it stops the loop checking interval
+2. The new sources are started with `createAndStartStemSources(clampedTime)` or `createAndStartMixdownSource(clampedTime)`
+3. These methods call `startLoopChecking()` but NOT `startTimeTracking()`
+4. The time tracking animation frame is still running with the OLD references
 
-## Root Cause
+The time tracking continues to run (never stopped during seek), but after `stopAllSources()`, there may be a brief window where `getCurrentTime()` returns stale data before the new `playStartTime` and `playStartOffset` are set.
 
-The deferred loading strategy introduced a new state: "prepared but not loaded". The button's disabled logic doesn't account for this state.
+Additionally, when stems mode is active but the condition `this.state.audioMode === 'stems' && this.state.allStemsReady` is checked, if `audioMode` hasn't been updated to `'stems'` yet (still `'mixdown'`), it falls through to `mixdownBuffer` but the mixdown source might not be the current active source.
 
 ## Solution
 
-Update the disabled logic to allow tapping Play when the song is prepared (idle) but has stems configured. The button should only be disabled when:
-1. Audio is actively loading (after user initiated playback), OR
-2. Something is genuinely wrong (no stems at all)
+Update the `seek()` method to:
+1. Properly restart time tracking after creating new sources
+2. Ensure the correct audio mode is checked
 
 ---
 
@@ -32,126 +51,59 @@ Update the disabled logic to allow tapping Play when the song is prepared (idle)
 
 | File | Changes |
 |------|---------|
-| `src/pages/TrainingMode.tsx` | Update Play button disabled logic to allow click when song is prepared |
-| `src/hooks/useAudioEngine.ts` | Add `isPrepared` flag to return value for clearer state tracking |
+| `src/services/webAudioEngine.ts` | Fix the seek method to properly restart time tracking and handle audio mode transition |
 
 ---
 
-## Implementation Details
+## Implementation
 
-### 1. `src/hooks/useAudioEngine.ts`
+### `src/services/webAudioEngine.ts`
 
-Add a new `isPrepared` flag that indicates the song is configured and ready for initialization:
-
-```typescript
-// Add to interface (around line 27)
-isPrepared: boolean;
-
-// Add to hook (around line 133)
-const isPrepared = engineState.playbackState === 'idle' && engineState.stemLoadProgress.length > 0;
-```
-
-### 2. `src/pages/TrainingMode.tsx`
-
-Update the destructured return from `useAudioEngine` to include `isPrepared`, then fix the disabled logic:
+Update the `seek()` method around line 390:
 
 ```typescript
-// Line 78-104: Add isPrepared to destructured values
-const { 
-  isLoaded, 
-  loadingProgress, 
-  seekTo, 
-  hasRealAudio,
-  isReadyToPlay,
-  isBuffering,
-  bufferedCount,
-  totalStemCount,
-  stemLoadProgress,
-  init: initAudioEngine,
-  audioMode,
-  mixdownReady,
-  mixdownProgress,
-  allStemsReady,
-  isPrepared,  // ADD THIS
-  // ... rest
-} = useAudioEngine();
+seek(time: number): void {
+  const clampedTime = Math.max(0, Math.min(time, this.state.duration));
+  
+  console.log(`🎵 Seeking to ${clampedTime.toFixed(2)}s (playbackState: ${this.state.playbackState}, audioMode: ${this.state.audioMode})`);
+  
+  if (this.state.playbackState === 'playing') {
+    // Stop current sources
+    this.stopAllSources();
+    this.stopTimeTracking(); // Also stop time tracking
+    
+    // Restart sources at new position
+    // Check allStemsReady first since audioMode might still be 'mixdown' during transition
+    if (this.state.allStemsReady) {
+      this.createAndStartStemSources(clampedTime);
+    } else if (this.mixdownBuffer) {
+      this.createAndStartMixdownSource(clampedTime);
+    }
+    
+    // Update state and restart time tracking
+    this.updateState({ currentTime: clampedTime });
+    this.startTimeTracking(); // Restart time tracking with new offset
+  } else {
+    // Just update the position for when we resume
+    this.updateState({ currentTime: clampedTime });
+  }
+}
 ```
 
-Update the Play button disabled logic (around line 754):
-
-```typescript
-// OLD (broken):
-disabled={songHasRealAudio && !isReadyToPlay}
-
-// NEW (fixed):
-// Allow click when prepared (idle with stems) or ready to play
-// Only disable when actively loading and mixdown not ready yet
-disabled={songHasRealAudio && hasStartedPlayback && !mixdownReady}
-```
-
-This means:
-- **Before first tap**: `hasStartedPlayback=false` - Button enabled
-- **After tap, while loading**: `hasStartedPlayback=true && !mixdownReady` - Button disabled
-- **After mixdown ready**: `mixdownReady=true` - Button enabled
-
----
-
-## Flow After Fix
-
-```text
-User navigates to /training/throwback-exercise
-         ↓
-useEffect fires → prepareSong() called
-         ↓
-playbackState = 'idle', stemLoadProgress.length > 0
-isPrepared = true, isReadyToPlay = false
-         ↓
-Button disabled = songHasRealAudio && hasStartedPlayback && !mixdownReady
-                = true && false && true
-                = false  ← BUTTON ENABLED ✓
-         ↓
-User taps Play button
-         ↓
-handlePlayPause() called → setHasStartedPlayback(true)
-         ↓
-Button disabled = true && true && true = true ← LOADING STATE
-         ↓
-initAudioEngine() → loadSong() → mixdownReady = true
-         ↓
-Button disabled = true && true && false = false ← ENABLED AGAIN
-```
-
----
-
-## Alternative Simpler Fix
-
-If we want a minimal change, we can just update the disabled condition directly without adding `isPrepared`:
-
-```typescript
-// Line 754: Change to only disable during active loading
-disabled={songHasRealAudio && hasStartedPlayback && !mixdownReady}
-```
-
-This single line change fixes the issue without adding new state tracking.
+**Key changes:**
+1. Call `stopTimeTracking()` before stopping sources
+2. Check `allStemsReady` first (not `audioMode === 'stems'`) since mode might not be updated yet
+3. Call `startTimeTracking()` after creating new sources to ensure fresh timing
+4. Add debug logging to help trace seek operations
 
 ---
 
 ## Testing Checklist
 
 After implementation:
-
-1. Navigate to exercise page - Play button should be **enabled** (gradient visible)
-2. Tap Play - button should briefly disable, show loading overlay
-3. After mixdown loads - button should enable, audio should play
-4. Tap Pause - audio pauses, button shows Play icon
-5. Tap Play again - audio resumes immediately (no loading)
-
----
-
-## Summary
-
-| Before | After |
-|--------|-------|
-| Button disabled when `!isReadyToPlay` | Button enabled when prepared |
-| User cannot tap Play | User can tap Play to start loading |
-| Deadlock - audio never loads | Audio loads on first tap |
+1. Play audio
+2. Click on the waveform to seek to middle of track - should jump to that position
+3. Click on the waveform to seek to near the end - should jump to that position
+4. Use skip forward/back buttons - should work correctly
+5. Seek while in mixdown mode (before stems load) - should work
+6. Seek while in stems mode (after stems load) - should work
