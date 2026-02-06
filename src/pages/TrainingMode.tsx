@@ -269,11 +269,10 @@ export default function TrainingMode() {
   // Cleanup: stop audio when leaving Training Mode
   useEffect(() => {
     return () => {
-      if (songHasRealAudio) {
-        webAudioEngine.pause();
-      }
+      console.log("[TrainingMode] Cleanup - releasing audio memory");
+      webAudioEngine.cleanup();
     };
-  }, [songHasRealAudio]);
+  }, []);
 
   // Simulate playback timer for mock songs (no real audio)
   useEffect(() => {
