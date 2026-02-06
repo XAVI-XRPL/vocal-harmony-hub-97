@@ -1,191 +1,240 @@
 
+# Fix: AudioContext Mobile Crash
 
-## Analysis Summary
+## Problem Summary
 
-### What I Found
-
-**Testing Results:**
-- Preview URL (`lovableproject.com`): Training Mode works correctly - mixdown loads, stems load in background, playback works, no crashes
-- Console logs show successful audio loading: "Mixdown ready (353.1s)", "All stems loaded in background"
-- Play/pause, stem controls, and UI all function properly
-
-**Console Warnings (Non-Fatal):**
-The following warnings appear but do NOT cause crashes:
-```
-Warning: Function components cannot be given refs.
-Check the render method of `AppShell`.
-```
-This appears for:
-- `AnimatePresence` children (page components)
-- `MobileNav` component
-
-**Root Cause of Original Crash:**
-The "Maximum update depth exceeded" error was caused by the audio engine triggering React state updates during render, creating an infinite loop. This was previously fixed by:
-1. Moving `currentTime`/`duration` syncing from render phase to `useEffect` hooks in `useAudioEngine.ts`
-2. Using `subscribeOnChange` instead of `subscribe` for `useSyncExternalStore`
+The app crashes when opening exercises on mobile because `AudioContext` is being created in a `useEffect` hook (when song data loads), not in a user tap/click handler. Mobile browsers block this.
 
 ---
 
-## Remaining Issues to Fix
+## Root Cause
 
-### 1. Fix `forwardRef` Warnings in AppShell
-
-**Problem:** `AnimatePresence` tries to pass refs to page components, but the page components don't support `forwardRef`.
-
-**Solution:** Wrap page components in an intermediary `div` so refs attach to the wrapper, not the function component directly.
-
-**File:** `src/components/layout/AppShell.tsx`
-
-**Change:**
-Replace the current pattern:
-```tsx
-<AnimatePresence mode="wait">
-  <motion.div key={location.pathname} ...>
-    {children}
-  </motion.div>
-</AnimatePresence>
+```text
+User navigates to /training/testify-exercise
+         ↓
+useEffect fires when currentSong changes (useAudioEngine.ts:91)
+         ↓
+webAudioEngine.loadSong() called from useEffect ❌
+         ↓
+loadSong() calls ensureContextCreated() (line 218)
+         ↓
+new AudioContext() created (line 155)
+         ↓
+Mobile browser BLOCKS this → crash
 ```
-
-The `motion.div` already handles the ref for AnimatePresence. The warnings likely come from other AnimatePresence usages (line 60-62 for MiniPlayer, line 64 for MobileNav).
-
-For `MobileNav` (line 64):
-```tsx
-{!hideNav && <MobileNav />}
-```
-This is outside AnimatePresence, so shouldn't cause the warning. The issue is that AnimatePresence at lines 60-62 wraps `MiniPlayer` which IS a motion component.
-
-Actually, looking more closely, the warnings come from React Router's component rendering through `AnimatePresence`. The solution is to ensure the motion.div properly intercepts the ref.
-
-### 2. Add Cleanup on TrainingMode Unmount
-
-**Problem:** Audio continues playing when navigating away from Training Mode.
-
-**Solution:** Add a cleanup effect that stops playback when the component unmounts.
-
-**File:** `src/pages/TrainingMode.tsx`
-
-**Change:** Add a `useEffect` cleanup:
-```tsx
-useEffect(() => {
-  return () => {
-    // Stop audio when leaving Training Mode
-    if (songHasRealAudio) {
-      webAudioEngine.pause();
-    }
-  };
-}, []);
-```
-
-### 3. Prevent Double Song Loading
-
-**Problem:** Console logs show the song loading twice in some cases:
-```
-"Mixdown-first loading strategy" appears twice
-"Song loaded: testify-exercise" appears twice
-```
-
-**Root Cause:** The `useAudioEngine` hook may be triggering song load twice due to React Strict Mode or dependency array issues.
-
-**Solution:** Add a guard in the loading effect to prevent duplicate loads.
-
-**File:** `src/hooks/useAudioEngine.ts`
-
-**Change:** Improve the song loading effect to check if already loading.
 
 ---
 
-## Implementation Plan
+## Solution Overview
 
-### Step 1: Fix AnimatePresence ref warnings in AppShell (optional, cosmetic)
+Split the loading flow into two phases:
 
-The warnings don't cause crashes, but they clutter the console. We can wrap components passed to AnimatePresence in a container that properly handles refs.
+| Phase | When | What |
+|-------|------|------|
+| **Prepare** | On mount/song change | Store song config only (metadata, URLs) |
+| **Initialize** | On Play tap | Create AudioContext + load buffers |
 
-```tsx
-// No change needed - motion.div already handles refs
-// The warnings may be from development mode only
+---
+
+## Files to Change
+
+| File | Changes |
+|------|---------|
+| `src/services/webAudioEngine.ts` | Add `prepareSong()` method that stores config without creating AudioContext |
+| `src/hooks/useAudioEngine.ts` | Call `prepareSong()` in useEffect instead of `loadSong()` |
+| `src/pages/TrainingMode.tsx` | Call `loadSong()` (with init) inside Play button handler |
+
+---
+
+## Detailed Changes
+
+### 1. `src/services/webAudioEngine.ts`
+
+Add a new `prepareSong()` method that stores the song configuration without touching AudioContext:
+
+```typescript
+/**
+ * Prepare song configuration without creating AudioContext.
+ * Safe to call from useEffect - no user gesture required.
+ */
+prepareSong(config: SongConfig): void {
+  // Abort any pending loads
+  this.abort();
+  this.cleanup();
+  
+  this.currentSongId = config.songId;
+  this.currentSongConfig = config;
+  
+  // Initialize stem progress tracking (UI only)
+  const stemProgress: StemLoadProgress[] = config.stems.map(s => ({
+    stemId: s.id,
+    stemName: s.name,
+    progress: 0,
+    loaded: false,
+  }));
+  
+  this.updateState({
+    playbackState: 'idle',
+    audioMode: 'mixdown',
+    currentTime: 0,
+    duration: config.duration || 0,
+    mixdownProgress: 0,
+    mixdownReady: false,
+    stemLoadProgress: stemProgress,
+    allStemsReady: false,
+  });
+  
+  console.log(`📋 Song prepared: ${config.songId} (waiting for user gesture)`);
+}
+
+/**
+ * Check if a song is prepared but not loaded.
+ */
+isPrepared(): boolean {
+  return this.currentSongConfig !== null && !this.mixdownBuffer;
+}
 ```
 
-### Step 2: Add unmount cleanup in TrainingMode
+Modify `loadSong()` to work with prepared config:
 
-```tsx
-// Add near other useEffects in TrainingMode.tsx
-useEffect(() => {
-  return () => {
-    // Clean up audio when leaving Training Mode
-    if (hasRealAudio) {
-      webAudioEngine.stop();
-    }
-  };
-}, [hasRealAudio]);
+```typescript
+async loadSong(config?: SongConfig): Promise<void> {
+  // Use stored config if none provided
+  const songConfig = config || this.currentSongConfig;
+  if (!songConfig) {
+    console.warn('No song config to load');
+    return;
+  }
+  
+  // ... rest of existing loadSong implementation
+}
 ```
 
-### Step 3: Prevent duplicate song loads
+### 2. `src/hooks/useAudioEngine.ts`
 
-```tsx
-// In useAudioEngine.ts, add loading guard
-const isLoadingRef = useRef(false);
+Change the song loading effect to use `prepareSong()` instead of `loadSong()`:
 
+```typescript
+// Prepare song when currentSong changes (safe - no AudioContext)
 useEffect(() => {
   if (!currentSong || currentSong.id === prevSongIdRef.current) return;
-  if (isLoadingRef.current) return; // Skip if already loading
+  if (isLoadingRef.current) return;
   
-  isLoadingRef.current = true;
   prevSongIdRef.current = currentSong.id;
-  
-  // ... existing loading logic ...
-  
-  webAudioEngine.loadSong(songConfig).finally(() => {
-    isLoadingRef.current = false;
-  });
+
+  const stemsWithAudio = currentSong.stems.filter((stem) => stem.url && stem.url.length > 0);
+  if (stemsWithAudio.length === 0) {
+    console.log('No audio stems for this song');
+    return;
+  }
+
+  const songConfig: SongConfig = {
+    songId: currentSong.id,
+    mixdownUrl: currentSong.fullMixUrl || undefined,
+    stems: stemsWithAudio.map((stem) => ({
+      id: stem.id,
+      name: stem.name,
+      url: stem.url,
+      color: stem.color,
+      type: stem.type,
+    })),
+    duration: currentSong.duration,
+  };
+
+  // CHANGED: Prepare only - don't load (no AudioContext created)
+  webAudioEngine.prepareSong(songConfig);
 }, [currentSong?.id]);
 ```
 
----
+Add a new `load` function that's safe to call from click handlers:
 
-## Technical Notes
-
-### Why the Original Crash Happened
-
-The `useSyncExternalStore` hook in React requires:
-1. `getSnapshot` to return a referentially stable value
-2. `subscribe` to NOT call the listener immediately (or React thinks the store changed and re-renders, causing an infinite loop)
-
-The fix was to use `subscribeOnChange` which doesn't call the listener on subscription, only on actual changes.
-
-### Audio Engine Architecture
-
-```text
-User Action (Play) -> initAudioEngine() -> AudioContext.resume() -> webAudioEngine.play()
-                                                                           |
-                                                                           v
-                                                            Creates AudioBufferSourceNodes
-                                                                           |
-                                                                           v
-                                                            Starts time tracking (RAF)
-                                                                           |
-                                                                           v
-                                                            Updates state -> notifyListeners
-                                                                           |
-                                                                           v
-                                                            useSyncExternalStore picks up change
-                                                                           |
-                                                                           v
-                                                            useEffect syncs to Zustand store
+```typescript
+const load = useCallback(async () => {
+  if (webAudioEngine.isPrepared()) {
+    await webAudioEngine.loadSong();
+  }
+}, []);
 ```
 
-### Files to Modify
+Update the `init` callback to include loading:
 
-| File | Change |
-|------|--------|
-| `src/pages/TrainingMode.tsx` | Add unmount cleanup effect |
-| `src/hooks/useAudioEngine.ts` | Add loading guard to prevent duplicates |
+```typescript
+const init = useCallback(async () => {
+  await webAudioEngine.init();
+  // If song is prepared but not loaded, load it now
+  if (webAudioEngine.isPrepared()) {
+    await webAudioEngine.loadSong();
+  }
+}, []);
+```
 
-### Testing Checklist
+### 3. `src/pages/TrainingMode.tsx`
 
-After implementation, verify:
-1. Navigate to Training Mode - no blank screen
-2. Press Play - audio plays
-3. Navigate away - audio stops
-4. Re-enter Training Mode - fresh session starts
-5. Check console - no "Maximum update depth" errors
+Update the Play handler to ensure full initialization:
 
+```typescript
+const handlePlayPause = async () => {
+  if (songHasRealAudio) {
+    // User gesture - safe to init AudioContext and load audio
+    await initAudioEngine(); // This now handles: init() + loadSong() if prepared
+    engineTogglePlayPause();
+  } else {
+    storeTogglePlayPause();
+  }
+};
+```
+
+---
+
+## Flow After Fix
+
+```text
+User navigates to /training/testify-exercise
+         ↓
+useEffect fires → prepareSong() called
+         ↓
+Song config stored (metadata only, no AudioContext) ✓
+         ↓
+UI shows song info, Play button ready
+         ↓
+User taps Play button
+         ↓
+initAudioEngine() called from onClick ✓
+         ↓
+new AudioContext() created (in user gesture) ✓
+         ↓
+loadSong() fetches and decodes audio buffers ✓
+         ↓
+Audio plays!
+```
+
+---
+
+## Mobile Compatibility Notes
+
+- `AudioContext` is only created inside `init()` which is only called from click handlers
+- `prepareSong()` can safely run in `useEffect` because it only stores metadata
+- The first Play tap may have a brief delay as audio loads, but won't crash
+- Subsequent taps are instant since audio is already loaded
+
+---
+
+## Testing Checklist
+
+After implementing:
+
+1. **Desktop Chrome/Safari**: Open exercise, press Play, verify audio works
+2. **Mobile Safari (iPhone)**: Open exercise, verify no crash, tap Play, verify audio plays
+3. **Mobile Chrome (Android)**: Same as above
+4. **Lock screen**: Verify media controls work after playing
+5. **Navigation**: Leave Training Mode, verify audio stops
+
+---
+
+## Summary
+
+| Before | After |
+|--------|-------|
+| `loadSong()` in useEffect | `prepareSong()` in useEffect |
+| AudioContext created on mount | AudioContext created on Play tap |
+| Mobile crashes | Mobile works |
