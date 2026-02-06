@@ -390,19 +390,26 @@ class WebAudioEngine {
   seek(time: number): void {
     const clampedTime = Math.max(0, Math.min(time, this.state.duration));
     
+    console.log(`🎵 Seeking to ${clampedTime.toFixed(2)}s (playbackState: ${this.state.playbackState}, audioMode: ${this.state.audioMode})`);
+    
     if (this.state.playbackState === 'playing') {
-      // Stop current sources and restart at new position
+      // Stop current sources and time tracking
       this.stopAllSources();
+      this.stopTimeTracking();
       
-      if (this.state.audioMode === 'stems' && this.state.allStemsReady) {
+      // Restart sources at new position
+      // Check allStemsReady first since audioMode might still be 'mixdown' during transition
+      if (this.state.allStemsReady) {
         this.createAndStartStemSources(clampedTime);
       } else if (this.mixdownBuffer) {
         this.createAndStartMixdownSource(clampedTime);
       }
       
+      // Update state and restart time tracking
       this.updateState({ currentTime: clampedTime });
+      this.startTimeTracking();
     } else {
-      // Just update the position
+      // Just update the position for when we resume
       this.updateState({ currentTime: clampedTime });
     }
   }
