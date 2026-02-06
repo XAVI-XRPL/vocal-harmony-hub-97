@@ -11,6 +11,7 @@ import { usePartnerBrands } from "@/hooks/usePartnerBrands";
 import { useChecklistItems } from "@/hooks/useChecklistItems";
 import { GearCategory } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StagePrepBackground } from "@/components/layout/StagePrepBackground";
 
 export default function StagePrep() {
   const navigate = useNavigate();
@@ -25,11 +26,7 @@ export default function StagePrep() {
 
   return (
     <div className="relative min-h-screen">
-      {/* Backstage Theme Background */}
-      <div className="fixed inset-0 backstage-bg" />
-      
-      {/* Overlay */}
-      <div className="fixed inset-0 bg-gradient-to-b from-background/40 via-background/60 to-background/95" />
+      <StagePrepBackground />
 
       {/* Content */}
       <div className="relative z-10">
