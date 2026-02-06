@@ -8,8 +8,8 @@ export function LibraryBackground() {
         alt=""
         className="absolute inset-0 w-full h-full object-cover animate-slow-zoom"
       />
-      <div className="absolute inset-0 bg-background/50" />
-      <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background/70" />
+      <div className="absolute inset-0 bg-background/40" />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-transparent to-background/80" />
     </div>
   );
 }
