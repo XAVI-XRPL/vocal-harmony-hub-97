@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Search, Filter, X, Music, Loader2 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { SongCard } from "@/components/song/SongCard";
+import { StackedSongCards } from "@/components/song/StackedSongCards";
 import { LibrarySkeleton } from "@/components/ui/loading-shimmer";
 import { IconButton } from "@/components/ui/icon-button";
 import { useSongs } from "@/hooks/useSongs";
@@ -69,7 +70,7 @@ export default function Library() {
   }, [songs, searchQuery, activeFilters]);
 
   const hasActiveFilters = activeFilters.genre || activeFilters.difficulty;
-
+  const isFiltered = !!hasActiveFilters || !!searchQuery;
   return (
     <div className="min-h-screen">
       <Header title="Library" showSearch={false} />
@@ -233,18 +234,22 @@ export default function Library() {
             </button>
           </motion.div>
         ) : (
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
-          >
-            {filteredSongs.map((song) => (
-              <motion.div key={song.id} variants={itemVariants}>
-                <SongCard song={song} />
-              </motion.div>
-            ))}
-          </motion.div>
+          isFiltered ? (
+            <motion.div
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            >
+              {filteredSongs.map((song) => (
+                <motion.div key={song.id} variants={itemVariants}>
+                  <SongCard song={song} />
+                </motion.div>
+              ))}
+            </motion.div>
+          ) : (
+            <StackedSongCards songs={filteredSongs} />
+          )
         )}
       </div>
     </div>
