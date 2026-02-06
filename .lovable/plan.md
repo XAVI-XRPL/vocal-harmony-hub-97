@@ -1,133 +1,84 @@
 
 
-# Grouped Stem Loading with Lazy Harmonies Card
+# Mobile-Optimized Stem Grouping: 3-Tier Loading
 
-## Overview
+## What Changes
 
-Restructure how stems load to reduce initial memory usage from ~360MB to ~200MB. Stems will be split into two groups: we need to apply this to all songs.  (I may have to provide a consolidated acapella with all harmonies one 1 track. we need to plan this out 
+The current code groups stems into 2 groups: **Core Tracks** (everything non-harmony, immediate) and **Harmonies** (lazy). This loads too many stems upfront (~280MB for exercises with 6+ core stems).
 
-- **Core Stems** (type != 'harmony') -- Load automatically with mixdown-first strategy  
-- **Harmonies** (type == 'harmony') -- Only load when user taps a "Harmonies" card
+The uploaded spec calls for a **3-tier** grouping to reduce initial load to ~120MB:
 
-This prevents mobile crashes and lets users start practicing faster. Most users only need core tracks; harmonies are optional for advanced practice.
+| Group | Contents | Load | Memory |
+|-------|----------|------|--------|
+| Core Vocals | Instrumental + RAab Exercise + JLevy Exercise + other vocal leads | Immediate | ~120MB |
+| Instruments | Piano, Guitar, Organ, Stomps (individual parts) | Lazy | ~80MB |
+| Harmonies | Harmony 1-4 | Lazy | ~160MB |
 
----
+## What Stays the Same
 
-## How It Works
+- The `StemGroupCard` component already handles collapsible lazy groups with "Tap to load" -- no changes needed
+- The `webAudioEngine.ts` group loading, `loadGroup()`, `startSingleStemSource()` all work as-is
+- The `useAudioEngine.ts` hook already exposes `loadGroup` and `groupStates`
+- The `TrainingMode.tsx` rendering pattern (immediate stems as `StemTrack`, lazy groups as `StemGroupCard`) is correct
+- The `StemGroup` type in `src/types/index.ts` is already defined
 
-1. User opens an exercise -- mixdown loads first, then **only core stems** load sequentially in background
-2. Crossfade to core stems when ready -- mixer controls activate for core tracks
-3. A collapsed "Harmonies" card appears below core tracks showing "Tap to load" badge
-4. When tapped, harmonies load sequentially one at a time
-5. Each harmony joins the active mix as it finishes loading (no restart needed)
-6. Memory stays stable throughout
+## Files to Modify
 
----
+| File | Change |
+|------|--------|
+| `src/hooks/useSongs.ts` | Update `transformSong` grouping logic to create 3 groups instead of 2 |
 
 ## Technical Details
 
-### No Database Changes Required
+### Updated Grouping Logic in `useSongs.ts`
 
-The existing `stems.type` column already distinguishes harmonies (`type = 'harmony'`) from core stems. The grouping logic is purely frontend.
-
-### Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/types/index.ts` | Add `StemGroup` interface |
-| `src/services/webAudioEngine.ts` | Add `loadGroup()` method, `startSingleStemSource()`, and group state tracking |
-| `src/components/audio/StemGroupCard.tsx` | **New file** -- Collapsible card for a group of stems with lazy-load trigger |
-| `src/hooks/useAudioEngine.ts` | Expose `loadGroup()` and group state |
-| `src/hooks/useSongs.ts` | Add stem grouping helper in `transformSong` |
-| `src/pages/TrainingMode.tsx` | Render core stems directly + StemGroupCard for harmonies |
-
-### 1. Types (`src/types/index.ts`)
-
-Add a `StemGroup` type:
+Replace the current 2-group partition with a 3-group partition:
 
 ```typescript
-export interface StemGroup {
-  id: string;
-  name: string;
-  loadBehavior: 'immediate' | 'lazy';
-  stems: Stem[];
-}
-```
-
-### 2. Audio Engine (`src/services/webAudioEngine.ts`)
-
-Key additions:
-
-- **`SongConfig` update**: Add optional `stemGroups` field alongside existing `stems`
-- **`loadStemsInBackground`**: Only loads stems from "immediate" groups
-- **`loadGroup(groupId)`**: New public method to trigger loading of a lazy group
-  - Fetches and decodes each stem sequentially (same memory-safe pattern)
-  - If playback is active in stems mode, each newly decoded stem joins the mix immediately via `startSingleStemSource()`
-- **`startSingleStemSource(stemId, offset)`**: New private method to create a `BufferSourceNode` for a single stem and start it at the current playback position, synced to the existing context clock
-- **Group state tracking**: `Map` of group states (idle/loading/loaded) exposed via `getGroupStates()` and `isGroupLoaded()`
-- **`prepareSong` update**: Accept grouped stem configs and only register "immediate" stems in the initial `stemLoadProgress`
-
-### 3. Stem Grouping in Song Transform (`src/hooks/useSongs.ts`)
-
-In `transformSong`, partition stems by type:
-
-```typescript
+// Current (2 groups):
 const coreStems = stems.filter(s => s.type !== 'harmony');
 const harmonyStems = stems.filter(s => s.type === 'harmony');
 
-// Attach groups to the Song object
+// New (3 groups):
+const vocalStems = stems.filter(s => s.type === 'vocal' || s.type === 'instrumental');
+const instrumentStems = stems.filter(s => s.type === 'keys' || s.type === 'drums' || s.type === 'bass');
+const harmonyStems = stems.filter(s => s.type === 'harmony');
 ```
 
-This keeps the grouping logic simple and data-driven from the existing `type` column.
+Group assignment:
+- **Core Vocals** (immediate): `type === 'vocal'` OR `type === 'instrumental'` -- these are the main training tracks (Instrumental mix, RAab Coaching, RAab Exercise, JLevy Exercise, Blakely Lead, etc.)
+- **Instruments** (lazy): `type === 'keys'` OR `type === 'drums'` OR `type === 'bass'` -- individual instrument parts like Piano, Guitar, Organ, Stomps
+- **Harmonies** (lazy): `type === 'harmony'` -- harmony vocal parts
 
-### 4. New StemGroupCard Component (`src/components/audio/StemGroupCard.tsx`)
+Edge cases:
+- If "Instruments" group is empty (no keys/drums/bass stems), skip creating it
+- If "Harmonies" group is empty, skip creating it (e.g., THROWBACK EXERCISE has no harmonies)
+- Songs with only vocal stems get a single "Core Vocals" group (immediate)
 
-A glass-style collapsible card that:
+### Per-Exercise Breakdown
 
-- **Collapsed state (lazy, not loaded)**: Shows group name, stem count, "Tap to load" badge with download icon
-- **Loading state**: Expanded, shows per-stem progress bars as they load sequentially
-- **Loaded state**: Expanded, shows standard StemTrack controls (volume, solo, mute) for each harmony stem
-- Uses framer-motion for expand/collapse animation
-- Calls `webAudioEngine.loadGroup('harmonies')` on tap
+**1. TESTIFY EXERCISE** (9 stems):
+- Core (immediate, 4): RAab Coaching, Instrumental, RAab Exercise, JLevy Exercise
+- Instruments (lazy, 2): Piano, Guitar
+- Harmonies (lazy, 3): RAab Harmony 2, JLevy Harmony 2, RAab Harmony 3
 
-### 5. Updated useAudioEngine Hook (`src/hooks/useAudioEngine.ts`)
+**2. THROWBACK EXERCISE** (6 stems):
+- Core (immediate, 4): RAab Coaching, Instrumental, RAab Exercise, JLevy Exercise
+- Instruments (lazy, 2): Piano, Guitar
+- Harmonies: none
 
-- Expose `loadGroup` callback
-- Expose `groupStates` from engine (loading/loaded status per group)
-- These flow through to TrainingMode for the StemGroupCard
+**3. DONT LEAVE EXERCISE** (11 stems):
+- Core (immediate, 5): RAab Coaching, Instrumental, Blakely Lead, RAab Exercise, JLevy Exercise
+- Instruments (lazy, 2): Organ, Stomps
+- Harmonies (lazy, 4): RAab Harmony 2, JLevy Harmony 2, JLevy Harmony 3, RAab Harmony 4
 
-### 6. Updated TrainingMode Page (`src/pages/TrainingMode.tsx`)
+**12. TESTIFY V2** (14 stems):
+- Core (immediate, 4): Acapella, Blakeley First, Justin First, RAab First + Instrumental
+- Instruments (lazy, 0): none
+- Harmonies (lazy, 9): all Second/Third/Fourth parts
 
-- Render core stems directly as before (using existing StemTrack components)
-- After core stems, render a `StemGroupCard` for harmonies (if any exist for this exercise)
-- Pass group loading state and callbacks to StemGroupCard
-- The `prepareSong` call now includes group metadata so the engine knows which stems are immediate vs lazy
+### Memory Impact
 
-### Memory Profile
+Before: ~280MB initial (all non-harmony stems decoded at once)
+After: ~120-200MB initial (only vocal + instrumental stems), instruments and harmonies on-demand
 
-```
-Before: All stems load at once
-  Mixdown (5MB) + 9 stems decoded (~360MB) = crashes on mobile
-
-After: Grouped loading
-  Mixdown (5MB) + 5 core stems (~200MB) = stable on mobile
-  + 4 harmonies (~160MB) = only if user requests
-  Total never spikes -- sequential loading keeps peak at ~80MB
-```
-
-### Edge Cases
-
-- **Songs with no harmonies**: No StemGroupCard rendered, behaves exactly as before
-- **Songs with only harmonies**: All stems load as "immediate" (no lazy group)
-- **User navigates away during harmony loading**: Existing abort controller cancels pending loads
-- **Harmony stems join mid-playback**: `startSingleStemSource` syncs to AudioContext clock at current playback position
-
-### Testing Checklist
-
-1. Open an exercise with harmonies (e.g., TESTIFY EXERCISE has 3 harmony stems)
-2. Verify core stems load and crossfade works without harmonies
-3. Tap the Harmonies card -- verify sequential loading with progress
-4. Verify each harmony joins playback in sync (no drift)
-5. Test solo/mute on harmony stems after loading
-6. Navigate away during harmony loading -- verify no errors
-7. Monitor memory in DevTools -- no spike above ~80MB at any point
