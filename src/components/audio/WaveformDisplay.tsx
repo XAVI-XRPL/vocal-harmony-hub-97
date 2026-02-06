@@ -135,7 +135,18 @@ export const WaveformDisplay = React.forwardRef<HTMLDivElement, WaveformDisplayP
     ref
   ) {
     const progress = duration > 0 ? currentTime / duration : 0;
-    const containerRef = useRef<HTMLDivElement>(null);
+    const internalRef = useRef<HTMLDivElement>(null);
+    const pointerUpHandledRef = useRef(false);
+
+    // Combine forwarded ref with internal ref
+    const setRefs = useCallback((node: HTMLDivElement | null) => {
+      internalRef.current = node;
+      if (typeof ref === 'function') {
+        ref(node);
+      } else if (ref) {
+        (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+      }
+    }, [ref]);
 
     // Drag state for loop selection
     const [isDragging, setIsDragging] = useState(false);
@@ -158,12 +169,12 @@ export const WaveformDisplay = React.forwardRef<HTMLDivElement, WaveformDisplayP
       return downsampled;
     }, [waveformData]);
 
-    // Calculate time from mouse/touch position
+    // Calculate time from mouse/touch position using internalRef
     const getTimeFromEvent = useCallback(
       (e: React.MouseEvent | React.TouchEvent | MouseEvent | TouchEvent): number => {
-        if (!containerRef.current || duration === 0) return 0;
+        if (!internalRef.current || duration === 0) return 0;
 
-        const rect = containerRef.current.getBoundingClientRect();
+        const rect = internalRef.current.getBoundingClientRect();
         let clientX: number;
 
         if ("touches" in e) {
@@ -179,11 +190,15 @@ export const WaveformDisplay = React.forwardRef<HTMLDivElement, WaveformDisplayP
       [duration]
     );
 
-    // Handle click for seeking (only if not dragging a selection)
+    // Handle click for seeking (only if not dragging or just handled by pointerUp)
     const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!onSeek || duration === 0 || isDragging) return;
+      if (!onSeek || duration === 0 || isDragging || pointerUpHandledRef.current) {
+        pointerUpHandledRef.current = false; // Reset for next interaction
+        return;
+      }
 
       const time = getTimeFromEvent(e);
+      console.log(`🎯 WaveformDisplay click seeking to ${time.toFixed(2)}s (duration: ${duration})`);
       onSeek(time);
     };
 
@@ -208,7 +223,7 @@ export const WaveformDisplay = React.forwardRef<HTMLDivElement, WaveformDisplayP
       setDragEndTime(time);
     };
 
-    // Handle drag end
+    // Handle drag end - also handles short taps as seeks
     const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
       if (!isDragging || dragStartTime === null || dragEndTime === null) {
         setIsDragging(false);
@@ -226,7 +241,9 @@ export const WaveformDisplay = React.forwardRef<HTMLDivElement, WaveformDisplayP
         onLoopSelect(start, end);
       } else if (onSeek) {
         // If too small, treat as a seek/click
+        console.log(`🎯 WaveformDisplay pointerUp seeking to ${start.toFixed(2)}s`);
         onSeek(start);
+        pointerUpHandledRef.current = true; // Prevent duplicate from handleClick
       }
 
       setIsDragging(false);
@@ -255,7 +272,7 @@ export const WaveformDisplay = React.forwardRef<HTMLDivElement, WaveformDisplayP
 
     return (
       <div
-        ref={ref || containerRef}
+        ref={setRefs}
         className={cn(
           "relative w-full cursor-pointer overflow-hidden rounded-lg touch-none select-none",
           className
