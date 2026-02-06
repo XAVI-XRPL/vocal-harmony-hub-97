@@ -179,23 +179,82 @@ class WebAudioEngine {
    */
   async init(): Promise<void> {
     await this.ensureContextRunning();
+    
+    // If song is prepared but not loaded, load it now (user gesture provides permission)
+    if (this.isPrepared()) {
+      await this.loadSong();
+    }
   }
   
   /**
-   * Load a song with mixdown-first strategy.
-   * If mixdownUrl is provided, it plays immediately while stems load in background.
+   * Prepare song configuration without creating AudioContext.
+   * Safe to call from useEffect - no user gesture required.
+   * Call init() from a click handler to actually load the audio.
    */
-  async loadSong(config: SongConfig): Promise<void> {
+  prepareSong(config: SongConfig): void {
     // Abort any pending loads
     this.abort();
     this.cleanup();
     
     this.currentSongId = config.songId;
     this.currentSongConfig = config;
+    
+    // Initialize stem progress tracking (UI only)
+    const stemProgress: StemLoadProgress[] = config.stems.map(s => ({
+      stemId: s.id,
+      stemName: s.name,
+      progress: 0,
+      loaded: false,
+    }));
+    
+    this.updateState({
+      playbackState: 'idle',
+      audioMode: 'mixdown',
+      currentTime: 0,
+      duration: config.duration || 0,
+      mixdownProgress: 0,
+      mixdownReady: false,
+      stemLoadProgress: stemProgress,
+      allStemsReady: false,
+    });
+    
+    console.log(`📋 Song prepared: ${config.songId} (waiting for user gesture)`);
+  }
+  
+  /**
+   * Check if a song is prepared but not loaded.
+   */
+  isPrepared(): boolean {
+    return this.currentSongConfig !== null && !this.mixdownBuffer && this.stems.size === 0;
+  }
+  
+  /**
+   * Load a song with mixdown-first strategy.
+   * If mixdownUrl is provided, it plays immediately while stems load in background.
+   * Can be called with config OR use previously prepared config.
+   */
+  async loadSong(config?: SongConfig): Promise<void> {
+    // Use stored config if none provided
+    const songConfig = config || this.currentSongConfig;
+    if (!songConfig) {
+      console.warn('No song config to load');
+      return;
+    }
+    
+    // Abort any pending loads
+    this.abort();
+    
+    // Only cleanup if loading a different song
+    if (config && config.songId !== this.currentSongId) {
+      this.cleanup();
+      this.currentSongId = config.songId;
+      this.currentSongConfig = config;
+    }
+    
     this.abortController = new AbortController();
     
     // Initialize stem progress tracking
-    const stemProgress: StemLoadProgress[] = config.stems.map(s => ({
+    const stemProgress: StemLoadProgress[] = songConfig.stems.map(s => ({
       stemId: s.id,
       stemName: s.name,
       progress: 0,
@@ -206,7 +265,7 @@ class WebAudioEngine {
       playbackState: 'loading',
       audioMode: 'mixdown',
       currentTime: 0,
-      duration: config.duration || 0,
+      duration: songConfig.duration || 0,
       mixdownProgress: 0,
       mixdownReady: false,
       stemLoadProgress: stemProgress,
@@ -218,13 +277,13 @@ class WebAudioEngine {
       this.ensureContextCreated();
       
       // If we have a mixdown URL, use mixdown-first strategy
-      if (config.mixdownUrl) {
+      if (songConfig.mixdownUrl) {
         console.log('📻 Mixdown-first loading strategy');
-        await this.loadMixdownFirst(config);
+        await this.loadMixdownFirst(songConfig);
       } else {
         // Fallback: load all stems (no mixdown available)
         console.log('🎹 Loading all stems (no mixdown)');
-        await this.loadAllStems(config.stems);
+        await this.loadAllStems(songConfig.stems);
         
         // Get duration from first loaded buffer
         const firstStem = Array.from(this.stems.values()).find(s => s.buffer);
@@ -239,7 +298,7 @@ class WebAudioEngine {
         });
       }
       
-      console.log(`✓ Song loaded: ${config.songId}`);
+      console.log(`✓ Song loaded: ${songConfig.songId}`);
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
         console.log('Load aborted');

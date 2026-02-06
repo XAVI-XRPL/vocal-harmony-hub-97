@@ -84,24 +84,18 @@ export function useAudioEngine(): UseAudioEngineReturn {
     }
   }, [engineState.duration]);
 
-  // Load song when currentSong changes
+  // Prepare song when currentSong changes (safe - no AudioContext created)
   const prevSongIdRef = useRef<string | null>(null);
-  const isLoadingRef = useRef(false);
 
   useEffect(() => {
     if (!currentSong || currentSong.id === prevSongIdRef.current) return;
     
-    // Prevent duplicate loads (React Strict Mode or dependency shifts)
-    if (isLoadingRef.current) return;
-    isLoadingRef.current = true;
-
     prevSongIdRef.current = currentSong.id;
 
-    // Only load if song has real audio
+    // Only prepare if song has real audio
     const stemsWithAudio = currentSong.stems.filter((stem) => stem.url && stem.url.length > 0);
     if (stemsWithAudio.length === 0) {
       console.log('No audio stems for this song');
-      isLoadingRef.current = false;
       return;
     }
 
@@ -118,15 +112,9 @@ export function useAudioEngine(): UseAudioEngineReturn {
       duration: currentSong.duration,
     };
 
-    // Load song directly - don't call init() here as it needs user gesture
-    // Loading can happen with AudioContext suspended
-    webAudioEngine.loadSong(songConfig).finally(() => {
-      isLoadingRef.current = false;
-    });
-
-    return () => {
-      // Don't cleanup on unmount - let engine persist
-    };
+    // CHANGED: Prepare only - don't load (no AudioContext created)
+    // The actual loading happens when user taps Play (calls init())
+    webAudioEngine.prepareSong(songConfig);
   }, [currentSong?.id]);
 
   // Calculate derived state
