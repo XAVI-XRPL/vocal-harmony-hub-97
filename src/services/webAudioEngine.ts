@@ -667,8 +667,15 @@ class WebAudioEngine {
     this.stopTimeTracking();
     this.releaseWakeLock();
     
-    // Clear stem data
+    // Abort any in-flight fetches
+    this.abortController?.abort();
+    this.abortController = null;
+    
+    // Release AudioBuffer references (big memory win - ~40MB each)
     this.stems.forEach(stem => {
+      stem.buffer = null;
+      stem.sourceNode?.disconnect();
+      stem.sourceNode = null;
       if (stem.gainNode) {
         stem.gainNode.disconnect();
       }
@@ -684,6 +691,13 @@ class WebAudioEngine {
     if (this.mixdownGainNode) {
       this.mixdownGainNode.disconnect();
       this.mixdownGainNode = null;
+    }
+    
+    // Close AudioContext to fully release system audio resources
+    if (this.audioContext && this.audioContext.state !== 'closed') {
+      this.audioContext.close();
+      this.audioContext = null;
+      this.masterGainNode = null;
     }
     
     this.currentSongId = null;
@@ -702,6 +716,8 @@ class WebAudioEngine {
       allStemsReady: false,
       groupStates: [],
     });
+    
+    console.log('[WebAudioEngine] Cleanup complete - memory released');
   }
   
   /**
