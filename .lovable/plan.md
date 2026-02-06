@@ -1,63 +1,46 @@
 
 
-# Fix Guitar Stem Type and Verify 3-Tier Grouping
+# Add Premium Lock Overlay to "12. TESTIFY (VERSION 2)" in Demo Mode
 
-## Problem
+## What Changes
 
-Guitar stems in **TESTIFY EXERCISE** and **THROWBACK EXERCISE** have `type = 'instrumental'` in the database. The frontend grouping logic treats `instrumental` as a Core Vocal (immediate load), so Guitar loads upfront instead of being deferred to the lazy Instruments card.
+When a user is in **demo mode** (not authenticated), the "12. TESTIFY (VERSION 2)" song card in the Library should display a lock overlay with "Unlock with Premium" text. Tapping the card navigates to the subscription page instead of opening the exercise.
 
-## Solution
+## Approach
 
-A single database migration to change Guitar stem types from `'instrumental'` to `'keys'` (which maps to the Instruments lazy group). No frontend code changes needed -- the 3-tier logic in `useSongs.ts` already handles this correctly.
+Two changes are needed:
 
-## Current State (from database)
+### 1. Database: Mark "TESTIFY V2" as premium
 
-| Exercise | Stem | Current Type | Should Be |
-|----------|------|-------------|-----------|
-| 1. TESTIFY EXERCISE | Guitar | instrumental | keys |
-| 2. THROWBACK EXERCISE | Guitar | keys (already correct: Piano is keys, Guitar is instrumental) | keys |
-| 3. DONT LEAVE EXERCISE | Organ | keys | keys (correct) |
-| 3. DONT LEAVE EXERCISE | Stomps | drums | drums (correct) |
-| 12. TESTIFY V2 | (no instruments) | -- | -- (correct) |
-
-## Database Migration
+Update the `songs` table to set `is_premium = true` for the Testify V2 exercise:
 
 ```sql
-UPDATE stems 
-SET type = 'keys' 
-WHERE name = 'Guitar' AND type = 'instrumental';
+UPDATE songs SET is_premium = true WHERE id = 'testify-v2';
 ```
 
-This changes exactly 2 rows (Guitar in TESTIFY EXERCISE and THROWBACK EXERCISE).
+This makes the existing `isLocked` logic in `SongCard` work automatically: `const isLocked = song.isPremium && !canAccessPremium`.
 
-## Result After Fix
+### 2. SongCard: Enhanced lock overlay text
 
-**1. TESTIFY EXERCISE** (9 stems):
-- Core Vocals (immediate, 4): RAab Coaching, Instrumental, RAab Exercise, JLevy Exercise
-- Instruments (lazy, 2): Piano, **Guitar**
-- Harmonies (lazy, 3): RAab Harmony 2, JLevy Harmony 2, RAab Harmony 3
+The current lock overlay shows a Lock icon and "Premium" text. Update it to show **"Unlock with Premium"** for a clearer call-to-action, matching the reference screenshot.
 
-**2. THROWBACK EXERCISE** (6 stems):
-- Core Vocals (immediate, 4): RAab Coaching, Instrumental, RAab Exercise, JLevy Exercise
-- Instruments (lazy, 2): Piano, **Guitar**
-- Harmonies: none
+In `src/components/song/SongCard.tsx`, update the locked overlay in the **default variant** (lines 239-246) to display:
+- Lock icon on top
+- "Unlock with Premium" text below
 
-**3. DONT LEAVE EXERCISE** (12 stems):
-- Core Vocals (immediate, 5): RAab Coaching, Instrumental, Blakely Lead, RAab Exercise, JLevy Exercise
-- Instruments (lazy, 2): Organ, Stomps
-- Harmonies (lazy, 5): RAab Harmony 2, JLevy Harmony 2, JLevy Harmony 3, RAab Harmony 3, RAab Harmony 4
+Same update for the **featured variant** overlay (lines 157-164).
 
-**12. TESTIFY V2** (14 stems):
-- Core Vocals (immediate, 5): Acapella, Blakeley First, Justin First, RAab First, Instrumental
-- Instruments: none
-- Harmonies (lazy, 9): all Second/Third/Fourth parts
+## How It Works
 
-## No Code Changes Needed
+- **Demo mode users**: `canAccessPremiumContent()` returns `false` (no user in store), so `isLocked = true` for any song with `isPremium = true`
+- **Authenticated free users**: Same behavior -- locked until they subscribe
+- **Pro/Premium subscribers**: `canAccessPremiumContent()` returns `true`, so card is unlocked
+- **Free exercises** (Testify, Throwback, Don't Leave): `isPremium = false`, always accessible
 
-The frontend grouping in `useSongs.ts` already correctly partitions stems:
-- `type === 'vocal' || type === 'instrumental'` goes to Core Vocals (immediate)
-- `type === 'keys' || type === 'drums' || type === 'bass'` goes to Instruments (lazy)
-- `type === 'harmony'` goes to Harmonies (lazy)
+## Files to Modify
 
-The lazy groups only load when the user taps the card, saving bandwidth and memory.
+| File | Change |
+|------|--------|
+| Database migration | `SET is_premium = true` for testify-v2 |
+| `src/components/song/SongCard.tsx` | Update lock overlay text from "Premium" to "Unlock with Premium" |
 
