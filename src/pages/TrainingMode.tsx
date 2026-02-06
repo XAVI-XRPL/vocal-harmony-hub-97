@@ -138,9 +138,25 @@ export default function TrainingMode() {
   // Unified handlers that route to engine or store
   const handlePlayPause = async () => {
     if (songHasRealAudio) {
-      setHasStartedPlayback(true); // Track that user initiated playback
-      await initAudioEngine(); // User gesture - safe to resume AudioContext
-      engineTogglePlayPause();
+      if (!mixdownReady) {
+        // First play - need to initialize
+        setHasStartedPlayback(true);
+        try {
+          await initAudioEngine();
+          // Successfully initialized - start playback directly (avoid stale closure)
+          webAudioEngine.play();
+          useAudioStore.getState().play();
+        } catch (error) {
+          console.error('Failed to initialize audio:', error);
+          setHasStartedPlayback(false);
+          toast.error("Couldn't load audio", {
+            description: "Please try again or check your connection",
+          });
+        }
+      } else {
+        // Already initialized - just toggle
+        engineTogglePlayPause();
+      }
     } else {
       storeTogglePlayPause();
     }
