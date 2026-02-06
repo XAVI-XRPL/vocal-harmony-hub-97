@@ -31,7 +31,7 @@ export function AppShell({ children }: AppShellProps) {
   // Mobile layout
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-background relative overflow-hidden">
+      <div className="min-h-screen bg-background relative overflow-x-hidden">
         <StadiumBackground />
         
         {/* Demo Mode Banner */}
@@ -69,7 +69,7 @@ export function AppShell({ children }: AppShellProps) {
   // Desktop layout with sidebar
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen bg-background relative overflow-hidden flex w-full">
+      <div className="min-h-screen bg-background relative overflow-x-hidden flex w-full">
         <StadiumBackground />
 
         {/* Desktop Sidebar */}
