@@ -1,240 +1,225 @@
 
-# Fix: AudioContext Mobile Crash
+# Fix: Training Player Stuck Loading
 
-## Problem Summary
+## Problem Analysis
 
-The app crashes when opening exercises on mobile because `AudioContext` is being created in a `useEffect` hook (when song data loads), not in a user tap/click handler. Mobile browsers block this.
+When opening an exercise, the player appears stuck. The user sees the Training Mode UI with stems but audio doesn't play when tapping the Play button.
+
+### Root Cause
+
+After the previous fix to defer `AudioContext` creation to a user gesture (fixing mobile crashes), there are two issues:
+
+1. **Missing Error Handling**: The `handlePlayPause` function doesn't catch errors from `initAudioEngine()`. If the AudioContext creation or resume fails, the function throws but the UI is left in a broken state with `hasStartedPlayback=true` but `mixdownReady=false`.
+
+2. **Play Button Logic After Init**: After `await initAudioEngine()` completes, `engineTogglePlayPause()` is called. However, the `togglePlayPause` callback uses `isPlaying` from a stale closure (the value at render time, not after loading). This causes a potential state mismatch.
+
+3. **No User Feedback**: When the user opens an exercise, there's no indication they need to tap Play to start loading. The old behavior auto-loaded on mount.
+
+### Console Evidence
+
+The logs show:
+```
+📋 Song prepared: testify-exercise (waiting for user gesture)
+```
+
+But NOT:
+```
+🎵 AudioContext created
+📻 Mixdown-first loading strategy
+```
+
+This confirms `init()` is either not being called or failing silently.
 
 ---
 
-## Root Cause
+## Solution
 
-```text
-User navigates to /training/testify-exercise
-         ↓
-useEffect fires when currentSong changes (useAudioEngine.ts:91)
-         ↓
-webAudioEngine.loadSong() called from useEffect ❌
-         ↓
-loadSong() calls ensureContextCreated() (line 218)
-         ↓
-new AudioContext() created (line 155)
-         ↓
-Mobile browser BLOCKS this → crash
-```
+### Step 1: Add Error Handling to handlePlayPause
 
----
-
-## Solution Overview
-
-Split the loading flow into two phases:
-
-| Phase | When | What |
-|-------|------|------|
-| **Prepare** | On mount/song change | Store song config only (metadata, URLs) |
-| **Initialize** | On Play tap | Create AudioContext + load buffers |
-
----
-
-## Files to Change
-
-| File | Changes |
-|------|---------|
-| `src/services/webAudioEngine.ts` | Add `prepareSong()` method that stores config without creating AudioContext |
-| `src/hooks/useAudioEngine.ts` | Call `prepareSong()` in useEffect instead of `loadSong()` |
-| `src/pages/TrainingMode.tsx` | Call `loadSong()` (with init) inside Play button handler |
-
----
-
-## Detailed Changes
-
-### 1. `src/services/webAudioEngine.ts`
-
-Add a new `prepareSong()` method that stores the song configuration without touching AudioContext:
+Wrap the async operations in try/catch and provide user feedback on failure.
 
 ```typescript
-/**
- * Prepare song configuration without creating AudioContext.
- * Safe to call from useEffect - no user gesture required.
- */
-prepareSong(config: SongConfig): void {
-  // Abort any pending loads
-  this.abort();
-  this.cleanup();
-  
-  this.currentSongId = config.songId;
-  this.currentSongConfig = config;
-  
-  // Initialize stem progress tracking (UI only)
-  const stemProgress: StemLoadProgress[] = config.stems.map(s => ({
-    stemId: s.id,
-    stemName: s.name,
-    progress: 0,
-    loaded: false,
-  }));
-  
-  this.updateState({
-    playbackState: 'idle',
-    audioMode: 'mixdown',
-    currentTime: 0,
-    duration: config.duration || 0,
-    mixdownProgress: 0,
-    mixdownReady: false,
-    stemLoadProgress: stemProgress,
-    allStemsReady: false,
-  });
-  
-  console.log(`📋 Song prepared: ${config.songId} (waiting for user gesture)`);
-}
+// src/pages/TrainingMode.tsx
 
-/**
- * Check if a song is prepared but not loaded.
- */
-isPrepared(): boolean {
-  return this.currentSongConfig !== null && !this.mixdownBuffer;
-}
-```
-
-Modify `loadSong()` to work with prepared config:
-
-```typescript
-async loadSong(config?: SongConfig): Promise<void> {
-  // Use stored config if none provided
-  const songConfig = config || this.currentSongConfig;
-  if (!songConfig) {
-    console.warn('No song config to load');
-    return;
-  }
-  
-  // ... rest of existing loadSong implementation
-}
-```
-
-### 2. `src/hooks/useAudioEngine.ts`
-
-Change the song loading effect to use `prepareSong()` instead of `loadSong()`:
-
-```typescript
-// Prepare song when currentSong changes (safe - no AudioContext)
-useEffect(() => {
-  if (!currentSong || currentSong.id === prevSongIdRef.current) return;
-  if (isLoadingRef.current) return;
-  
-  prevSongIdRef.current = currentSong.id;
-
-  const stemsWithAudio = currentSong.stems.filter((stem) => stem.url && stem.url.length > 0);
-  if (stemsWithAudio.length === 0) {
-    console.log('No audio stems for this song');
-    return;
-  }
-
-  const songConfig: SongConfig = {
-    songId: currentSong.id,
-    mixdownUrl: currentSong.fullMixUrl || undefined,
-    stems: stemsWithAudio.map((stem) => ({
-      id: stem.id,
-      name: stem.name,
-      url: stem.url,
-      color: stem.color,
-      type: stem.type,
-    })),
-    duration: currentSong.duration,
-  };
-
-  // CHANGED: Prepare only - don't load (no AudioContext created)
-  webAudioEngine.prepareSong(songConfig);
-}, [currentSong?.id]);
-```
-
-Add a new `load` function that's safe to call from click handlers:
-
-```typescript
-const load = useCallback(async () => {
-  if (webAudioEngine.isPrepared()) {
-    await webAudioEngine.loadSong();
-  }
-}, []);
-```
-
-Update the `init` callback to include loading:
-
-```typescript
-const init = useCallback(async () => {
-  await webAudioEngine.init();
-  // If song is prepared but not loaded, load it now
-  if (webAudioEngine.isPrepared()) {
-    await webAudioEngine.loadSong();
-  }
-}, []);
-```
-
-### 3. `src/pages/TrainingMode.tsx`
-
-Update the Play handler to ensure full initialization:
-
-```typescript
 const handlePlayPause = async () => {
   if (songHasRealAudio) {
-    // User gesture - safe to init AudioContext and load audio
-    await initAudioEngine(); // This now handles: init() + loadSong() if prepared
-    engineTogglePlayPause();
+    setHasStartedPlayback(true);
+    try {
+      await initAudioEngine();
+      // After init, directly call play since we know we want to start
+      webAudioEngine.play();
+      useAudioStore.getState().play();
+    } catch (error) {
+      console.error('Failed to initialize audio:', error);
+      setHasStartedPlayback(false); // Reset to allow retry
+      toast.error("Failed to load audio", {
+        description: "Please try again",
+      });
+    }
   } else {
     storeTogglePlayPause();
   }
 };
 ```
 
----
+### Step 2: Simplify Play Logic After Init
 
-## Flow After Fix
+The current flow calls `engineTogglePlayPause()` which uses a stale `isPlaying` value. Since we just initialized, we know:
+- The engine is ready (`playbackState === 'ready'`)  
+- We want to play (not pause)
 
-```text
-User navigates to /training/testify-exercise
-         ↓
-useEffect fires → prepareSong() called
-         ↓
-Song config stored (metadata only, no AudioContext) ✓
-         ↓
-UI shows song info, Play button ready
-         ↓
-User taps Play button
-         ↓
-initAudioEngine() called from onClick ✓
-         ↓
-new AudioContext() created (in user gesture) ✓
-         ↓
-loadSong() fetches and decodes audio buffers ✓
-         ↓
-Audio plays!
+So call `play()` directly instead of toggle.
+
+### Step 3: Add Console Logs for Debugging
+
+Add more logging in the `init()` function to help debug issues:
+
+```typescript
+// src/services/webAudioEngine.ts
+
+async init(): Promise<void> {
+  console.log('🎵 init() called');
+  await this.ensureContextRunning();
+  console.log('🎵 AudioContext running');
+  
+  if (this.isPrepared()) {
+    console.log('🎵 Song is prepared, loading...');
+    await this.loadSong();
+  } else {
+    console.log('🎵 Song not prepared, skipping load');
+  }
+}
+```
+
+### Step 4: Fix ensureContextRunning Error Handling
+
+The `resume()` call might fail on some browsers. Add proper error handling:
+
+```typescript
+private async ensureContextRunning(): Promise<void> {
+  this.ensureContextCreated();
+  
+  if (this.audioContext!.state === 'suspended') {
+    try {
+      await this.audioContext!.resume();
+      console.log('🎵 AudioContext resumed');
+    } catch (error) {
+      console.error('Failed to resume AudioContext:', error);
+      throw new Error('Cannot start audio. Please try again.');
+    }
+  }
+}
 ```
 
 ---
 
-## Mobile Compatibility Notes
+## Files to Modify
 
-- `AudioContext` is only created inside `init()` which is only called from click handlers
-- `prepareSong()` can safely run in `useEffect` because it only stores metadata
-- The first Play tap may have a brief delay as audio loads, but won't crash
-- Subsequent taps are instant since audio is already loaded
+| File | Changes |
+|------|---------|
+| `src/pages/TrainingMode.tsx` | Add try/catch to `handlePlayPause`, call `play()` directly after init |
+| `src/services/webAudioEngine.ts` | Add debug logging to `init()`, add error handling to `ensureContextRunning()` |
+
+---
+
+## Implementation Details
+
+### TrainingMode.tsx Changes
+
+```typescript
+// Replace the handlePlayPause function (around line 139)
+
+const handlePlayPause = async () => {
+  if (songHasRealAudio) {
+    if (!mixdownReady) {
+      // First play - need to initialize
+      setHasStartedPlayback(true);
+      try {
+        await initAudioEngine();
+        // Successfully initialized - start playback
+        webAudioEngine.play();
+        useAudioStore.getState().play();
+      } catch (error) {
+        console.error('Failed to initialize audio:', error);
+        setHasStartedPlayback(false);
+        toast.error("Couldn't load audio", {
+          description: "Please try again or check your connection",
+        });
+      }
+    } else {
+      // Already initialized - just toggle
+      engineTogglePlayPause();
+    }
+  } else {
+    storeTogglePlayPause();
+  }
+};
+```
+
+### webAudioEngine.ts Changes
+
+```typescript
+// Update init() method (around line 180)
+
+async init(): Promise<void> {
+  console.log('🎵 Initializing audio engine...');
+  
+  try {
+    await this.ensureContextRunning();
+  } catch (error) {
+    console.error('🎵 Failed to start AudioContext:', error);
+    throw error;
+  }
+  
+  if (this.isPrepared()) {
+    console.log('🎵 Loading prepared song...');
+    await this.loadSong();
+  } else {
+    console.log('🎵 No song prepared, skipping load');
+  }
+  
+  console.log('🎵 Audio engine initialized');
+}
+
+// Update ensureContextRunning() method (around line 168)
+
+private async ensureContextRunning(): Promise<void> {
+  this.ensureContextCreated();
+  
+  if (this.audioContext!.state === 'suspended') {
+    try {
+      await this.audioContext!.resume();
+      console.log('🎵 AudioContext resumed (state:', this.audioContext!.state, ')');
+    } catch (error) {
+      console.error('🎵 AudioContext.resume() failed:', error);
+      throw new Error('Audio playback blocked. Please tap the play button.');
+    }
+  } else {
+    console.log('🎵 AudioContext already running (state:', this.audioContext!.state, ')');
+  }
+}
+```
 
 ---
 
 ## Testing Checklist
 
-After implementing:
+After implementation:
 
-1. **Desktop Chrome/Safari**: Open exercise, press Play, verify audio works
-2. **Mobile Safari (iPhone)**: Open exercise, verify no crash, tap Play, verify audio plays
-3. **Mobile Chrome (Android)**: Same as above
-4. **Lock screen**: Verify media controls work after playing
-5. **Navigation**: Leave Training Mode, verify audio stops
+1. **Desktop**: Open exercise → Tap Play → Audio should load and play
+2. **Mobile Safari**: Open exercise → Tap Play → Audio should load and play (no crash)
+3. **Mobile Chrome**: Same as Safari
+4. **Error case**: Disable network → Tap Play → Should show error toast
+5. **Retry**: After error, tap Play again → Should attempt to load again
+6. **Console**: Verify new debug logs appear when tapping Play
 
 ---
 
-## Summary
+## Why This Fixes the Issue
 
 | Before | After |
 |--------|-------|
-| `loadSong()` in useEffect | `prepareSong()` in useEffect |
-| AudioContext created on mount | AudioContext created on Play tap |
-| Mobile crashes | Mobile works |
+| `initAudioEngine()` errors are uncaught | Errors caught and shown to user |
+| UI stuck with `hasStartedPlayback=true` on error | State reset on error, allows retry |
+| `engineTogglePlayPause()` uses stale `isPlaying` | Directly call `play()` after successful init |
+| No logging to debug init issues | Comprehensive logging in init flow |
