@@ -60,7 +60,7 @@ function StackedCard({ song, index, totalCards }: { song: Song; index: number; t
   return (
     <div
       ref={containerRef}
-      className="h-[85vh] md:h-[70vh] flex items-start justify-center"
+      className="h-[70vh] md:h-[65vh] flex items-start justify-center"
       style={{
         position: "sticky",
         top: 0,
