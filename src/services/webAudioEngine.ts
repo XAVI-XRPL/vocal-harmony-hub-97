@@ -169,8 +169,15 @@ class WebAudioEngine {
     this.ensureContextCreated();
     
     if (this.audioContext!.state === 'suspended') {
-      await this.audioContext!.resume();
-      console.log('🎵 AudioContext resumed');
+      try {
+        await this.audioContext!.resume();
+        console.log('🎵 AudioContext resumed (state:', this.audioContext!.state, ')');
+      } catch (error) {
+        console.error('🎵 AudioContext.resume() failed:', error);
+        throw new Error('Audio playback blocked. Please tap the play button.');
+      }
+    } else {
+      console.log('🎵 AudioContext already running (state:', this.audioContext!.state, ')');
     }
   }
   
@@ -178,12 +185,24 @@ class WebAudioEngine {
    * Initialize the AudioContext. MUST be called from a user gesture (click/tap).
    */
   async init(): Promise<void> {
-    await this.ensureContextRunning();
+    console.log('🎵 Initializing audio engine...');
+    
+    try {
+      await this.ensureContextRunning();
+    } catch (error) {
+      console.error('🎵 Failed to start AudioContext:', error);
+      throw error;
+    }
     
     // If song is prepared but not loaded, load it now (user gesture provides permission)
     if (this.isPrepared()) {
+      console.log('🎵 Loading prepared song...');
       await this.loadSong();
+    } else {
+      console.log('🎵 No song prepared, skipping load');
     }
+    
+    console.log('🎵 Audio engine initialized');
   }
   
   /**
