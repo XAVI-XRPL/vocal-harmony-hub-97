@@ -155,10 +155,10 @@ export function SongCard({ song, variant = "default", className, showAddToPlayli
 
             {/* Locked overlay */}
             {isLocked && (
-              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[2px]">
                 <div className="flex flex-col items-center gap-2">
                   <Lock className="w-8 h-8 text-white" />
-                  <span className="text-xs text-white/80">Premium</span>
+                  <span className="text-sm text-white font-bold tracking-wide">Unlock with Premium</span>
                 </div>
               </div>
             )}
@@ -237,10 +237,10 @@ export function SongCard({ song, variant = "default", className, showAddToPlayli
 
           {/* Locked overlay */}
           {isLocked && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center backdrop-blur-[2px]">
               <div className="flex flex-col items-center gap-2">
                 <Lock className="w-8 h-8 text-white" />
-                <span className="text-xs text-white/80 font-medium">Premium</span>
+                <span className="text-sm text-white font-bold tracking-wide">Unlock with Premium</span>
               </div>
             </div>
           )}
