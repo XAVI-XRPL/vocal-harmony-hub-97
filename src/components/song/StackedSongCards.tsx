@@ -30,7 +30,7 @@ function StackedCard({ song, index, totalCards }: { song: Song; index: number; t
     offset: ["start start", "end start"],
   });
 
-  const targetScale = 1 - (totalCards - index) * 0.05;
+  const targetScale = 1 - (totalCards - index) * 0.04;
   const scale = useTransform(scrollYProgress, [0, 1], [1, targetScale]);
   const opacity = useTransform(scrollYProgress, [0, 0.6, 1], [1, 0.85, 0.6]);
 
@@ -61,7 +61,7 @@ function StackedCard({ song, index, totalCards }: { song: Song; index: number; t
   return (
     <div
       ref={containerRef}
-      className="h-[55vh] md:h-[50vh] flex items-start justify-center"
+      className="h-[75vh] md:h-[65vh] flex items-start justify-center"
       style={{
         position: "sticky",
         top: 0,
@@ -77,7 +77,7 @@ function StackedCard({ song, index, totalCards }: { song: Song; index: number; t
         style={{
           scale,
           opacity,
-          top: `calc(120px + ${index * 16}px)`,
+          top: `calc(120px + ${index * 24}px)`,
           transformOrigin: "center top",
         }}
       >
@@ -195,7 +195,7 @@ export function StackedSongCards({ songs }: StackedSongCardsProps) {
         />
       ))}
       {/* Bottom spacer so last card has room */}
-      <div className="h-[10vh]" />
+      <div className="h-[25vh]" />
     </div>
   );
 }
