@@ -13,7 +13,7 @@ export const VocalNotesDeskBackground = React.forwardRef<HTMLDivElement>(
         />
         
         {/* Dark overlay for card readability */}
-        <div className="absolute inset-0 bg-background/50" />
+        <div className="absolute inset-0 bg-background/35" />
         
         {/* Gradient overlay for color blending - warm tones to match store aesthetic */}
         <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background/70" />
