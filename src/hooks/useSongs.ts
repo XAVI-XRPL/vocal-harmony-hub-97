@@ -57,20 +57,29 @@ const transformSong = (dbSong: DbSong): Song => {
       waveformData: generateMockWaveform(200),
     }));
 
-  // Partition stems into core vs harmony groups
-  const coreStems = stems.filter(s => s.type !== 'harmony');
+  // Partition stems into 3 tiers for optimized mobile loading
+  const vocalStems = stems.filter(s => s.type === 'vocal' || s.type === 'instrumental');
+  const instrumentStems = stems.filter(s => s.type === 'keys' || s.type === 'drums' || s.type === 'bass');
   const harmonyStems = stems.filter(s => s.type === 'harmony');
 
   const stemGroups: StemGroup[] = [
     {
       id: 'core',
-      name: 'Core Tracks',
+      name: 'Core Vocals',
       loadBehavior: 'immediate',
-      stems: coreStems,
+      stems: vocalStems,
     },
   ];
 
-  // Only add harmonies group if there are harmony stems
+  if (instrumentStems.length > 0) {
+    stemGroups.push({
+      id: 'instruments',
+      name: 'Instruments',
+      loadBehavior: 'lazy',
+      stems: instrumentStems,
+    });
+  }
+
   if (harmonyStems.length > 0) {
     stemGroups.push({
       id: 'harmonies',
