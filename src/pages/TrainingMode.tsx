@@ -751,11 +751,11 @@ export default function TrainingMode() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handlePlayPause}
-              disabled={songHasRealAudio && !isReadyToPlay}
+              disabled={songHasRealAudio && hasStartedPlayback && !mixdownReady}
               className={cn(
                 "w-14 h-14 rounded-full flex items-center justify-center",
                 "gradient-bg shadow-xl relative",
-                songHasRealAudio && !isReadyToPlay && "opacity-50 cursor-not-allowed"
+                songHasRealAudio && hasStartedPlayback && !mixdownReady && "opacity-50 cursor-not-allowed"
               )}
             >
               {/* Pulsing ring when playing */}
