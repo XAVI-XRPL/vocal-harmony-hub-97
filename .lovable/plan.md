@@ -1,374 +1,133 @@
 
-# Fix: Sequential Stem Loading to Prevent Memory Crashes
 
-## Problem Summary
-The app crashes when loading stems because all 9+ stems are fetched and decoded simultaneously:
-- Each 4-minute stereo stem decodes to ~40MB of raw PCM audio
-- 9 stems x 40MB = 360MB memory spike
-- Mobile browsers run out of memory and crash
+# Grouped Stem Loading with Lazy Harmonies Card
 
-## Root Cause
+## Overview
 
-In `src/services/webAudioEngine.ts`, both stem loading methods use `Promise.all()`:
+Restructure how stems load to reduce initial memory usage from ~360MB to ~200MB. Stems will be split into two groups: we need to apply this to all songs.  (I may have to provide a consolidated acapella with all harmonies one 1 track. we need to plan this out 
 
-```typescript
-// loadStemsInBackground() - Line 740
-const loadPromises = stems.map(async (stemConfig) => { ... });
-await Promise.all(loadPromises);
+- **Core Stems** (type != 'harmony') -- Load automatically with mixdown-first strategy  
+- **Harmonies** (type == 'harmony') -- Only load when user taps a "Harmonies" card
 
-// loadAllStems() - Line 862  
-const loadPromises = stems.map(async (stemConfig) => { ... });
-await Promise.all(loadPromises);
-```
-
-This fires 9+ fetch + decode operations at once, overwhelming memory.
-
-## Solution
-
-Replace parallel loading with sequential loading using `for...of` loops:
-1. Load stems ONE AT A TIME
-2. Add small delay between stems for garbage collection
-3. Clear previous song's buffers before loading new song
-4. Add progress tracking per stem
+This prevents mobile crashes and lets users start practicing faster. Most users only need core tracks; harmonies are optional for advanced practice.
 
 ---
 
-## Files to Modify
+## How It Works
+
+1. User opens an exercise -- mixdown loads first, then **only core stems** load sequentially in background
+2. Crossfade to core stems when ready -- mixer controls activate for core tracks
+3. A collapsed "Harmonies" card appears below core tracks showing "Tap to load" badge
+4. When tapped, harmonies load sequentially one at a time
+5. Each harmony joins the active mix as it finishes loading (no restart needed)
+6. Memory stays stable throughout
+
+---
+
+## Technical Details
+
+### No Database Changes Required
+
+The existing `stems.type` column already distinguishes harmonies (`type = 'harmony'`) from core stems. The grouping logic is purely frontend.
+
+### Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/services/webAudioEngine.ts` | Replace `Promise.all` with sequential `for...of` loop in both loading methods |
+| `src/types/index.ts` | Add `StemGroup` interface |
+| `src/services/webAudioEngine.ts` | Add `loadGroup()` method, `startSingleStemSource()`, and group state tracking |
+| `src/components/audio/StemGroupCard.tsx` | **New file** -- Collapsible card for a group of stems with lazy-load trigger |
+| `src/hooks/useAudioEngine.ts` | Expose `loadGroup()` and group state |
+| `src/hooks/useSongs.ts` | Add stem grouping helper in `transformSong` |
+| `src/pages/TrainingMode.tsx` | Render core stems directly + StemGroupCard for harmonies |
 
----
+### 1. Types (`src/types/index.ts`)
 
-## Implementation Details
-
-### 1. Update `loadStemsInBackground()` (Lines 735-798)
-
-Replace the parallel `Promise.all` pattern with sequential loading:
+Add a `StemGroup` type:
 
 ```typescript
-private async loadStemsInBackground(stems: StemConfig[]): Promise<void> {
-  if (!this.audioContext || !this.masterGainNode) {
-    throw new Error('AudioContext not initialized');
-  }
-  
-  const signal = this.abortController?.signal;
-  
-  // Load stems ONE AT A TIME (not in parallel!)
-  for (const stemConfig of stems) {
-    // Check if cancelled
-    if (signal?.aborted) {
-      console.log('[WebAudioEngine] Stem loading cancelled');
-      return;
-    }
-    
-    console.log(`[WebAudioEngine] Loading stem: ${stemConfig.name}`);
-    
-    try {
-      // Create gain node for this stem
-      const gainNode = this.audioContext!.createGain();
-      gainNode.gain.value = 0; // Start muted - will fade in during crossfade
-      gainNode.connect(this.masterGainNode!);
-      
-      // Initialize stem data
-      const stemData: StemData = {
-        id: stemConfig.id,
-        name: stemConfig.name,
-        buffer: null,
-        sourceNode: null,
-        gainNode,
-        volume: 0.8,
-        isMuted: false,
-        isSolo: false,
-      };
-      this.stems.set(stemConfig.id, stemData);
-      
-      // Fetch audio file with progress tracking
-      const response = await fetch(stemConfig.url, { signal });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      // Track download progress
-      const contentLength = response.headers.get('content-length');
-      const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
-      let receivedBytes = 0;
-      const chunks: Uint8Array[] = [];
-      
-      if (response.body) {
-        const reader = response.body.getReader();
-        
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          if (signal?.aborted) return;
-          
-          chunks.push(value);
-          receivedBytes += value.length;
-          
-          if (totalBytes > 0) {
-            const progress = Math.round((receivedBytes / totalBytes) * 80);
-            this.updateStemProgress(stemConfig.id, progress, false);
-          }
-        }
-      } else {
-        // Fallback if body streaming not supported
-        const buffer = await response.arrayBuffer();
-        chunks.push(new Uint8Array(buffer));
-        receivedBytes = buffer.byteLength;
-      }
-      
-      // Combine chunks
-      const combined = new Uint8Array(receivedBytes);
-      let offset = 0;
-      for (const chunk of chunks) {
-        combined.set(chunk, offset);
-        offset += chunk.length;
-      }
-      
-      if (signal?.aborted) return;
-      
-      // Decode audio data
-      console.log(`[WebAudioEngine] Decoding stem: ${stemConfig.name}`);
-      const audioBuffer = await this.audioContext!.decodeAudioData(combined.buffer.slice(0));
-      
-      stemData.buffer = audioBuffer;
-      this.updateStemProgress(stemConfig.id, 100, true);
-      
-      console.log(`[WebAudioEngine] ✓ Loaded: ${stemConfig.name}`);
-      
-      // Small delay between stems for garbage collector
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-    } catch (error) {
-      if ((error as Error).name === 'AbortError') {
-        console.log('[WebAudioEngine] Stem loading aborted');
-        return;
-      }
-      
-      console.error(`[WebAudioEngine] ✗ Failed: ${stemConfig.name}`, error);
-      this.updateStemProgress(stemConfig.id, 0, false, (error as Error).message);
-      // Continue loading other stems even if one fails
-    }
-  }
-  
-  // Verify at least some stems loaded
-  const loadedCount = Array.from(this.stems.values()).filter(s => s.buffer).length;
-  if (loadedCount === 0) {
-    throw new Error('No stems could be loaded');
-  }
-  
-  this.updateState({ allStemsReady: true });
+export interface StemGroup {
+  id: string;
+  name: string;
+  loadBehavior: 'immediate' | 'lazy';
+  stems: Stem[];
 }
 ```
 
-### 2. Update `loadAllStems()` (Lines 857-919)
+### 2. Audio Engine (`src/services/webAudioEngine.ts`)
 
-Apply the same sequential pattern:
+Key additions:
 
-```typescript
-private async loadAllStems(stems: StemConfig[]): Promise<void> {
-  if (!this.audioContext || !this.masterGainNode) {
-    throw new Error('AudioContext not initialized');
-  }
-  
-  const signal = this.abortController?.signal;
-  
-  // Load stems ONE AT A TIME (not in parallel!)
-  for (const stemConfig of stems) {
-    if (signal?.aborted) {
-      console.log('[WebAudioEngine] Stem loading cancelled');
-      return;
-    }
-    
-    console.log(`[WebAudioEngine] Loading stem: ${stemConfig.name}`);
-    
-    try {
-      // Create gain node for this stem
-      const gainNode = this.audioContext!.createGain();
-      gainNode.connect(this.masterGainNode!);
-      
-      // Initialize stem data
-      const stemData: StemData = {
-        id: stemConfig.id,
-        name: stemConfig.name,
-        buffer: null,
-        sourceNode: null,
-        gainNode,
-        volume: 0.8,
-        isMuted: false,
-        isSolo: false,
-      };
-      this.stems.set(stemConfig.id, stemData);
-      
-      // Fetch with progress tracking
-      const response = await fetch(stemConfig.url, { signal });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      // Track download progress
-      const contentLength = response.headers.get('content-length');
-      const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
-      let receivedBytes = 0;
-      const chunks: Uint8Array[] = [];
-      
-      if (response.body) {
-        const reader = response.body.getReader();
-        
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          if (signal?.aborted) return;
-          
-          chunks.push(value);
-          receivedBytes += value.length;
-          
-          if (totalBytes > 0) {
-            const progress = Math.round((receivedBytes / totalBytes) * 80);
-            this.updateStemProgress(stemConfig.id, progress, false);
-          }
-        }
-      } else {
-        const buffer = await response.arrayBuffer();
-        chunks.push(new Uint8Array(buffer));
-        receivedBytes = buffer.byteLength;
-      }
-      
-      // Combine chunks
-      const combined = new Uint8Array(receivedBytes);
-      let offset = 0;
-      for (const chunk of chunks) {
-        combined.set(chunk, offset);
-        offset += chunk.length;
-      }
-      
-      if (signal?.aborted) return;
-      
-      // Decode audio data
-      console.log(`[WebAudioEngine] Decoding stem: ${stemConfig.name}`);
-      const audioBuffer = await this.audioContext!.decodeAudioData(combined.buffer.slice(0));
-      
-      stemData.buffer = audioBuffer;
-      this.updateStemProgress(stemConfig.id, 100, true);
-      
-      console.log(`[WebAudioEngine] ✓ Loaded: ${stemConfig.name}`);
-      
-      // Small delay for garbage collector
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-    } catch (error) {
-      if ((error as Error).name === 'AbortError') {
-        console.log('[WebAudioEngine] Stem loading aborted');
-        return;
-      }
-      
-      console.error(`[WebAudioEngine] ✗ Failed: ${stemConfig.name}`, error);
-      this.updateStemProgress(stemConfig.id, 0, false, (error as Error).message);
-    }
-  }
-  
-  // Verify at least some stems loaded
-  const loadedCount = Array.from(this.stems.values()).filter(s => s.buffer).length;
-  if (loadedCount === 0) {
-    throw new Error('No stems could be loaded');
-  }
-  
-  this.updateState({ allStemsReady: true });
-}
-```
+- **`SongConfig` update**: Add optional `stemGroups` field alongside existing `stems`
+- **`loadStemsInBackground`**: Only loads stems from "immediate" groups
+- **`loadGroup(groupId)`**: New public method to trigger loading of a lazy group
+  - Fetches and decodes each stem sequentially (same memory-safe pattern)
+  - If playback is active in stems mode, each newly decoded stem joins the mix immediately via `startSingleStemSource()`
+- **`startSingleStemSource(stemId, offset)`**: New private method to create a `BufferSourceNode` for a single stem and start it at the current playback position, synced to the existing context clock
+- **Group state tracking**: `Map` of group states (idle/loading/loaded) exposed via `getGroupStates()` and `isGroupLoaded()`
+- **`prepareSong` update**: Accept grouped stem configs and only register "immediate" stems in the initial `stemLoadProgress`
 
-### 3. Clear Buffers in `loadSong()` (Lines 255-330)
+### 3. Stem Grouping in Song Transform (`src/hooks/useSongs.ts`)
 
-Add memory cleanup before loading new song:
+In `transformSong`, partition stems by type:
 
 ```typescript
-async loadSong(config?: SongConfig): Promise<void> {
-  const songConfig = config || this.currentSongConfig;
-  if (!songConfig) {
-    console.warn('No song config to load');
-    return;
-  }
-  
-  // Abort any pending loads
-  this.abort();
-  
-  // Clear previous song's buffers to free memory
-  if (config && config.songId !== this.currentSongId) {
-    console.log('[WebAudioEngine] Clearing previous song buffers...');
-    this.cleanup();
-    this.currentSongId = config.songId;
-    this.currentSongConfig = config;
-    
-    // Force garbage collection opportunity
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
-  
-  // ... rest of method unchanged
-}
+const coreStems = stems.filter(s => s.type !== 'harmony');
+const harmonyStems = stems.filter(s => s.type === 'harmony');
+
+// Attach groups to the Song object
 ```
 
----
+This keeps the grouping logic simple and data-driven from the existing `type` column.
 
-## Memory Flow After Fix
+### 4. New StemGroupCard Component (`src/components/audio/StemGroupCard.tsx`)
 
-```text
-Before (CRASH):
-  Load stem 1 ──┬──> 40MB
-  Load stem 2 ──┼──> 40MB   ← All at once = 360MB spike
-  ...          ──┼──> ...
-  Load stem 9 ──┴──> 40MB
+A glass-style collapsible card that:
 
-After (SAFE):
-  Load stem 1 ──> 40MB ──> GC delay
-                          ↓
-  Load stem 2 ──────────> 40MB ──> GC delay
-                                   ↓
-  Load stem 3 ─────────────────> 40MB ──> ...
-  
-  (Memory stays ~80-120MB, never spikes to 360MB)
+- **Collapsed state (lazy, not loaded)**: Shows group name, stem count, "Tap to load" badge with download icon
+- **Loading state**: Expanded, shows per-stem progress bars as they load sequentially
+- **Loaded state**: Expanded, shows standard StemTrack controls (volume, solo, mute) for each harmony stem
+- Uses framer-motion for expand/collapse animation
+- Calls `webAudioEngine.loadGroup('harmonies')` on tap
+
+### 5. Updated useAudioEngine Hook (`src/hooks/useAudioEngine.ts`)
+
+- Expose `loadGroup` callback
+- Expose `groupStates` from engine (loading/loaded status per group)
+- These flow through to TrainingMode for the StemGroupCard
+
+### 6. Updated TrainingMode Page (`src/pages/TrainingMode.tsx`)
+
+- Render core stems directly as before (using existing StemTrack components)
+- After core stems, render a `StemGroupCard` for harmonies (if any exist for this exercise)
+- Pass group loading state and callbacks to StemGroupCard
+- The `prepareSong` call now includes group metadata so the engine knows which stems are immediate vs lazy
+
+### Memory Profile
+
+```
+Before: All stems load at once
+  Mixdown (5MB) + 9 stems decoded (~360MB) = crashes on mobile
+
+After: Grouped loading
+  Mixdown (5MB) + 5 core stems (~200MB) = stable on mobile
+  + 4 harmonies (~160MB) = only if user requests
+  Total never spikes -- sequential loading keeps peak at ~80MB
 ```
 
----
+### Edge Cases
 
-## Expected Console Output After Fix
+- **Songs with no harmonies**: No StemGroupCard rendered, behaves exactly as before
+- **Songs with only harmonies**: All stems load as "immediate" (no lazy group)
+- **User navigates away during harmony loading**: Existing abort controller cancels pending loads
+- **Harmony stems join mid-playback**: `startSingleStemSource` syncs to AudioContext clock at current playback position
 
-```text
-[WebAudioEngine] Loading stem: Drums
-[WebAudioEngine] Decoding stem: Drums
-[WebAudioEngine] ✓ Loaded: Drums
-[WebAudioEngine] Loading stem: Bass
-[WebAudioEngine] Decoding stem: Bass
-[WebAudioEngine] ✓ Loaded: Bass
-[WebAudioEngine] Loading stem: Guitar
-...
-```
+### Testing Checklist
 
-Each stem loads completely before the next starts.
-
----
-
-## Testing Checklist
-
-After implementation:
-1. Open browser DevTools → Performance/Memory tab
-2. Watch memory usage as stems load
-3. Memory should climb gradually (step by step), not spike all at once
-4. Each stem should show "Loading..." then "✓" one at a time in console
-5. App should NOT crash on mobile
-6. All stems should eventually show as loaded
-7. Play button should work after stems are ready
-
----
-
-## Summary
-
-| Aspect | Before | After |
-|--------|--------|-------|
-| Loading Pattern | Parallel (`Promise.all`) | Sequential (`for...of`) |
-| Memory Spike | ~360MB at once | ~40-80MB gradual |
-| Mobile Stability | Crashes | Stable |
-| Load Time | Faster but crashes | Slightly slower but reliable |
+1. Open an exercise with harmonies (e.g., TESTIFY EXERCISE has 3 harmony stems)
+2. Verify core stems load and crossfade works without harmonies
+3. Tap the Harmonies card -- verify sequential loading with progress
+4. Verify each harmony joins playback in sync (no drift)
+5. Test solo/mute on harmony stems after loading
+6. Navigate away during harmony loading -- verify no errors
+7. Monitor memory in DevTools -- no spike above ~80MB at any point
