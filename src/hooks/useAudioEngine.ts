@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
-import { webAudioEngine, EngineState, SongConfig, StemLoadProgress } from '@/services/webAudioEngine';
+import { webAudioEngine, EngineState, SongConfig, StemLoadProgress, StemGroupState } from '@/services/webAudioEngine';
 import { useAudioStore } from '@/stores/audioStore';
 
 interface UseAudioEngineReturn {
@@ -27,6 +27,7 @@ interface UseAudioEngineReturn {
   mixdownReady: boolean;
   allStemsReady: boolean;
   mixdownProgress: number;
+  groupStates: StemGroupState[];
 
   // Controls
   init: () => Promise<void>;
@@ -49,6 +50,9 @@ interface UseAudioEngineReturn {
 
   // Playback rate
   setPlaybackRate: (rate: number) => void;
+
+  // Group loading
+  loadGroup: (groupId: string) => Promise<void>;
 }
 
 export function useAudioEngine(): UseAudioEngineReturn {
@@ -58,7 +62,6 @@ export function useAudioEngine(): UseAudioEngineReturn {
   const hasRealAudio = currentSong?.stems.some((stem) => stem.url && stem.url.length > 0) ?? false;
 
   // Subscribe to engine state using useSyncExternalStore for React 18 compatibility.
-  // IMPORTANT: webAudioEngine.getState() must return a referentially-stable snapshot.
   const engineState = useSyncExternalStore(
     useCallback((onStoreChange) => webAudioEngine.subscribeOnChange(onStoreChange), []),
     () => webAudioEngine.getState(),
@@ -66,7 +69,6 @@ export function useAudioEngine(): UseAudioEngineReturn {
   );
 
   // Keep audio store in sync with engine state WITHOUT updating during render.
-  // (Updating Zustand during render can trigger React nested update / infinite loops.)
   const prevTimeRef = useRef<number>(0);
   const prevDurationRef = useRef<number>(0);
 
@@ -99,6 +101,16 @@ export function useAudioEngine(): UseAudioEngineReturn {
       return;
     }
 
+    // Build stem groups from the song's stemGroups
+    const stemGroupConfigs = currentSong.stemGroups && currentSong.stemGroups.length > 0
+      ? currentSong.stemGroups.map(group => ({
+          id: group.id,
+          name: group.name,
+          loadBehavior: group.loadBehavior,
+          stemIds: group.stems.map(s => s.id),
+        }))
+      : undefined;
+
     const songConfig: SongConfig = {
       songId: currentSong.id,
       mixdownUrl: currentSong.fullMixUrl || undefined,
@@ -109,11 +121,10 @@ export function useAudioEngine(): UseAudioEngineReturn {
         color: stem.color,
         type: stem.type,
       })),
+      stemGroups: stemGroupConfigs,
       duration: currentSong.duration,
     };
 
-    // CHANGED: Prepare only - don't load (no AudioContext created)
-    // The actual loading happens when user taps Play (calls init())
     webAudioEngine.prepareSong(songConfig);
   }, [currentSong?.id]);
 
@@ -123,7 +134,6 @@ export function useAudioEngine(): UseAudioEngineReturn {
   const loadingProgress = totalStems > 0 ? (loadedStems / totalStems) * 100 : 0;
 
   const isLoaded = engineState.playbackState !== 'idle' && engineState.playbackState !== 'loading';
-  // Can play if mixdown is ready (even if still loading stems) or if fully ready
   const isReadyToPlay =
     engineState.playbackState === 'ready' ||
     engineState.playbackState === 'playing' ||
@@ -173,7 +183,6 @@ export function useAudioEngine(): UseAudioEngineReturn {
 
   const setStemMuted = useCallback((stemId: string, muted: boolean) => {
     webAudioEngine.setStemMuted(stemId, muted);
-    // Toggle in store (store uses toggle, engine uses set)
     const stemState = useAudioStore.getState().stemStates.find((s) => s.stemId === stemId);
     if (stemState && stemState.isMuted !== muted) {
       useAudioStore.getState().toggleStemMute(stemId);
@@ -182,7 +191,6 @@ export function useAudioEngine(): UseAudioEngineReturn {
 
   const setStemSolo = useCallback((stemId: string, solo: boolean) => {
     webAudioEngine.setStemSolo(stemId, solo);
-    // Toggle in store
     const stemState = useAudioStore.getState().stemStates.find((s) => s.stemId === stemId);
     if (stemState && stemState.isSolo !== solo) {
       useAudioStore.getState().toggleStemSolo(stemId);
@@ -214,6 +222,10 @@ export function useAudioEngine(): UseAudioEngineReturn {
     useAudioStore.getState().setPlaybackRate(rate);
   }, []);
 
+  const loadGroup = useCallback(async (groupId: string) => {
+    await webAudioEngine.loadGroup(groupId);
+  }, []);
+
   return {
     // State
     playbackState: engineState.playbackState,
@@ -232,6 +244,7 @@ export function useAudioEngine(): UseAudioEngineReturn {
     mixdownReady: engineState.mixdownReady,
     allStemsReady: engineState.allStemsReady,
     mixdownProgress: engineState.mixdownProgress,
+    groupStates: engineState.groupStates,
 
     // Controls
     init,
@@ -254,6 +267,9 @@ export function useAudioEngine(): UseAudioEngineReturn {
 
     // Playback rate
     setPlaybackRate,
+
+    // Group loading
+    loadGroup,
   };
 }
 

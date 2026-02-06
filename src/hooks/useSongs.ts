@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Song, Stem, StemType, Difficulty } from '@/types';
+import { Song, Stem, StemType, StemGroup, Difficulty } from '@/types';
 
 // Helper to generate fake waveform data for visual display
 const generateMockWaveform = (length: number = 200): number[] => {
@@ -57,6 +57,29 @@ const transformSong = (dbSong: DbSong): Song => {
       waveformData: generateMockWaveform(200),
     }));
 
+  // Partition stems into core vs harmony groups
+  const coreStems = stems.filter(s => s.type !== 'harmony');
+  const harmonyStems = stems.filter(s => s.type === 'harmony');
+
+  const stemGroups: StemGroup[] = [
+    {
+      id: 'core',
+      name: 'Core Tracks',
+      loadBehavior: 'immediate',
+      stems: coreStems,
+    },
+  ];
+
+  // Only add harmonies group if there are harmony stems
+  if (harmonyStems.length > 0) {
+    stemGroups.push({
+      id: 'harmonies',
+      name: 'Harmonies',
+      loadBehavior: 'lazy',
+      stems: harmonyStems,
+    });
+  }
+
   return {
     id: dbSong.id,
     title: dbSong.title,
@@ -67,6 +90,7 @@ const transformSong = (dbSong: DbSong): Song => {
     key: dbSong.key ?? undefined,
     fullMixUrl: dbSong.full_mix_url || '',
     stems,
+    stemGroups,
     difficulty: dbSong.difficulty as Difficulty,
     genre: dbSong.genre,
     isPremium: dbSong.is_premium,

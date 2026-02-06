@@ -16,7 +16,7 @@
  * - AudioBufferSourceNode for each stem (recreated on seek/stop)
  */
 
-import { Song, Stem } from '@/types';
+// Types are defined locally to avoid circular dependencies
 
 // ============= Types =============
 
@@ -29,6 +29,15 @@ export interface StemLoadProgress {
   progress: number; // 0-100
   loaded: boolean;
   error?: string;
+}
+
+export interface StemGroupState {
+  id: string;
+  name: string;
+  loadBehavior: 'immediate' | 'lazy';
+  isLoaded: boolean;
+  isLoading: boolean;
+  stemIds: string[];
 }
 
 export interface EngineState {
@@ -44,6 +53,7 @@ export interface EngineState {
   loopStart: number;
   loopEnd: number;
   playbackRate: number;
+  groupStates: StemGroupState[];
 }
 
 export interface StemConfig {
@@ -58,6 +68,12 @@ export interface SongConfig {
   songId: string;
   mixdownUrl?: string;
   stems: StemConfig[];
+  stemGroups?: Array<{
+    id: string;
+    name: string;
+    loadBehavior: 'immediate' | 'lazy';
+    stemIds: string[];
+  }>;
   duration?: number;
 }
 
@@ -111,6 +127,7 @@ class WebAudioEngine {
     loopStart: 0,
     loopEnd: 0,
     playbackRate: 1,
+    groupStates: [],
   };
   
   // Playback tracking
@@ -134,6 +151,9 @@ class WebAudioEngine {
   
   // Background loading promise
   private backgroundLoadPromise: Promise<void> | null = null;
+  
+  // Stem group tracking
+  private stemGroupMap: Map<string, StemGroupState> = new Map();
   
   private constructor() {}
   
@@ -218,8 +238,42 @@ class WebAudioEngine {
     this.currentSongId = config.songId;
     this.currentSongConfig = config;
     
-    // Initialize stem progress tracking (UI only)
-    const stemProgress: StemLoadProgress[] = config.stems.map(s => ({
+    // Setup stem group tracking
+    this.stemGroupMap.clear();
+    const groupStates: StemGroupState[] = [];
+    
+    if (config.stemGroups && config.stemGroups.length > 0) {
+      for (const group of config.stemGroups) {
+        const gs: StemGroupState = {
+          id: group.id,
+          name: group.name,
+          loadBehavior: group.loadBehavior,
+          isLoaded: false,
+          isLoading: false,
+          stemIds: group.stemIds,
+        };
+        this.stemGroupMap.set(group.id, gs);
+        groupStates.push(gs);
+      }
+    }
+    
+    // Only track progress for immediate stems
+    const immediateStemIds = new Set<string>();
+    if (config.stemGroups) {
+      for (const group of config.stemGroups) {
+        if (group.loadBehavior === 'immediate') {
+          group.stemIds.forEach(id => immediateStemIds.add(id));
+        }
+      }
+    } else {
+      // No groups defined — all stems are immediate
+      config.stems.forEach(s => immediateStemIds.add(s.id));
+    }
+    
+    const immediateStems = config.stems.filter(s => immediateStemIds.has(s.id));
+    
+    // Initialize stem progress tracking (UI only) for immediate stems
+    const stemProgress: StemLoadProgress[] = immediateStems.map(s => ({
       stemId: s.id,
       stemName: s.name,
       progress: 0,
@@ -235,9 +289,10 @@ class WebAudioEngine {
       mixdownReady: false,
       stemLoadProgress: stemProgress,
       allStemsReady: false,
+      groupStates,
     });
     
-    console.log(`📋 Song prepared: ${config.songId} (waiting for user gesture)`);
+    console.log(`📋 Song prepared: ${config.songId} (${immediateStems.length} immediate stems, ${config.stems.length - immediateStems.length} lazy)`);
   }
   
   /**
@@ -276,8 +331,22 @@ class WebAudioEngine {
     
     this.abortController = new AbortController();
     
-    // Initialize stem progress tracking
-    const stemProgress: StemLoadProgress[] = songConfig.stems.map(s => ({
+    // Determine which stems are immediate
+    const immediateStemIds = new Set<string>();
+    if (songConfig.stemGroups) {
+      for (const group of songConfig.stemGroups) {
+        if (group.loadBehavior === 'immediate') {
+          group.stemIds.forEach(id => immediateStemIds.add(id));
+        }
+      }
+    } else {
+      songConfig.stems.forEach(s => immediateStemIds.add(s.id));
+    }
+    
+    const immediateStems = songConfig.stems.filter(s => immediateStemIds.has(s.id));
+    
+    // Initialize stem progress tracking for immediate stems only
+    const stemProgress: StemLoadProgress[] = immediateStems.map(s => ({
       stemId: s.id,
       stemName: s.name,
       progress: 0,
@@ -304,9 +373,24 @@ class WebAudioEngine {
         console.log('📻 Mixdown-first loading strategy');
         await this.loadMixdownFirst(songConfig);
       } else {
-        // Fallback: load all stems (no mixdown available)
-        console.log('🎹 Loading all stems (no mixdown)');
-        await this.loadAllStems(songConfig.stems);
+        // Fallback: load immediate stems only (no mixdown available)
+        const immediateStemIds = new Set<string>();
+        if (songConfig.stemGroups) {
+          for (const group of songConfig.stemGroups) {
+            if (group.loadBehavior === 'immediate') {
+              group.stemIds.forEach(id => immediateStemIds.add(id));
+            }
+          }
+        } else {
+          songConfig.stems.forEach(s => immediateStemIds.add(s.id));
+        }
+        const immediateStems = songConfig.stems.filter(s => immediateStemIds.has(s.id));
+        
+        console.log(`🎹 Loading ${immediateStems.length} immediate stems (no mixdown)`);
+        await this.loadAllStems(immediateStems);
+        
+        // Mark core group as loaded
+        this.markGroupLoaded('core');
         
         // Get duration from first loaded buffer
         const firstStem = Array.from(this.stems.values()).find(s => s.buffer);
@@ -605,6 +689,7 @@ class WebAudioEngine {
     this.currentSongId = null;
     this.currentSongConfig = null;
     this.backgroundLoadPromise = null;
+    this.stemGroupMap.clear();
     
     this.updateState({
       playbackState: 'idle',
@@ -615,6 +700,7 @@ class WebAudioEngine {
       mixdownReady: false,
       stemLoadProgress: [],
       allStemsReady: false,
+      groupStates: [],
     });
   }
   
@@ -623,6 +709,187 @@ class WebAudioEngine {
    */
   isReady(): boolean {
     return this.audioContext?.state === 'running';
+  }
+  
+  // ============= Group Loading =============
+  
+  /**
+   * Load a lazy stem group (e.g., harmonies).
+   * Can be called while playback is active - newly loaded stems join the mix.
+   */
+  async loadGroup(groupId: string): Promise<void> {
+    const group = this.stemGroupMap.get(groupId);
+    if (!group || group.isLoaded || group.isLoading) return;
+    if (!this.currentSongConfig || !this.audioContext || !this.masterGainNode) return;
+    
+    group.isLoading = true;
+    this.syncGroupStates();
+    
+    const signal = this.abortController?.signal;
+    const stemsToLoad = this.currentSongConfig.stems.filter(s => group.stemIds.includes(s.id));
+    
+    // Add progress tracking for these stems
+    const newProgress: StemLoadProgress[] = stemsToLoad.map(s => ({
+      stemId: s.id,
+      stemName: s.name,
+      progress: 0,
+      loaded: false,
+    }));
+    this.updateState({
+      stemLoadProgress: [...this.state.stemLoadProgress, ...newProgress],
+    });
+    
+    console.log(`[WebAudioEngine] Loading group: ${group.name} (${stemsToLoad.length} stems)`);
+    
+    // Load stems sequentially (memory-safe)
+    for (const stemConfig of stemsToLoad) {
+      if (signal?.aborted) break;
+      
+      console.log(`[WebAudioEngine] Loading: ${stemConfig.name}`);
+      
+      try {
+        // Create gain node for this stem
+        const gainNode = this.audioContext!.createGain();
+        gainNode.gain.value = 0; // Start silent
+        gainNode.connect(this.masterGainNode!);
+        
+        const stemData: StemData = {
+          id: stemConfig.id,
+          name: stemConfig.name,
+          buffer: null,
+          sourceNode: null,
+          gainNode,
+          volume: 0.8,
+          isMuted: false,
+          isSolo: false,
+        };
+        this.stems.set(stemConfig.id, stemData);
+        
+        // Fetch with progress
+        const response = await fetch(stemConfig.url, { signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const contentLength = response.headers.get('content-length');
+        const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+        let receivedBytes = 0;
+        const chunks: Uint8Array[] = [];
+        
+        if (response.body) {
+          const reader = response.body.getReader();
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (signal?.aborted) return;
+            chunks.push(value);
+            receivedBytes += value.length;
+            if (totalBytes > 0) {
+              this.updateStemProgress(stemConfig.id, Math.round((receivedBytes / totalBytes) * 80), false);
+            }
+          }
+        } else {
+          const buffer = await response.arrayBuffer();
+          chunks.push(new Uint8Array(buffer));
+          receivedBytes = buffer.byteLength;
+        }
+        
+        const combined = new Uint8Array(receivedBytes);
+        let offset = 0;
+        for (const chunk of chunks) {
+          combined.set(chunk, offset);
+          offset += chunk.length;
+        }
+        
+        if (signal?.aborted) return;
+        
+        // Decode
+        console.log(`[WebAudioEngine] Decoding: ${stemConfig.name}`);
+        const audioBuffer = await this.audioContext!.decodeAudioData(combined.buffer.slice(0));
+        stemData.buffer = audioBuffer;
+        this.updateStemProgress(stemConfig.id, 100, true);
+        
+        console.log(`[WebAudioEngine] ✓ Loaded: ${stemConfig.name}`);
+        
+        // If playing in stems mode, start this stem immediately at current position
+        if (this.state.playbackState === 'playing' && this.state.audioMode === 'stems') {
+          this.startSingleStemSource(stemConfig.id, this.getCurrentTime());
+        }
+        
+        // GC delay
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') return;
+        console.error(`[WebAudioEngine] ✗ Failed: ${stemConfig.name}`, error);
+        this.updateStemProgress(stemConfig.id, 0, false, (error as Error).message);
+      }
+    }
+    
+    group.isLoaded = true;
+    group.isLoading = false;
+    this.syncGroupStates();
+    console.log(`[WebAudioEngine] ✓ Group loaded: ${group.name}`);
+  }
+  
+  /**
+   * Start a single stem source mid-playback (for lazy-loaded stems).
+   */
+  private startSingleStemSource(stemId: string, offset: number): void {
+    if (!this.audioContext) return;
+    
+    const stem = this.stems.get(stemId);
+    if (!stem || !stem.buffer) return;
+    
+    // Disconnect any existing source
+    if (stem.sourceNode) {
+      try { stem.sourceNode.stop(); } catch (e) {}
+      stem.sourceNode.disconnect();
+    }
+    
+    const source = this.audioContext.createBufferSource();
+    source.buffer = stem.buffer;
+    source.playbackRate.value = this.state.playbackRate;
+    source.connect(stem.gainNode);
+    
+    // Set proper gain
+    this.updateStemGain(stem);
+    
+    // Start at the correct offset without resetting global timing
+    source.start(0, offset);
+    stem.sourceNode = source;
+  }
+  
+  /**
+   * Mark a group as loaded and sync state.
+   */
+  private markGroupLoaded(groupId: string): void {
+    const group = this.stemGroupMap.get(groupId);
+    if (group) {
+      group.isLoaded = true;
+      group.isLoading = false;
+      this.syncGroupStates();
+    }
+  }
+  
+  /**
+   * Sync group states map to engine state for React subscribers.
+   */
+  private syncGroupStates(): void {
+    const groupStates: StemGroupState[] = Array.from(this.stemGroupMap.values()).map(g => ({ ...g }));
+    this.updateState({ groupStates });
+  }
+  
+  /**
+   * Check if a group is loaded.
+   */
+  isGroupLoaded(groupId: string): boolean {
+    return this.stemGroupMap.get(groupId)?.isLoaded ?? false;
+  }
+  
+  /**
+   * Check if a group is loading.
+   */
+  isGroupLoading(groupId: string): boolean {
+    return this.stemGroupMap.get(groupId)?.isLoading ?? false;
   }
   
   // ============= Mixdown-First Loading =============
@@ -708,13 +975,28 @@ class WebAudioEngine {
       return;
     }
     
-    // Phase 2: Background load stems
-    console.log('📻 Phase 2: Loading stems in background...');
-    this.backgroundLoadPromise = this.loadStemsInBackground(config.stems);
+    // Phase 2: Background load ONLY immediate stems
+    const immediateStemIds = new Set<string>();
+    if (config.stemGroups) {
+      for (const group of config.stemGroups) {
+        if (group.loadBehavior === 'immediate') {
+          group.stemIds.forEach(id => immediateStemIds.add(id));
+        }
+      }
+    } else {
+      config.stems.forEach(s => immediateStemIds.add(s.id));
+    }
+    
+    const immediateStems = config.stems.filter(s => immediateStemIds.has(s.id));
+    console.log(`📻 Phase 2: Loading ${immediateStems.length} immediate stems in background...`);
+    this.backgroundLoadPromise = this.loadStemsInBackground(immediateStems);
     
     // Don't await - let stems load in background
     this.backgroundLoadPromise.then(() => {
-      console.log('✓ All stems loaded in background');
+      console.log('✓ All immediate stems loaded in background');
+      
+      // Mark the core group as loaded
+      this.markGroupLoaded('core');
       
       // If currently playing mixdown, crossfade to stems
       if (this.state.playbackState === 'playing' && this.state.audioMode === 'mixdown') {

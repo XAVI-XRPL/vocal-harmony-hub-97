@@ -24,6 +24,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { WaveformDisplay } from "@/components/audio/WaveformDisplay";
 import { StemTrack } from "@/components/audio/StemTrack";
+import { StemGroupCard } from "@/components/audio/StemGroupCard";
 import { TempoControl } from "@/components/audio/TempoControl";
 import { LoopControls } from "@/components/audio/LoopControls";
 import { LoopRegion } from "@/components/audio/LoopRegion";
@@ -90,6 +91,8 @@ export default function TrainingMode() {
     mixdownReady,
     mixdownProgress,
     allStemsReady,
+    groupStates,
+    loadGroup,
     // Engine control functions
     togglePlayPause: engineTogglePlayPause,
     setPlaybackRate: engineSetPlaybackRate,
@@ -691,7 +694,11 @@ export default function TrainingMode() {
           animate="visible"
           className="flex-1 overflow-y-auto hide-scrollbar space-y-2 pb-2"
         >
-          {song.stems.map((stem) => (
+          {/* Core stems (non-harmony) */}
+          {(song.stemGroups.length > 0
+            ? song.stemGroups.find(g => g.loadBehavior === 'immediate')?.stems ?? song.stems
+            : song.stems
+          ).map((stem) => (
             <motion.div key={stem.id} variants={itemVariants}>
               <StemTrack
                 stem={stem}
@@ -707,6 +714,32 @@ export default function TrainingMode() {
               />
             </motion.div>
           ))}
+
+          {/* Lazy stem groups (e.g., Harmonies) */}
+          {song.stemGroups
+            .filter(g => g.loadBehavior === 'lazy')
+            .map(group => {
+              const gs = groupStates.find(s => s.id === group.id);
+              if (!gs) return null;
+              return (
+                <motion.div key={group.id} variants={itemVariants}>
+                  <StemGroupCard
+                    groupState={gs}
+                    stems={group.stems}
+                    currentTime={currentTime}
+                    duration={duration}
+                    loopStart={loopStart}
+                    loopEnd={loopEnd}
+                    isLooping={isLooping}
+                    onSeek={handleSeek}
+                    onLoadGroup={loadGroup}
+                    onVolumeChange={handleStemVolumeChange}
+                    onMuteToggle={handleStemMuteToggle}
+                    onSoloToggle={handleStemSoloToggle}
+                  />
+                </motion.div>
+              );
+            })}
         </motion.div>
       </div>
 
