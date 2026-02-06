@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Search, Filter, X, Music, Loader2 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
+import { LibraryBackground } from "@/components/layout/LibraryBackground";
 import { SongCard } from "@/components/song/SongCard";
 import { StackedSongCards } from "@/components/song/StackedSongCards";
 import { LibrarySkeleton } from "@/components/ui/loading-shimmer";
@@ -73,6 +74,7 @@ export default function Library() {
   const isFiltered = !!hasActiveFilters || !!searchQuery;
   return (
     <div className="min-h-screen">
+      <LibraryBackground />
       <Header title="Library" showSearch={false} />
 
       <div className="px-4 pb-8">
