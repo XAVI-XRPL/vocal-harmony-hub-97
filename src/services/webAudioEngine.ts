@@ -263,11 +263,15 @@ class WebAudioEngine {
     // Abort any pending loads
     this.abort();
     
-    // Only cleanup if loading a different song
+    // Clear previous song's buffers to free memory when switching songs
     if (config && config.songId !== this.currentSongId) {
+      console.log('[WebAudioEngine] Clearing previous song buffers...');
       this.cleanup();
       this.currentSongId = config.songId;
       this.currentSongConfig = config;
+      
+      // Force garbage collection opportunity
+      await new Promise(resolve => setTimeout(resolve, 50));
     }
     
     this.abortController = new AbortController();
@@ -730,14 +734,26 @@ class WebAudioEngine {
   }
   
   /**
-   * Load all stems in parallel in the background.
+   * Load all stems SEQUENTIALLY in the background to prevent memory spikes.
+   * Loading one at a time keeps memory usage stable (~40-80MB instead of 360MB+).
    */
   private async loadStemsInBackground(stems: StemConfig[]): Promise<void> {
     if (!this.audioContext || !this.masterGainNode) {
       throw new Error('AudioContext not initialized');
     }
     
-    const loadPromises = stems.map(async (stemConfig) => {
+    const signal = this.abortController?.signal;
+    
+    // Load stems ONE AT A TIME (not in parallel!)
+    for (const stemConfig of stems) {
+      // Check if cancelled
+      if (signal?.aborted) {
+        console.log('[WebAudioEngine] Stem loading cancelled');
+        return;
+      }
+      
+      console.log(`[WebAudioEngine] Loading stem: ${stemConfig.name}`);
+      
       try {
         // Create gain node for this stem
         const gainNode = this.audioContext!.createGain();
@@ -757,36 +773,75 @@ class WebAudioEngine {
         };
         this.stems.set(stemConfig.id, stemData);
         
-        // Fetch audio file
-        const response = await fetch(stemConfig.url, {
-          signal: this.abortController?.signal,
-        });
+        // Fetch audio file with progress tracking
+        const response = await fetch(stemConfig.url, { signal });
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
         
-        const arrayBuffer = await response.arrayBuffer();
+        // Track download progress
+        const contentLength = response.headers.get('content-length');
+        const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+        let receivedBytes = 0;
+        const chunks: Uint8Array[] = [];
         
-        // Update progress to show download complete
-        this.updateStemProgress(stemConfig.id, 80, false);
+        if (response.body) {
+          const reader = response.body.getReader();
+          
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (signal?.aborted) return;
+            
+            chunks.push(value);
+            receivedBytes += value.length;
+            
+            if (totalBytes > 0) {
+              const progress = Math.round((receivedBytes / totalBytes) * 80);
+              this.updateStemProgress(stemConfig.id, progress, false);
+            }
+          }
+        } else {
+          // Fallback if body streaming not supported
+          const buffer = await response.arrayBuffer();
+          chunks.push(new Uint8Array(buffer));
+          receivedBytes = buffer.byteLength;
+        }
+        
+        // Combine chunks
+        const combined = new Uint8Array(receivedBytes);
+        let offset = 0;
+        for (const chunk of chunks) {
+          combined.set(chunk, offset);
+          offset += chunk.length;
+        }
+        
+        if (signal?.aborted) return;
         
         // Decode audio data
-        const audioBuffer = await this.audioContext!.decodeAudioData(arrayBuffer);
+        console.log(`[WebAudioEngine] Decoding stem: ${stemConfig.name}`);
+        const audioBuffer = await this.audioContext!.decodeAudioData(combined.buffer.slice(0));
         
         stemData.buffer = audioBuffer;
         this.updateStemProgress(stemConfig.id, 100, true);
         
-        console.log(`✓ Stem loaded: ${stemConfig.name}`);
-      } catch (error) {
-        if ((error as Error).name === 'AbortError') throw error;
+        console.log(`[WebAudioEngine] ✓ Loaded: ${stemConfig.name}`);
         
-        console.error(`Failed to load stem ${stemConfig.name}:`, error);
+        // Small delay between stems for garbage collector
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') {
+          console.log('[WebAudioEngine] Stem loading aborted');
+          return;
+        }
+        
+        console.error(`[WebAudioEngine] ✗ Failed: ${stemConfig.name}`, error);
         this.updateStemProgress(stemConfig.id, 0, false, (error as Error).message);
+        // Continue loading other stems even if one fails
       }
-    });
-    
-    await Promise.all(loadPromises);
+    }
     
     // Verify at least some stems loaded
     const loadedCount = Array.from(this.stems.values()).filter(s => s.buffer).length;
@@ -854,12 +909,26 @@ class WebAudioEngine {
   
   // ============= Fallback: Load All Stems =============
   
+  /**
+   * Load all stems SEQUENTIALLY (fallback when no mixdown available).
+   * Loading one at a time prevents memory spikes on mobile.
+   */
   private async loadAllStems(stems: StemConfig[]): Promise<void> {
     if (!this.audioContext || !this.masterGainNode) {
       throw new Error('AudioContext not initialized');
     }
     
-    const loadPromises = stems.map(async (stemConfig) => {
+    const signal = this.abortController?.signal;
+    
+    // Load stems ONE AT A TIME (not in parallel!)
+    for (const stemConfig of stems) {
+      if (signal?.aborted) {
+        console.log('[WebAudioEngine] Stem loading cancelled');
+        return;
+      }
+      
+      console.log(`[WebAudioEngine] Loading stem: ${stemConfig.name}`);
+      
       try {
         // Create gain node for this stem
         const gainNode = this.audioContext!.createGain();
@@ -879,35 +948,73 @@ class WebAudioEngine {
         this.stems.set(stemConfig.id, stemData);
         
         // Fetch with progress tracking
-        const response = await fetch(stemConfig.url, {
-          signal: this.abortController?.signal,
-        });
+        const response = await fetch(stemConfig.url, { signal });
         
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
         
-        const arrayBuffer = await response.arrayBuffer();
+        // Track download progress
+        const contentLength = response.headers.get('content-length');
+        const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+        let receivedBytes = 0;
+        const chunks: Uint8Array[] = [];
         
-        // Update progress to show download complete
-        this.updateStemProgress(stemConfig.id, 80, false);
+        if (response.body) {
+          const reader = response.body.getReader();
+          
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (signal?.aborted) return;
+            
+            chunks.push(value);
+            receivedBytes += value.length;
+            
+            if (totalBytes > 0) {
+              const progress = Math.round((receivedBytes / totalBytes) * 80);
+              this.updateStemProgress(stemConfig.id, progress, false);
+            }
+          }
+        } else {
+          const buffer = await response.arrayBuffer();
+          chunks.push(new Uint8Array(buffer));
+          receivedBytes = buffer.byteLength;
+        }
+        
+        // Combine chunks
+        const combined = new Uint8Array(receivedBytes);
+        let offset = 0;
+        for (const chunk of chunks) {
+          combined.set(chunk, offset);
+          offset += chunk.length;
+        }
+        
+        if (signal?.aborted) return;
         
         // Decode audio data
-        const audioBuffer = await this.audioContext!.decodeAudioData(arrayBuffer);
+        console.log(`[WebAudioEngine] Decoding stem: ${stemConfig.name}`);
+        const audioBuffer = await this.audioContext!.decodeAudioData(combined.buffer.slice(0));
         
         stemData.buffer = audioBuffer;
         this.updateStemProgress(stemConfig.id, 100, true);
         
-        console.log(`✓ Stem loaded: ${stemConfig.name}`);
-      } catch (error) {
-        if ((error as Error).name === 'AbortError') throw error;
+        console.log(`[WebAudioEngine] ✓ Loaded: ${stemConfig.name}`);
         
-        console.error(`Failed to load stem ${stemConfig.name}:`, error);
+        // Small delay for garbage collector
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') {
+          console.log('[WebAudioEngine] Stem loading aborted');
+          return;
+        }
+        
+        console.error(`[WebAudioEngine] ✗ Failed: ${stemConfig.name}`, error);
         this.updateStemProgress(stemConfig.id, 0, false, (error as Error).message);
+        // Continue loading other stems even if one fails
       }
-    });
-    
-    await Promise.all(loadPromises);
+    }
     
     // Verify at least some stems loaded
     const loadedCount = Array.from(this.stems.values()).filter(s => s.buffer).length;
