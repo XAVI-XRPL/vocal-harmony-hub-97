@@ -69,12 +69,14 @@ export default function Hub() {
           transition={{ duration: 0.5 }}
           className="text-center mb-10"
         >
-          <h1 className="text-3xl md:text-4xl font-bold gradient-text mb-2">
-            Vocalist Toolkit
-          </h1>
-          <p className="text-muted-foreground text-sm md:text-base">
-            Everything you need on the road
-          </p>
+          <div className="glass-card inline-block px-8 py-4 rounded-2xl mb-2">
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground drop-shadow-lg">
+              Vocalist Toolkit
+            </h1>
+            <p className="text-muted-foreground text-sm md:text-base mt-1">
+              Everything you need on the road
+            </p>
+          </div>
         </motion.div>
 
         {/* Hub Cards Grid */}
@@ -82,7 +84,7 @@ export default function Hub() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid gap-4 md:gap-6 max-w-lg mx-auto"
+          className="grid gap-5 md:gap-7 max-w-lg mx-auto"
         >
           {hubModules.map((module) => (
             <motion.div key={module.id} variants={itemVariants}>

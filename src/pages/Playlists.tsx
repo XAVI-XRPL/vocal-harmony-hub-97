@@ -57,30 +57,36 @@ export default function Playlists() {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <>
+        <RecordsWallBackground />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center justify-center min-h-[60vh] px-4"
-      >
-        <GlassCard className="max-w-md w-full text-center p-8">
-          <ListMusic className="w-16 h-16 mx-auto mb-4 text-primary" />
-          <h2 className="text-2xl font-bold mb-2">Sign In Required</h2>
-          <p className="text-muted-foreground mb-6">
-            Create an account to build custom playlists of your favorite vocal exercises.
-          </p>
-          <Button onClick={() => navigate("/auth")} className="gradient-bg">
-            Sign In to Continue
-          </Button>
-        </GlassCard>
-      </motion.div>
+      <>
+        <RecordsWallBackground />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col items-center justify-center min-h-[60vh] px-4"
+        >
+          <GlassCard className="max-w-md w-full text-center p-8">
+            <ListMusic className="w-16 h-16 mx-auto mb-4 text-primary" />
+            <h2 className="text-2xl font-bold mb-2">Sign In Required</h2>
+            <p className="text-muted-foreground mb-6">
+              Create an account to build custom playlists of your favorite vocal exercises.
+            </p>
+            <Button onClick={() => navigate("/auth")} className="gradient-bg">
+              Sign In to Continue
+            </Button>
+          </GlassCard>
+        </motion.div>
+      </>
     );
   }
 
