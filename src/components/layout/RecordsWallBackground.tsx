@@ -1,13 +1,16 @@
+import { useState } from "react";
 import recordsWallBackground from "@/assets/records-wall-background.png";
 
 export function RecordsWallBackground() {
+  const [isLoaded, setIsLoaded] = useState(false);
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden">
       {/* Records wall image with slow zoom animation */}
       <img
         src={recordsWallBackground}
         alt=""
-        className="absolute inset-0 w-full h-full object-cover animate-slow-zoom"
+        onLoad={() => setIsLoaded(true)}
+        className={`absolute inset-0 w-full h-full object-cover animate-slow-zoom transition-opacity duration-700 ease-in-out ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
       />
 
       {/* Dark overlay for card readability */}
