@@ -33,6 +33,8 @@ export const DoctorCard = React.memo(function DoctorCard({ doctor }: DoctorCardP
             src={doctor.imageUrl}
             alt={doctor.name}
             className="w-14 h-14 rounded-xl object-cover"
+            loading="lazy"
+            decoding="async"
           />
           {doctor.acceptsEmergency && (
             <div className="absolute -top-1 -right-1">

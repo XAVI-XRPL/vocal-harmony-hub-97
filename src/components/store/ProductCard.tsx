@@ -71,6 +71,8 @@ export const ProductCard = React.memo(function ProductCard({ product }: ProductC
             "w-full h-full object-cover transition-transform duration-500",
             !product.isComingSoon && "group-hover:scale-110"
           )}
+          loading="lazy"
+          decoding="async"
         />
         
         {/* Hover Overlay */}

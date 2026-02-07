@@ -43,6 +43,8 @@ export const GearProductCard = React.memo(function GearProductCard({ product, br
           src={product.imageUrl}
           alt={product.name}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          loading="lazy"
+          decoding="async"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
 
@@ -83,6 +85,8 @@ export const GearProductCard = React.memo(function GearProductCard({ product, br
               src={brand.logoUrl}
               alt={brand.name}
               className="w-4 h-4 rounded object-cover"
+              loading="lazy"
+              decoding="async"
             />
             <span className="text-[10px] text-muted-foreground">{brand.name}</span>
             {brand.discountPercent > 0 && (
