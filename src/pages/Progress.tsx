@@ -160,10 +160,8 @@ export default function Progress() {
                   transition={{ delay: i * 0.1, duration: 0.5 }}
                   style={{ minHeight: day.minutes > 0 ? 8 : 0 }}
                 >
-                  <motion.div
-                    className="absolute inset-0 bg-white/20"
-                    animate={{ opacity: [0.2, 0.4, 0.2] }}
-                    transition={{ duration: 2, repeat: Infinity, delay: i * 0.2 }}
+                  <div
+                    className="absolute inset-0 bg-white/20 opacity-30"
                   />
                 </motion.div>
                 <span className="text-xs text-muted-foreground">{day.day}</span>
