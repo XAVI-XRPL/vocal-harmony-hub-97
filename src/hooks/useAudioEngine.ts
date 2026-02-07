@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+const __DEV__ = import.meta.env.DEV;
 import { webAudioEngine, EngineState, SongConfig, StemLoadProgress, StemGroupState } from '@/services/webAudioEngine';
 import { useAudioStore } from '@/stores/audioStore';
 
@@ -97,7 +98,7 @@ export function useAudioEngine(): UseAudioEngineReturn {
     // Only prepare if song has real audio
     const stemsWithAudio = currentSong.stems.filter((stem) => stem.url && stem.url.length > 0);
     if (stemsWithAudio.length === 0) {
-      console.log('No audio stems for this song');
+      if (__DEV__) console.log('No audio stems for this song');
       return;
     }
 

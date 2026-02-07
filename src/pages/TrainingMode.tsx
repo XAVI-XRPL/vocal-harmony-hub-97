@@ -269,7 +269,7 @@ export default function TrainingMode() {
   // Cleanup: stop audio when leaving Training Mode
   useEffect(() => {
     return () => {
-      console.log("[TrainingMode] Cleanup - releasing audio memory");
+      if (import.meta.env.DEV) console.log("[TrainingMode] Cleanup - releasing audio memory");
       webAudioEngine.cleanup();
     };
   }, []);

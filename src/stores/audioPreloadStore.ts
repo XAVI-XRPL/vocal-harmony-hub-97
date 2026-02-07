@@ -220,7 +220,7 @@ export const useAudioPreloadStore = create<AudioPreloadState>((set, get) => ({
     const CONCURRENT_REQUESTS = isHighStemCount ? 2 : 3;
     
     if (isHighStemCount) {
-      console.log(`High stem count song (${sortedStems.length}) - using ${CONCURRENT_REQUESTS} concurrent requests`);
+      if (import.meta.env.DEV) console.log(`High stem count song (${sortedStems.length}) - using ${CONCURRENT_REQUESTS} concurrent requests`);
     }
     
     for (let i = 0; i < sortedStems.length; i += CONCURRENT_REQUESTS) {
@@ -283,7 +283,7 @@ export const useAudioPreloadStore = create<AudioPreloadState>((set, get) => ({
         };
       });
       
-      console.log(`✓ Preloaded ${loadedStems.length}/${totalStems} stems for "${song.title}"`);
+      if (import.meta.env.DEV) console.log(`✓ Preloaded ${loadedStems.length}/${totalStems} stems for "${song.title}"`);
     } else {
       set(state => {
         const newStates = new Map(state.loadingStates);
