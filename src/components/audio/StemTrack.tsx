@@ -36,7 +36,9 @@ interface StemTrackProps {
 
 export const StemTrack = forwardRef<HTMLDivElement, StemTrackProps>(
   ({ stem, currentTime, duration, onSeek, loopStart = 0, loopEnd = 0, isLooping = false, onVolumeChange, onMuteToggle, onSoloToggle }, ref) => {
-    const stemStates = useAudioStore((state) => state.stemStates);
+    // Targeted selectors: only re-render when THIS stem's state or solo status changes
+    const stemState = useAudioStore((state) => state.stemStates.find((s) => s.stemId === stem.id));
+    const hasSoloedStems = useAudioStore((state) => state.stemStates.some((s) => s.isSolo));
     const setStemVolumeStore = useAudioStore((state) => state.setStemVolume);
     const toggleStemMuteStore = useAudioStore((state) => state.toggleStemMute);
     const toggleStemSoloStore = useAudioStore((state) => state.toggleStemSolo);
@@ -67,7 +69,6 @@ export const StemTrack = forwardRef<HTMLDivElement, StemTrackProps>(
       }
     };
 
-    const stemState = stemStates.find((s) => s.stemId === stem.id);
     const effectiveVolume = useEffectiveStemVolume(stem.id);
 
     const isMuted = stemState?.isMuted || false;
@@ -75,7 +76,6 @@ export const StemTrack = forwardRef<HTMLDivElement, StemTrackProps>(
     const volume = stemState?.volume || 1;
 
     // Check if other stems are soloed (making this one effectively muted)
-    const hasSoloedStems = stemStates.some((s) => s.isSolo);
     const isEffectivelyMuted = hasSoloedStems && !isSolo;
 
     const Icon = stemIcons[stem.type] || Mic2;

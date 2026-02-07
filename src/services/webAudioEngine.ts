@@ -105,6 +105,9 @@ const CROSSFADE_DURATION = 0.2; // 200ms crossfade
 class WebAudioEngine {
   private static instance: WebAudioEngine;
   
+  // Frame counter for throttling time updates (~50ms instead of every frame)
+  private frameCounter: number = 0;
+  
   // Audio Context
   private audioContext: AudioContext | null = null;
   private masterGainNode: GainNode | null = null;
@@ -1481,11 +1484,16 @@ class WebAudioEngine {
   
   private startTimeTracking(): void {
     this.stopTimeTracking();
+    this.frameCounter = 0;
     
     const updateTime = () => {
       if (this.state.playbackState === 'playing') {
-        const currentTime = this.getCurrentTime();
-        this.updateState({ currentTime });
+        this.frameCounter++;
+        // Only push state updates every 3rd frame (~50ms) to reduce React re-renders
+        if (this.frameCounter % 3 === 0) {
+          const currentTime = this.getCurrentTime();
+          this.updateState({ currentTime });
+        }
         this.animationFrameId = requestAnimationFrame(updateTime);
       }
     };
@@ -1577,6 +1585,16 @@ class WebAudioEngine {
   }
   
   private updateState(partial: Partial<EngineState>): void {
+    // Shallow equality check: skip update if no values actually changed
+    let hasChanged = false;
+    for (const key in partial) {
+      if ((partial as any)[key] !== (this.state as any)[key]) {
+        hasChanged = true;
+        break;
+      }
+    }
+    if (!hasChanged) return;
+    
     this.state = { ...this.state, ...partial };
     this.notifyListeners();
   }

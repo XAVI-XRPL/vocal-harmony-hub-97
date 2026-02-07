@@ -72,6 +72,7 @@ export default function TrainingMode() {
   
   const intervalRef = useRef<number | null>(null);
   const prevAllStemsReadyRef = useRef(false);
+  const masterWaveformRef = useRef(generateMockWaveform(200));
   const [showControls, setShowControls] = React.useState(false);
   const [hasStartedPlayback, setHasStartedPlayback] = React.useState(false);
 
@@ -396,7 +397,7 @@ export default function TrainingMode() {
   };
 
   // Generate master waveform from all stems combined
-  const masterWaveform = generateMockWaveform(200);
+  const masterWaveform = masterWaveformRef.current;
 
   // Show loading overlay when audio needs to buffer
   // With mixdown-first strategy, dismiss overlay once mixdown is ready
@@ -790,19 +791,10 @@ export default function TrainingMode() {
                 songHasRealAudio && hasStartedPlayback && !mixdownReady && "opacity-50 cursor-not-allowed"
               )}
             >
-              {/* Pulsing ring when playing */}
+              {/* Pulsing ring when playing - CSS-only for GPU performance */}
               {isPlaying && (
-                <motion.div
-                  className="absolute inset-0 rounded-full border-2 border-foreground/30"
-                  animate={{
-                    scale: [1, 1.15, 1],
-                    opacity: [0.4, 0, 0.4],
-                  }}
-                  transition={{
-                    duration: 1.5,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
+                <div
+                  className="absolute inset-0 rounded-full border-2 border-foreground/30 animate-play-pulse-ring"
                 />
               )}
               
@@ -825,18 +817,10 @@ export default function TrainingMode() {
                 />
               )}
 
-              {/* Loop indicator ring when looping */}
+              {/* Loop indicator ring when looping - CSS-only for GPU performance */}
               {isLooping && loopEnd > loopStart && (
-                <motion.div
-                  className="absolute -inset-1 rounded-full border-2 border-primary"
-                  animate={{
-                    opacity: [0.3, 0.7, 0.3],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
+                <div
+                  className="absolute -inset-1 rounded-full border-2 border-primary animate-loop-indicator-glow"
                 />
               )}
 
