@@ -47,7 +47,7 @@ export default function Splash({ onComplete }: SplashProps) {
   }, []);
 
   const handleVideoError = useCallback(() => {
-    console.log('Splash video error - using fallback');
+    if (import.meta.env.DEV) console.log('Splash video error - using fallback');
     setVideoState('fallback');
     triggerExit();
   }, [triggerExit]);
@@ -68,7 +68,7 @@ export default function Splash({ onComplete }: SplashProps) {
       try {
         await video.play();
       } catch (error) {
-        console.log('Splash video autoplay blocked - using fallback');
+        if (import.meta.env.DEV) console.log('Splash video autoplay blocked - using fallback');
         setVideoState('fallback');
       }
     };
@@ -79,7 +79,7 @@ export default function Splash({ onComplete }: SplashProps) {
     // If video doesn't start playing within timeout, use fallback
     playTimeout = setTimeout(() => {
       if (!hasVideoStartedRef.current) {
-        console.log('Splash video play timeout - using fallback');
+        if (import.meta.env.DEV) console.log('Splash video play timeout - using fallback');
         setVideoState('fallback');
       }
     }, VIDEO_PLAY_TIMEOUT);

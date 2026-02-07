@@ -16,6 +16,10 @@
  * - AudioBufferSourceNode for each stem (recreated on seek/stop)
  */
 
+// Dev-only logging helper — suppresses console.log in production
+const __DEV__ = typeof import.meta !== 'undefined' && import.meta.env?.DEV;
+const devLog = (...args: unknown[]) => { if (__DEV__) console.log(...args); };
+
 // Types are defined locally to avoid circular dependencies
 
 // ============= Types =============
@@ -178,7 +182,7 @@ class WebAudioEngine {
       this.masterGainNode = this.audioContext.createGain();
       this.masterGainNode.connect(this.audioContext.destination);
       
-      console.log('🎵 AudioContext created');
+      devLog('🎵 AudioContext created');
     }
   }
   
@@ -191,13 +195,13 @@ class WebAudioEngine {
     if (this.audioContext!.state === 'suspended') {
       try {
         await this.audioContext!.resume();
-        console.log('🎵 AudioContext resumed (state:', this.audioContext!.state, ')');
+        devLog('🎵 AudioContext resumed (state:', this.audioContext!.state, ')');
       } catch (error) {
         console.error('🎵 AudioContext.resume() failed:', error);
         throw new Error('Audio playback blocked. Please tap the play button.');
       }
     } else {
-      console.log('🎵 AudioContext already running (state:', this.audioContext!.state, ')');
+      devLog('🎵 AudioContext already running (state:', this.audioContext!.state, ')');
     }
   }
   
@@ -205,7 +209,7 @@ class WebAudioEngine {
    * Initialize the AudioContext. MUST be called from a user gesture (click/tap).
    */
   async init(): Promise<void> {
-    console.log('🎵 Initializing audio engine...');
+    devLog('🎵 Initializing audio engine...');
     
     try {
       await this.ensureContextRunning();
@@ -216,13 +220,13 @@ class WebAudioEngine {
     
     // If song is prepared but not loaded, load it now (user gesture provides permission)
     if (this.isPrepared()) {
-      console.log('🎵 Loading prepared song...');
+      devLog('🎵 Loading prepared song...');
       await this.loadSong();
     } else {
-      console.log('🎵 No song prepared, skipping load');
+      devLog('🎵 No song prepared, skipping load');
     }
     
-    console.log('🎵 Audio engine initialized');
+    devLog('🎵 Audio engine initialized');
   }
   
   /**
@@ -292,7 +296,7 @@ class WebAudioEngine {
       groupStates,
     });
     
-    console.log(`📋 Song prepared: ${config.songId} (${immediateStems.length} immediate stems, ${config.stems.length - immediateStems.length} lazy)`);
+    devLog(`📋 Song prepared: ${config.songId} (${immediateStems.length} immediate stems, ${config.stems.length - immediateStems.length} lazy)`);
   }
   
   /**
@@ -320,7 +324,7 @@ class WebAudioEngine {
     
     // Clear previous song's buffers to free memory when switching songs
     if (config && config.songId !== this.currentSongId) {
-      console.log('[WebAudioEngine] Clearing previous song buffers...');
+      devLog('[WebAudioEngine] Clearing previous song buffers...');
       this.cleanup();
       this.currentSongId = config.songId;
       this.currentSongConfig = config;
@@ -370,7 +374,7 @@ class WebAudioEngine {
       
       // If we have a mixdown URL, use mixdown-first strategy
       if (songConfig.mixdownUrl) {
-        console.log('📻 Mixdown-first loading strategy');
+        devLog('📻 Mixdown-first loading strategy');
         await this.loadMixdownFirst(songConfig);
       } else {
         // Fallback: load immediate stems only (no mixdown available)
@@ -386,7 +390,7 @@ class WebAudioEngine {
         }
         const immediateStems = songConfig.stems.filter(s => immediateStemIds.has(s.id));
         
-        console.log(`🎹 Loading ${immediateStems.length} immediate stems (no mixdown)`);
+        devLog(`🎹 Loading ${immediateStems.length} immediate stems (no mixdown)`);
         await this.loadAllStems(immediateStems);
         
         // Mark core group as loaded
@@ -405,10 +409,10 @@ class WebAudioEngine {
         });
       }
       
-      console.log(`✓ Song loaded: ${songConfig.songId}`);
+      devLog(`✓ Song loaded: ${songConfig.songId}`);
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
-        console.log('Load aborted');
+        devLog('Load aborted');
         return;
       }
       console.error('Failed to load song:', error);
@@ -478,7 +482,7 @@ class WebAudioEngine {
   seek(time: number): void {
     const clampedTime = Math.max(0, Math.min(time, this.state.duration));
     
-    console.log(`🎵 Seeking to ${clampedTime.toFixed(2)}s (playbackState: ${this.state.playbackState}, audioMode: ${this.state.audioMode})`);
+    devLog(`🎵 Seeking to ${clampedTime.toFixed(2)}s (playbackState: ${this.state.playbackState}, audioMode: ${this.state.audioMode})`);
     
     if (this.state.playbackState === 'playing') {
       // Stop current sources and time tracking
@@ -717,7 +721,7 @@ class WebAudioEngine {
       groupStates: [],
     });
     
-    console.log('[WebAudioEngine] Cleanup complete - memory released');
+    devLog('[WebAudioEngine] Cleanup complete - memory released');
   }
   
   /**
@@ -755,13 +759,13 @@ class WebAudioEngine {
       stemLoadProgress: [...this.state.stemLoadProgress, ...newProgress],
     });
     
-    console.log(`[WebAudioEngine] Loading group: ${group.name} (${stemsToLoad.length} stems)`);
+    devLog(`[WebAudioEngine] Loading group: ${group.name} (${stemsToLoad.length} stems)`);
     
     // Load stems sequentially (memory-safe)
     for (const stemConfig of stemsToLoad) {
       if (signal?.aborted) break;
       
-      console.log(`[WebAudioEngine] Loading: ${stemConfig.name}`);
+      devLog(`[WebAudioEngine] Loading: ${stemConfig.name}`);
       
       try {
         // Create gain node for this stem
@@ -818,12 +822,12 @@ class WebAudioEngine {
         if (signal?.aborted) return;
         
         // Decode
-        console.log(`[WebAudioEngine] Decoding: ${stemConfig.name}`);
+        devLog(`[WebAudioEngine] Decoding: ${stemConfig.name}`);
         const audioBuffer = await this.audioContext!.decodeAudioData(combined.buffer.slice(0));
         stemData.buffer = audioBuffer;
         this.updateStemProgress(stemConfig.id, 100, true);
         
-        console.log(`[WebAudioEngine] ✓ Loaded: ${stemConfig.name}`);
+        devLog(`[WebAudioEngine] ✓ Loaded: ${stemConfig.name}`);
         
         // If playing in stems mode, start this stem immediately at current position
         if (this.state.playbackState === 'playing' && this.state.audioMode === 'stems') {
@@ -843,7 +847,7 @@ class WebAudioEngine {
     group.isLoaded = true;
     group.isLoading = false;
     this.syncGroupStates();
-    console.log(`[WebAudioEngine] ✓ Group loaded: ${group.name}`);
+    devLog(`[WebAudioEngine] ✓ Group loaded: ${group.name}`);
   }
   
   /**
@@ -925,7 +929,7 @@ class WebAudioEngine {
     this.mixdownGainNode.connect(this.masterGainNode);
     
     // Phase 1: Load mixdown
-    console.log('📻 Phase 1: Loading mixdown...');
+    devLog('📻 Phase 1: Loading mixdown...');
     try {
       const response = await fetch(config.mixdownUrl, {
         signal: this.abortController?.signal,
@@ -981,7 +985,7 @@ class WebAudioEngine {
         duration: this.mixdownBuffer.duration,
       });
       
-      console.log(`✓ Mixdown ready (${this.mixdownBuffer.duration.toFixed(1)}s)`);
+      devLog(`✓ Mixdown ready (${this.mixdownBuffer.duration.toFixed(1)}s)`);
       
     } catch (error) {
       if ((error as Error).name === 'AbortError') throw error;
@@ -1004,12 +1008,12 @@ class WebAudioEngine {
     }
     
     const immediateStems = config.stems.filter(s => immediateStemIds.has(s.id));
-    console.log(`📻 Phase 2: Loading ${immediateStems.length} immediate stems in background...`);
+    devLog(`📻 Phase 2: Loading ${immediateStems.length} immediate stems in background...`);
     this.backgroundLoadPromise = this.loadStemsInBackground(immediateStems);
     
     // Don't await - let stems load in background
     this.backgroundLoadPromise.then(() => {
-      console.log('✓ All immediate stems loaded in background');
+      devLog('✓ All immediate stems loaded in background');
       
       // Mark the core group as loaded
       this.markGroupLoaded('core');
@@ -1046,11 +1050,11 @@ class WebAudioEngine {
     for (const stemConfig of stems) {
       // Check if cancelled
       if (signal?.aborted) {
-        console.log('[WebAudioEngine] Stem loading cancelled');
+        devLog('[WebAudioEngine] Stem loading cancelled');
         return;
       }
       
-      console.log(`[WebAudioEngine] Loading stem: ${stemConfig.name}`);
+      devLog(`[WebAudioEngine] Loading stem: ${stemConfig.name}`);
       
       try {
         // Create gain node for this stem
@@ -1118,20 +1122,20 @@ class WebAudioEngine {
         if (signal?.aborted) return;
         
         // Decode audio data
-        console.log(`[WebAudioEngine] Decoding stem: ${stemConfig.name}`);
+        devLog(`[WebAudioEngine] Decoding stem: ${stemConfig.name}`);
         const audioBuffer = await this.audioContext!.decodeAudioData(combined.buffer.slice(0));
         
         stemData.buffer = audioBuffer;
         this.updateStemProgress(stemConfig.id, 100, true);
         
-        console.log(`[WebAudioEngine] ✓ Loaded: ${stemConfig.name}`);
+        devLog(`[WebAudioEngine] ✓ Loaded: ${stemConfig.name}`);
         
         // Small delay between stems for garbage collector
         await new Promise(resolve => setTimeout(resolve, 100));
         
       } catch (error) {
         if ((error as Error).name === 'AbortError') {
-          console.log('[WebAudioEngine] Stem loading aborted');
+          devLog('[WebAudioEngine] Stem loading aborted');
           return;
         }
         
@@ -1163,7 +1167,7 @@ class WebAudioEngine {
     const currentTime = this.getCurrentTime();
     const contextTime = this.audioContext.currentTime;
     
-    console.log(`🔀 Phase 3: Crossfading to stems at ${currentTime.toFixed(2)}s`);
+    devLog(`🔀 Phase 3: Crossfading to stems at ${currentTime.toFixed(2)}s`);
     
     this.updateState({ audioMode: 'crossfading' });
     
@@ -1201,7 +1205,7 @@ class WebAudioEngine {
       }
       
       this.updateState({ audioMode: 'stems' });
-      console.log('✓ Crossfade complete - stem mixer active');
+      devLog('✓ Crossfade complete - stem mixer active');
     }, CROSSFADE_DURATION * 1000 + 50); // Small buffer after fade
   }
   
@@ -1221,11 +1225,11 @@ class WebAudioEngine {
     // Load stems ONE AT A TIME (not in parallel!)
     for (const stemConfig of stems) {
       if (signal?.aborted) {
-        console.log('[WebAudioEngine] Stem loading cancelled');
+        devLog('[WebAudioEngine] Stem loading cancelled');
         return;
       }
       
-      console.log(`[WebAudioEngine] Loading stem: ${stemConfig.name}`);
+      devLog(`[WebAudioEngine] Loading stem: ${stemConfig.name}`);
       
       try {
         // Create gain node for this stem
@@ -1291,20 +1295,20 @@ class WebAudioEngine {
         if (signal?.aborted) return;
         
         // Decode audio data
-        console.log(`[WebAudioEngine] Decoding stem: ${stemConfig.name}`);
+        devLog(`[WebAudioEngine] Decoding stem: ${stemConfig.name}`);
         const audioBuffer = await this.audioContext!.decodeAudioData(combined.buffer.slice(0));
         
         stemData.buffer = audioBuffer;
         this.updateStemProgress(stemConfig.id, 100, true);
         
-        console.log(`[WebAudioEngine] ✓ Loaded: ${stemConfig.name}`);
+        devLog(`[WebAudioEngine] ✓ Loaded: ${stemConfig.name}`);
         
         // Small delay for garbage collector
         await new Promise(resolve => setTimeout(resolve, 100));
         
       } catch (error) {
         if ((error as Error).name === 'AbortError') {
-          console.log('[WebAudioEngine] Stem loading aborted');
+          devLog('[WebAudioEngine] Stem loading aborted');
           return;
         }
         
@@ -1508,7 +1512,7 @@ class WebAudioEngine {
       
       // Check if we've passed the loop end point
       if (currentTime >= this.state.loopEnd - 0.05) {
-        console.log('Loop: jumping back to start');
+        devLog('Loop: jumping back to start');
         this.stopAllSources();
         
         // Restart appropriate sources
@@ -1543,9 +1547,9 @@ class WebAudioEngine {
     if ('wakeLock' in navigator) {
       try {
         this.wakeLock = await navigator.wakeLock.request('screen');
-        console.log('🔒 Wake lock acquired');
+        devLog('🔒 Wake lock acquired');
       } catch (err) {
-        console.log('Wake lock not available:', err);
+        devLog('Wake lock not available:', err);
       }
     }
   }
@@ -1553,7 +1557,7 @@ class WebAudioEngine {
   private releaseWakeLock(): void {
     if (this.wakeLock) {
       this.wakeLock.release().then(() => {
-        console.log('🔓 Wake lock released');
+        devLog('🔓 Wake lock released');
       });
       this.wakeLock = null;
     }
