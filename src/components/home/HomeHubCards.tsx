@@ -8,19 +8,22 @@ const hubModules = [
     title: "Store",
     icon: Mic,
     path: "/store",
-    color: "#22c55e", // green
+    colorVar: "--accent-store",
+    fallback: "hsl(30 55% 70%)",
   },
   {
     title: "Vocal Health",
     icon: Stethoscope,
     path: "/vocal-health",
-    color: "#ef4444", // red
+    colorVar: "--accent-medical",
+    fallback: "hsl(0 84% 60%)",
   },
   {
     title: "Stage Prep",
     icon: Headphones,
     path: "/stage-prep",
-    color: "#14b8a6", // teal
+    colorVar: "--accent-gear",
+    fallback: "hsl(187 85% 53%)",
   },
 ];
 
@@ -73,18 +76,17 @@ export function HomeHubCards() {
           whileHover={{ 
             y: -4, 
             scale: 1.02,
-            boxShadow: `0 8px 30px ${module.color}40`,
           }}
           whileTap={{ scale: 0.95 }}
           style={{
-            ["--card-accent" as string]: module.color,
+            ["--card-accent" as string]: module.fallback,
           }}
         >
           {/* Glow Background on Hover */}
-          <motion.div 
+          <div 
             className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"
             style={{
-              background: `radial-gradient(circle at center, ${module.color}20 0%, transparent 70%)`,
+              background: `radial-gradient(circle at center, ${module.fallback} / 0.12, transparent 70%)`,
             }}
           />
 
@@ -99,15 +101,12 @@ export function HomeHubCards() {
               "group-hover:scale-110"
             )}
             style={{
-              boxShadow: `0 0 0 1px ${module.color}30`,
-            }}
-            whileHover={{
-              boxShadow: `0 0 20px ${module.color}50`,
+              boxShadow: `0 0 0 1px ${module.fallback} / 0.3`,
             }}
           >
             <module.icon 
               className="w-6 h-6 transition-all duration-300"
-              style={{ color: module.color }}
+              style={{ color: module.fallback }}
               strokeWidth={1.5} 
             />
           </motion.div>

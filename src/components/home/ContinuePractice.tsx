@@ -34,7 +34,7 @@ export function ContinuePractice({ className }: ContinuePracticeProps) {
         transition={{ delay: 0.4 }}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-muted-foreground">Continue Practice</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Continue Practice</h3>
         </div>
         <div className="flex items-center justify-center py-6">
           <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -55,7 +55,7 @@ export function ContinuePractice({ className }: ContinuePracticeProps) {
       transition={{ delay: 0.4 }}
     >
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-muted-foreground">Continue Practice</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Continue Practice</h3>
         <motion.button
           onClick={() => navigate("/library")}
           className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
