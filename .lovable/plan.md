@@ -1,36 +1,58 @@
 
-# Playlists Background in Demo Mode + Hub Page Polish
+# Smooth Background Image Loading
 
-## 1. Playlists Page -- Show Records Wall in Demo Mode
+## Overview
+All 6 image-based background components currently render their `<img>` at full opacity immediately, causing a visible "pop-in" when the image finishes loading. The fix adds a fade-in transition triggered by the image's `onLoad` event.
 
-Currently, unauthenticated (demo) users see a plain "Sign In Required" card with no background. The `RecordsWallBackground` only renders for authenticated users because of an early return.
+## Approach
+Add a `useState` + `onLoad` pattern to each background component's `<img>` tag:
+- Start with `opacity: 0`
+- On `onLoad`, set state to `true`
+- CSS `transition: opacity 0.6s ease-in-out` handles the smooth fade
 
-**File: `src/pages/Playlists.tsx`**
+This is minimal, requires no new components or hooks, and keeps the existing architecture intact.
 
-- Move `<RecordsWallBackground />` **above** the auth-loading and not-authenticated checks so it always renders regardless of auth state.
-- Wrap the "Sign In Required" card in the same outer `<>` fragment so demo users see the premium records wall behind the sign-in prompt.
+## Files to Modify (6 total)
 
-## 2. Hub Page -- Premium Polish and Legibility
+### 1. `src/components/layout/LibraryBackground.tsx`
+- Add `useState` for `isLoaded`
+- Add `onLoad` handler to `<img>`
+- Apply conditional opacity + CSS transition classes
 
-**File: `src/pages/Hub.tsx`**
+### 2. `src/components/layout/RecordsWallBackground.tsx`
+- Same pattern
 
-- Increase header text contrast: change heading from `gradient-text` to a solid `text-foreground` with a subtle `drop-shadow-lg` for crisp legibility over the background.
-- Add a semi-transparent glass-card container behind the header text for extra readability.
-- Increase card gap from `gap-4 md:gap-6` to `gap-5 md:gap-7` for more breathing room.
+### 3. `src/components/layout/StudioBackground.tsx`
+- Same pattern (preserves `React.forwardRef`)
 
-**File: `src/components/hub/HubCard.tsx`**
+### 4. `src/components/layout/VocalNotesDeskBackground.tsx`
+- Same pattern (preserves `React.forwardRef`)
 
-- Upgrade card styling to `glass-card-3d` for a more premium, raised feel with depth.
-- Increase padding from `p-5` to `p-6` for a roomier, less cramped look.
-- Boost title text weight/size slightly and ensure the description text uses a brighter muted color (`text-muted-foreground/90`) for better readability.
-- Add a subtle text shadow to the title to ensure it pops over the background glow effects.
-- Make the icon container slightly larger (`w-16 h-16`, icon `w-8 h-8`) for a bolder visual anchor.
-- Increase the chevron size for clearer affordance.
+### 5. `src/components/layout/VocalHealthBackground.tsx`
+- Same pattern
 
-## Technical Summary
+### 6. `src/components/layout/StagePrepBackground.tsx`
+- Same pattern
 
-| File | Change |
-|------|--------|
-| `src/pages/Playlists.tsx` | Move `RecordsWallBackground` before auth checks so it always renders |
-| `src/pages/Hub.tsx` | Add glass header container, improve text contrast, increase card spacing |
-| `src/components/hub/HubCard.tsx` | Upgrade to `glass-card-3d`, larger icons/padding, text shadows for legibility |
+## Technical Detail
+
+Each component's `<img>` tag changes from:
+
+```tsx
+<img src={bg} alt="" className="absolute inset-0 w-full h-full object-cover animate-slow-zoom" />
+```
+
+To:
+
+```tsx
+const [isLoaded, setIsLoaded] = useState(false);
+
+<img
+  src={bg}
+  alt=""
+  onLoad={() => setIsLoaded(true)}
+  className={`absolute inset-0 w-full h-full object-cover animate-slow-zoom transition-opacity duration-700 ease-in-out ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+/>
+```
+
+No new files, no new dependencies. The `StadiumBackground` component is unaffected as it uses CSS gradients, not an image.
