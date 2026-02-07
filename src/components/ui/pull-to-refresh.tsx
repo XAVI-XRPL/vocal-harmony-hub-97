@@ -27,7 +27,7 @@ export function PullToRefresh({ children, onRefresh, className = "" }: PullToRef
     >
       {/* Pull indicator */}
       <AnimatePresence>
-        {(pullDistance > 0 || isRefreshing) && (
+        {(pullDistance > 10 || isRefreshing) && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -55,8 +55,8 @@ export function PullToRefresh({ children, onRefresh, className = "" }: PullToRef
 
       {/* Content with pull offset */}
       <motion.div
-        animate={{ y: pullDistance > 0 ? pullDistance : 0 }}
-        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+        animate={{ y: pullDistance > 10 ? pullDistance : 0 }}
+        transition={{ type: "tween", duration: 0.15, ease: "easeOut" }}
       >
         {children}
       </motion.div>

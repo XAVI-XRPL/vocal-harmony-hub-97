@@ -24,11 +24,13 @@ export function usePullToRefresh({ threshold = 80, onRefresh }: UsePullToRefresh
     const currentY = e.touches[0].clientY;
     const diff = currentY - startY.current;
 
-    if (diff > 0) {
-      // Apply resistance curve for natural feel
+    if (diff > 10) {
+      // Apply resistance curve for natural feel (subtract dead zone)
       const resistance = 0.4;
-      const adjustedDiff = Math.pow(diff, resistance) * 4;
+      const adjustedDiff = Math.pow(diff - 10, resistance) * 4;
       setPullDistance(Math.min(adjustedDiff, threshold * 1.5));
+    } else {
+      setPullDistance(0);
     }
   }, [isRefreshing, threshold]);
 
