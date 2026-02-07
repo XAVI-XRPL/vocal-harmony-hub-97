@@ -1,45 +1,36 @@
 
-# Add Cinematic Backgrounds to Vocal Health and Stage Prep Pages
+# Playlists Background in Demo Mode + Hub Page Polish
 
-## Overview
-Add the uploaded images as themed backgrounds for two pages:
-- **Image 1** (honey tea / vocal booth) --> Vocal Health page
-- **Image 2** (mic on stage) --> Stage Prep page
+## 1. Playlists Page -- Show Records Wall in Demo Mode
 
-Both will follow the same pattern used by existing background components (slow-zoom animation, dark overlays for readability).
+Currently, unauthenticated (demo) users see a plain "Sign In Required" card with no background. The `RecordsWallBackground` only renders for authenticated users because of an early return.
 
-## Steps
+**File: `src/pages/Playlists.tsx`**
 
-### 1. Copy uploaded images into the project
-- Copy `user-uploads://image-26.png` to `src/assets/vocal-health-bg.png`
-- Copy `user-uploads://image-27.png` to `src/assets/stage-prep-bg.png`
+- Move `<RecordsWallBackground />` **above** the auth-loading and not-authenticated checks so it always renders regardless of auth state.
+- Wrap the "Sign In Required" card in the same outer `<>` fragment so demo users see the premium records wall behind the sign-in prompt.
 
-### 2. Create `src/components/layout/VocalHealthBackground.tsx`
-A new background component following the same pattern as `VocalNotesDeskBackground`:
-- Full-screen fixed image with `object-cover` and `animate-slow-zoom`
-- Dark overlay at ~35% opacity to keep it subtle and not too bright
-- Gradient overlay from top to bottom for readability
+## 2. Hub Page -- Premium Polish and Legibility
 
-### 3. Create `src/components/layout/StagePrepBackground.tsx`
-Same pattern as above, using the stage mic image.
+**File: `src/pages/Hub.tsx`**
 
-### 4. Update `src/pages/VocalHealth.tsx`
-- Import and use the new `VocalHealthBackground` component
-- Replace the existing `<div className="fixed inset-0 medical-bg" />` and its overlay div with the new background component
+- Increase header text contrast: change heading from `gradient-text` to a solid `text-foreground` with a subtle `drop-shadow-lg` for crisp legibility over the background.
+- Add a semi-transparent glass-card container behind the header text for extra readability.
+- Increase card gap from `gap-4 md:gap-6` to `gap-5 md:gap-7` for more breathing room.
 
-### 5. Update `src/pages/StagePrep.tsx`
-- Import and use the new `StagePrepBackground` component
-- Replace the existing `<div className="fixed inset-0 backstage-bg" />` and its overlay div with the new background component
+**File: `src/components/hub/HubCard.tsx`**
 
-## Technical Details
+- Upgrade card styling to `glass-card-3d` for a more premium, raised feel with depth.
+- Increase padding from `p-5` to `p-6` for a roomier, less cramped look.
+- Boost title text weight/size slightly and ensure the description text uses a brighter muted color (`text-muted-foreground/90`) for better readability.
+- Add a subtle text shadow to the title to ensure it pops over the background glow effects.
+- Make the icon container slightly larger (`w-16 h-16`, icon `w-8 h-8`) for a bolder visual anchor.
+- Increase the chevron size for clearer affordance.
 
-Each background component will render:
-```
-<div className="fixed inset-0 -z-10 overflow-hidden">
-  <img src={bg} className="absolute inset-0 w-full h-full object-cover animate-slow-zoom" />
-  <div className="absolute inset-0 bg-background/35" />
-  <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background/70" />
-</div>
-```
+## Technical Summary
 
-The pages will swap their inline background divs for these components, keeping the content `z-10` layer unchanged.
+| File | Change |
+|------|--------|
+| `src/pages/Playlists.tsx` | Move `RecordsWallBackground` before auth checks so it always renders |
+| `src/pages/Hub.tsx` | Add glass header container, improve text contrast, increase card spacing |
+| `src/components/hub/HubCard.tsx` | Upgrade to `glass-card-3d`, larger icons/padding, text shadows for legibility |
