@@ -124,13 +124,11 @@ export default function Subscription() {
               transition={{ type: "spring", stiffness: 400, damping: 20 }}
             >
               <GlassCard padding="md" hover={false} className="text-center">
-                <motion.div
+                <div
                   className={cn("w-10 h-10 mx-auto mb-2 rounded-xl flex items-center justify-center", `bg-${item.color}/20`)}
-                  animate={{ y: [0, -3, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, delay: index * 0.2 }}
                 >
                   <item.icon className={cn("w-5 h-5", `text-${item.color}`)} />
-                </motion.div>
+                </div>
                 <p className="text-xs font-medium">{item.label}</p>
               </GlassCard>
             </motion.div>
@@ -223,16 +221,11 @@ export default function Subscription() {
                   <motion.li 
                     key={feature} 
                     className="flex items-center gap-2 text-sm"
-                    initial={{ opacity: 0, x: -10 }}
+                    initial={index < 6 ? { opacity: 0, x: -10 } : false}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
+                    transition={{ delay: Math.min(index, 5) * 0.05 }}
                   >
-                    <motion.div
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ duration: 0.5, delay: index * 0.1 }}
-                    >
-                      <Check className="w-4 h-4 text-primary shrink-0" />
-                    </motion.div>
+                    <Check className="w-4 h-4 text-primary shrink-0" />
                     {feature}
                   </motion.li>
                 ))}

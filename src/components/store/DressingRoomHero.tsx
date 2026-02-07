@@ -20,21 +20,11 @@ export function DressingRoomHero({ featuredCount }: DressingRoomHeroProps) {
           {/* Light Bulbs */}
           <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex gap-4">
             {[...Array(5)].map((_, i) => (
-              <motion.div
+              <div
                 key={i}
                 className="w-4 h-4 rounded-full bg-accent-store/80"
-                animate={{
-                  opacity: [0.6, 1, 0.6],
-                  boxShadow: [
-                    "0 0 8px hsl(var(--accent-store) / 0.4)",
-                    "0 0 16px hsl(var(--accent-store) / 0.6)",
-                    "0 0 8px hsl(var(--accent-store) / 0.4)",
-                  ],
-                }}
-                transition={{
-                  duration: 2,
-                  delay: i * 0.2,
-                  repeat: Infinity,
+                style={{
+                  boxShadow: "0 0 12px hsl(var(--accent-store) / 0.5)",
                 }}
               />
             ))}
