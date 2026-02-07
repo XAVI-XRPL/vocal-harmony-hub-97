@@ -12,6 +12,28 @@
   animation: bar-pulse 1.5s ease-in-out infinite;
 }
 
+/* Play button pulse ring - GPU-accelerated CSS animation */
+@keyframes play-pulse-ring {
+  0%, 100% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.15); opacity: 0; }
+}
+
+.animate-play-pulse-ring {
+  animation: play-pulse-ring 1.5s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* Loop indicator glow - GPU-accelerated CSS animation */
+@keyframes loop-indicator-glow {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+.animate-loop-indicator-glow {
+  animation: loop-indicator-glow 2s ease-in-out infinite;
+  will-change: opacity;
+}
+
 /* RMVT Design System - Cinematic Stadium Blue Theme */
 
 @layer base {

@@ -43,6 +43,8 @@ interface AudioPreloadState {
   currentlyLoading: string | null;
   // Maximum cached songs (LRU eviction)
   maxCachedSongs: number;
+  // Pending song data for queue processing (replaces window.__preloadSongData)
+  pendingSongData: Map<string, Song>;
   
   // Actions
   getLoadingState: (songId: string) => LoadingState;
@@ -82,6 +84,7 @@ export const useAudioPreloadStore = create<AudioPreloadState>((set, get) => ({
   preloadQueue: [],
   currentlyLoading: null,
   maxCachedSongs: 4,
+  pendingSongData: new Map(),
 
   getLoadingState: (songId) => {
     return get().loadingStates.get(songId) ?? 'idle';
@@ -116,14 +119,15 @@ export const useAudioPreloadStore = create<AudioPreloadState>((set, get) => ({
     if (state.loadingStates.get(songId) === 'loading') return;
     if (state.preloadQueue.includes(songId)) return;
     
-    // Add to queue
-    set(state => ({
-      preloadQueue: [...state.preloadQueue, songId],
-    }));
-    
-    // Store song data for later (we need it when processing queue)
-    (window as any).__preloadSongData = (window as any).__preloadSongData || {};
-    (window as any).__preloadSongData[songId] = song;
+    // Store song data in Zustand state for later processing
+    set(state => {
+      const newPending = new Map(state.pendingSongData);
+      newPending.set(songId, song);
+      return {
+        preloadQueue: [...state.preloadQueue, songId],
+        pendingSongData: newPending,
+      };
+    });
     
     // Start processing if not currently loading
     if (!state.currentlyLoading) {
@@ -138,7 +142,7 @@ export const useAudioPreloadStore = create<AudioPreloadState>((set, get) => ({
     if (state.preloadQueue.length === 0) return;
     
     const nextSongId = state.preloadQueue[0];
-    const song = (window as any).__preloadSongData?.[nextSongId];
+    const song = state.pendingSongData.get(nextSongId);
     
     if (!song) {
       // Remove from queue and try next
@@ -295,10 +299,12 @@ export const useAudioPreloadStore = create<AudioPreloadState>((set, get) => ({
       });
     }
     
-    // Clean up song data
-    if ((window as any).__preloadSongData?.[songId]) {
-      delete (window as any).__preloadSongData[songId];
-    }
+    // Clean up pending song data from store
+    set(state => {
+      const newPending = new Map(state.pendingSongData);
+      newPending.delete(songId);
+      return { pendingSongData: newPending };
+    });
     
     // Process next in queue
     setTimeout(() => get().processQueue(), 100);
