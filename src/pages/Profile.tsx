@@ -67,19 +67,12 @@ export default function Profile() {
             animate={{ scale: 1, opacity: 1 }}
             className="relative"
           >
-            <motion.div
+            <div
               className="w-24 h-24 rounded-full bg-glass border border-glass-border flex items-center justify-center mb-6"
-              animate={{
-                boxShadow: [
-                  "0 0 0 0 hsl(var(--primary) / 0)",
-                  "0 0 0 8px hsl(var(--primary) / 0.1)",
-                  "0 0 0 0 hsl(var(--primary) / 0)",
-                ],
-              }}
-              transition={{ duration: 2, repeat: Infinity }}
+              style={{ boxShadow: "0 0 0 4px hsl(var(--primary) / 0.08)" }}
             >
               <User className="w-12 h-12 text-muted-foreground" />
-            </motion.div>
+            </div>
           </motion.div>
 
           <h2 className="text-xl font-semibold mb-2">Sign in to continue</h2>
