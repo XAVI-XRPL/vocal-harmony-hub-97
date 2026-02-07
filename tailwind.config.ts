@@ -154,7 +154,7 @@ export default {
         shimmer: "shimmer 2s infinite",
         float: "float 3s ease-in-out infinite",
         "liquid-flow": "liquid-flow 8s ease-in-out infinite",
-        "slow-zoom": "slow-zoom 30s ease-in-out infinite alternate",
+        "slow-zoom": "slow-zoom 30s ease-in-out forwards",
       },
       backdropBlur: {
         xs: "2px",
