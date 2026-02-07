@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Play, Sparkles } from "lucide-react";
@@ -12,6 +12,18 @@ import { ContinuePractice } from "@/components/home/ContinuePractice";
 import { HomeHubCards } from "@/components/home/HomeHubCards";
 import { useUserStore } from "@/stores/userStore";
 import stadiumBg from "@/assets/stadium-background.png";
+
+function HomeBgImage({ src }: { src: string }) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  return (
+    <img
+      src={src}
+      alt=""
+      onLoad={() => setIsLoaded(true)}
+      className={`w-full h-full object-cover animate-slow-zoom transition-opacity duration-700 ease-in-out ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
+    />
+  );
+}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -48,11 +60,7 @@ export default function Home() {
     <div className="min-h-screen relative">
       {/* Stadium Background Image */}
       <div className="absolute inset-0 z-0">
-        <img 
-          src={stadiumBg} 
-          alt="" 
-          className="w-full h-full object-cover" 
-        />
+        <HomeBgImage src={stadiumBg} />
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/80" />
       </div>
 
@@ -66,11 +74,11 @@ export default function Home() {
           className="px-4 pb-8"
         >
           {/* Hero Section with prominent CTA */}
-          <motion.section variants={itemVariants} className="py-8 text-center">
-            <h1 className="text-3xl sm:text-4xl font-bold mb-3">
+          <motion.section variants={itemVariants} className="pt-6 pb-8 text-center">
+            <h1 className="text-3xl sm:text-4xl font-bold mb-2 tracking-tight">
               Master Your <span className="gradient-text">Voice</span>
             </h1>
-            <p className="text-muted-foreground text-sm max-w-xs mx-auto mb-8">
+            <p className="text-muted-foreground text-sm max-w-xs mx-auto mb-6 leading-relaxed">
               Train with isolated stems. Control every element of the mix.
             </p>
             
@@ -138,12 +146,12 @@ export default function Home() {
           </motion.section>
 
           {/* Hub Module Cards */}
-          <motion.section variants={itemVariants} className="mb-6">
+          <motion.section variants={itemVariants} className="mb-8">
             <HomeHubCards />
           </motion.section>
 
           {/* Continue Practice */}
-          <motion.section variants={itemVariants} className="mb-6">
+          <motion.section variants={itemVariants} className="mb-8">
             <ContinuePractice />
           </motion.section>
 

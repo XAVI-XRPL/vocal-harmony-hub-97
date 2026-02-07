@@ -19,9 +19,9 @@ interface SongCardProps {
 }
 
 const difficultyColors = {
-  beginner: "text-green-400 bg-green-400/20",
-  intermediate: "text-yellow-400 bg-yellow-400/20",
-  advanced: "text-red-400 bg-red-400/20",
+  beginner: "text-emerald-400 bg-emerald-400/20",
+  intermediate: "text-amber-400 bg-amber-400/20",
+  advanced: "text-rose-400 bg-rose-400/20",
 };
 
 export function SongCard({ song, variant = "default", className, showAddToPlaylist = true }: SongCardProps) {

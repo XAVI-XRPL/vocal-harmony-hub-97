@@ -41,7 +41,7 @@ export function MobileNav({ className }: MobileNavProps) {
         className
       )}
     >
-      <div className="flex items-center justify-around h-20 px-4">
+      <div className="flex items-center justify-around h-[72px] px-4 pb-1">
         {navItems.map((item, index) => {
           const active = isActive(item.path);
           const Icon = item.icon;
@@ -55,7 +55,7 @@ export function MobileNav({ className }: MobileNavProps) {
                 onClick={() => navigate(item.path)}
                 className={cn(
                   "relative",
-                  "w-12 h-12 rounded-2xl",
+                  "w-11 h-11 rounded-2xl",
                   "gradient-bg",
                   "flex items-center justify-center",
                   "home-button-glow"
@@ -67,31 +67,22 @@ export function MobileNav({ className }: MobileNavProps) {
                 }}
                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
               >
-                {/* Inner glow */}
-                <motion.div
-                  className="absolute inset-1 rounded-xl bg-white/10"
-                  animate={{
-                    opacity: [0.1, 0.2, 0.1],
-                  }}
-                  transition={{
-                    duration: 1.5,
-                    repeat: Infinity,
-                  }}
-                />
+                {/* Inner glow — static for perf */}
+                <div className="absolute inset-1 rounded-xl bg-white/10 pointer-events-none" />
 
-                <Icon className="w-6 h-6 text-white relative z-10" strokeWidth={2} />
+                <Icon className="w-5 h-5 text-white relative z-10" strokeWidth={2} />
               </motion.button>
             );
           }
 
-          // Regular nav items - icon only
+          // Regular nav items - icon + label
           return (
             <motion.button
               key={item.path}
               onClick={() => navigate(item.path)}
               className={cn(
-                "relative flex items-center justify-center",
-                "w-12 h-12 rounded-xl",
+                "relative flex flex-col items-center justify-center gap-0.5",
+                "w-14 h-14 rounded-xl",
                 "transition-all duration-300",
                 active ? "text-primary" : "text-muted-foreground"
               )}
@@ -109,28 +100,27 @@ export function MobileNav({ className }: MobileNavProps) {
 
               <motion.div
                 animate={{
-                  scale: active ? 1.15 : 1,
+                  scale: active ? 1.1 : 1,
                 }}
                 transition={{ type: "spring", stiffness: 400, damping: 25 }}
                 className="relative z-10"
               >
                 <Icon
                   className={cn(
-                    "w-6 h-6 transition-all duration-300",
+                    "w-5 h-5 transition-all duration-300",
                     active && "drop-shadow-[0_0_8px_hsl(var(--primary))]"
                   )}
                   strokeWidth={active ? 2.5 : 1.5}
                 />
               </motion.div>
 
-              {/* Active indicator dot */}
-              {active && (
-                <motion.div
-                  layoutId="nav-indicator"
-                  className="absolute -bottom-1 w-1 h-1 rounded-full bg-primary shadow-[0_0_6px_hsl(var(--primary))]"
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                />
-              )}
+              {/* Label */}
+              <span className={cn(
+                "text-2xs font-medium relative z-10 transition-colors duration-300",
+                active ? "text-primary" : "text-muted-foreground"
+              )}>
+                {item.label}
+              </span>
             </motion.button>
           );
         })}

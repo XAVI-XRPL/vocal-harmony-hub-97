@@ -12,9 +12,9 @@ interface StackedSongCardsProps {
 }
 
 const difficultyColors = {
-  beginner: "text-green-400",
-  intermediate: "text-yellow-400",
-  advanced: "text-red-400",
+  beginner: "text-emerald-400",
+  intermediate: "text-amber-400",
+  advanced: "text-rose-400",
 };
 
 function StackedCard({ song, index, totalCards }: { song: Song; index: number; totalCards: number }) {

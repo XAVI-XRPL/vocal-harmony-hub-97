@@ -32,17 +32,12 @@ export function Header({ className, showSearch = true, title }: HeaderProps) {
       {/* Gradient border at bottom */}
       <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
       
-      {/* Subtle inner glow */}
-      <motion.div
+      {/* Subtle inner glow — static for performance */}
+      <div
         className="absolute inset-0 pointer-events-none"
-        animate={{
-          background: [
-            "radial-gradient(ellipse at 50% 0%, hsl(var(--primary) / 0.03) 0%, transparent 50%)",
-            "radial-gradient(ellipse at 50% 0%, hsl(var(--primary) / 0.06) 0%, transparent 50%)",
-            "radial-gradient(ellipse at 50% 0%, hsl(var(--primary) / 0.03) 0%, transparent 50%)",
-          ],
+        style={{
+          background: "radial-gradient(ellipse at 50% 0%, hsl(var(--primary) / 0.04) 0%, transparent 50%)",
         }}
-        transition={{ duration: 4, repeat: Infinity }}
       />
 
       {/* Left section */}
@@ -102,23 +97,16 @@ export function Header({ className, showSearch = true, title }: HeaderProps) {
           />
         )}
         <ThemeToggle />
-        <motion.div className="relative">
+        <div className="relative">
           <IconButton
             icon={Bell}
             variant="ghost"
             size="sm"
             label="Notifications"
           />
-          {/* Notification badge */}
-          <motion.div
-            className="absolute top-1 right-1 w-2 h-2 rounded-full gradient-bg"
-            animate={{
-              scale: [1, 1.2, 1],
-              opacity: [1, 0.8, 1],
-            }}
-            transition={{ duration: 2, repeat: Infinity }}
-          />
-        </motion.div>
+          {/* Notification badge — static dot */}
+          <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full gradient-bg ring-2 ring-background" />
+        </div>
       </div>
     </motion.header>
   );
