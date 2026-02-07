@@ -198,7 +198,6 @@ export const WaveformDisplay = React.forwardRef<HTMLDivElement, WaveformDisplayP
       }
 
       const time = getTimeFromEvent(e);
-      console.log(`🎯 WaveformDisplay click seeking to ${time.toFixed(2)}s (duration: ${duration})`);
       onSeek(time);
     };
 
@@ -241,7 +240,6 @@ export const WaveformDisplay = React.forwardRef<HTMLDivElement, WaveformDisplayP
         onLoopSelect(start, end);
       } else if (onSeek) {
         // If too small, treat as a seek/click
-        console.log(`🎯 WaveformDisplay pointerUp seeking to ${start.toFixed(2)}s`);
         onSeek(start);
         pointerUpHandledRef.current = true; // Prevent duplicate from handleClick
       }

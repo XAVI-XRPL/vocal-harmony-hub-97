@@ -1,23 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Song, Stem, StemType, StemGroup, Difficulty } from '@/types';
-
-// Helper to generate fake waveform data for visual display
-const generateMockWaveform = (length: number = 200): number[] => {
-  const waveform: number[] = [];
-  let value = 0.5;
-
-  for (let i = 0; i < length; i++) {
-    const change = (Math.random() - 0.5) * 0.3;
-    value = Math.max(0.1, Math.min(0.9, value + change));
-    if (i % 10 < 3) {
-      value = Math.min(0.95, value + 0.2);
-    }
-    waveform.push(value);
-  }
-
-  return waveform;
-};
+import { generateMockWaveform } from '@/data/mockSongs';
 
 interface DbStem {
   id: string;
