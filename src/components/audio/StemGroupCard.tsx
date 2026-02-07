@@ -22,7 +22,7 @@ interface StemGroupCardProps {
   onSoloToggle: (stemId: string) => void;
 }
 
-export function StemGroupCard({
+export const StemGroupCard = React.memo(function StemGroupCard({
   groupState,
   stems,
   currentTime,
@@ -137,4 +137,6 @@ export function StemGroupCard({
       </AnimatePresence>
     </GlassCard>
   );
-}
+});
+
+StemGroupCard.displayName = "StemGroupCard";

@@ -1,3 +1,4 @@
+import React from "react";
 import { motion } from "framer-motion";
 import { Star, Phone, ExternalLink, Zap, MapPin } from "lucide-react";
 import { Doctor } from "@/types";
@@ -15,7 +16,7 @@ const specialtyColors: Record<string, string> = {
   "Vocal Coach": "bg-amber-500/20 text-amber-400",
 };
 
-export function DoctorCard({ doctor }: DoctorCardProps) {
+export const DoctorCard = React.memo(function DoctorCard({ doctor }: DoctorCardProps) {
   return (
     <motion.div
       className={cn(
@@ -107,4 +108,4 @@ export function DoctorCard({ doctor }: DoctorCardProps) {
       </div>
     </motion.div>
   );
-}
+});

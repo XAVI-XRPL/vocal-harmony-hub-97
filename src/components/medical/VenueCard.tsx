@@ -1,3 +1,4 @@
+import React from "react";
 import { motion } from "framer-motion";
 import { Users, MapPin } from "lucide-react";
 import { Venue } from "@/types";
@@ -21,7 +22,7 @@ const venueTypeColors: Record<string, string> = {
   club: "bg-green-500/20 text-green-400",
 };
 
-export function VenueCard({ venue }: VenueCardProps) {
+export const VenueCard = React.memo(function VenueCard({ venue }: VenueCardProps) {
   const formattedCapacity = venue.capacity >= 1000
     ? `${(venue.capacity / 1000).toFixed(venue.capacity >= 10000 ? 0 : 1)}K`
     : venue.capacity.toString();
@@ -73,4 +74,4 @@ export function VenueCard({ venue }: VenueCardProps) {
       </div>
     </motion.div>
   );
-}
+});
