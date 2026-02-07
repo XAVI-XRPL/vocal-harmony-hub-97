@@ -42,6 +42,8 @@ export const VenueCard = React.memo(function VenueCard({ venue }: VenueCardProps
           src={venue.imageUrl}
           alt={venue.name}
           className="w-full h-full object-cover"
+          loading="lazy"
+          decoding="async"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
         

@@ -74,6 +74,8 @@ export function AddToPlaylistDialog({
                 src={song.coverArt}
                 alt={song.title}
                 className="w-12 h-12 rounded-lg object-cover"
+                loading="lazy"
+                decoding="async"
               />
               <div className="flex-1 min-w-0">
                 <p className="font-medium truncate">{song.title}</p>
@@ -126,6 +128,8 @@ export function AddToPlaylistDialog({
                         src={playlist.songs[0].song.coverArt}
                         alt=""
                         className="w-full h-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                       />
                     ) : (
                       <ListMusic className="w-5 h-5 text-muted-foreground" />

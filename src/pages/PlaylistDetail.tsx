@@ -131,11 +131,11 @@ export default function PlaylistDetail() {
           {coverImages.length >= 4 ? (
             <div className="grid grid-cols-2 w-full h-full">
               {coverImages.slice(0, 4).map((img, i) => (
-                <img key={i} src={img} alt="" className="w-full h-full object-cover" />
+                <img key={i} src={img} alt="" className="w-full h-full object-cover" loading="lazy" decoding="async" />
               ))}
             </div>
           ) : coverImages.length > 0 ? (
-            <img src={coverImages[0]} alt={playlist.name} className="w-full h-full object-cover" />
+            <img src={coverImages[0]} alt={playlist.name} className="w-full h-full object-cover" loading="lazy" decoding="async" />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
               <Music className="w-16 h-16 text-muted-foreground" />
@@ -200,7 +200,7 @@ export default function PlaylistDetail() {
                   
                   <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0">
                     {ps.song?.coverArt ? (
-                      <img src={ps.song.coverArt} alt={ps.song.title} className="w-full h-full object-cover" />
+                      <img src={ps.song.coverArt} alt={ps.song.title} className="w-full h-full object-cover" loading="lazy" decoding="async" />
                     ) : (
                       <div className="w-full h-full bg-muted flex items-center justify-center">
                         <Music className="w-5 h-5 text-muted-foreground" />
@@ -287,7 +287,7 @@ export default function PlaylistDetail() {
                   onClick={() => handleAddSong(song.id)}
                   className="w-full flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
                 >
-                  <img src={song.coverArt} alt={song.title} className="w-12 h-12 rounded-lg object-cover" />
+                  <img src={song.coverArt} alt={song.title} className="w-12 h-12 rounded-lg object-cover" loading="lazy" decoding="async" />
                   <div className="flex-1 text-left min-w-0">
                     <p className="font-medium truncate">{song.title}</p>
                     <p className="text-sm text-muted-foreground truncate">{song.artist}</p>

@@ -52,6 +52,8 @@ export function PlaylistCard({ playlist, onEdit, onDelete, className }: Playlist
                 src={img}
                 alt=""
                 className="w-full h-full object-cover"
+                loading="lazy"
+                decoding="async"
               />
             ))}
           </div>
@@ -60,6 +62,8 @@ export function PlaylistCard({ playlist, onEdit, onDelete, className }: Playlist
             src={coverImages[0]}
             alt={playlist.name}
             className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
