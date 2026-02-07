@@ -1,3 +1,4 @@
+import React from "react";
 import { motion } from "framer-motion";
 import { Star, ExternalLink, Tag } from "lucide-react";
 import { GearProduct, PartnerBrand } from "@/types";
@@ -17,7 +18,7 @@ const categoryColors: Record<string, string> = {
   "in-ear-monitor": "bg-accent-stage/20 text-accent-stage",
 };
 
-export function GearProductCard({ product, brand }: GearProductCardProps) {
+export const GearProductCard = React.memo(function GearProductCard({ product, brand }: GearProductCardProps) {
   const formattedPrice = new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -113,4 +114,4 @@ export function GearProductCard({ product, brand }: GearProductCardProps) {
       </div>
     </motion.a>
   );
-}
+});

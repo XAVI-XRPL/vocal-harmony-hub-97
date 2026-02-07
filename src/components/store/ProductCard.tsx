@@ -1,3 +1,4 @@
+import React from "react";
 import { motion } from "framer-motion";
 import { Star, ExternalLink, Tag, Clock, Sparkles } from "lucide-react";
 import { Product } from "@/types";
@@ -17,7 +18,7 @@ const categoryLabels: Record<string, string> = {
   "accessories": "Gear",
 };
 
-export function ProductCard({ product }: ProductCardProps) {
+export const ProductCard = React.memo(function ProductCard({ product }: ProductCardProps) {
   return (
     <motion.a
       href={product.isComingSoon ? undefined : product.affiliateUrl}
@@ -128,4 +129,4 @@ export function ProductCard({ product }: ProductCardProps) {
       )}
     </motion.a>
   );
-}
+});
