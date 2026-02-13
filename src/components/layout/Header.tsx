@@ -56,7 +56,7 @@ export function Header({ className, showSearch = true, title }: HeaderProps) {
         ) : (
           <div className="flex items-center gap-2.5">
             <RMVTLogo size="sm" animated />
-            <span className="font-semibold text-lg gradient-text hidden sm:block">RMVT</span>
+            <span className="font-semibold text-lg gradient-text hidden sm:block">RVMT</span>
           </div>
         )}
       </div>

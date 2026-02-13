@@ -75,7 +75,7 @@ export function DesktopSidebar() {
               exit={{ opacity: 0, x: -10 }}
               className="font-bold text-xl gradient-text"
             >
-              RMVT
+              RVMT
             </motion.span>
           )}
         </motion.div>
