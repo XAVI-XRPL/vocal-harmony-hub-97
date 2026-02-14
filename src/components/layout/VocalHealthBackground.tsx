@@ -4,7 +4,7 @@ import vocalHealthBg from "@/assets/vocal-health-bg.png";
 export function VocalHealthBackground() {
   const [isLoaded, setIsLoaded] = useState(false);
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden">
+    <div className="fixed inset-0 -z-[5] overflow-hidden">
       <img
         src={vocalHealthBg}
         alt=""

@@ -4,7 +4,7 @@ import recordsWallBackground from "@/assets/records-wall-background.png";
 export function RecordsWallBackground() {
   const [isLoaded, setIsLoaded] = useState(false);
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden">
+    <div className="fixed inset-0 -z-[5] overflow-hidden">
       {/* Records wall image with slow zoom animation */}
       <img
         src={recordsWallBackground}

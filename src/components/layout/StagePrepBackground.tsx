@@ -4,7 +4,7 @@ import stagePrepBg from "@/assets/stage-prep-bg.png";
 export function StagePrepBackground() {
   const [isLoaded, setIsLoaded] = useState(false);
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden">
+    <div className="fixed inset-0 -z-[5] overflow-hidden">
       <img
         src={stagePrepBg}
         alt=""

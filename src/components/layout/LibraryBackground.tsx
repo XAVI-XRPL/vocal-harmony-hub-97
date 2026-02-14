@@ -4,7 +4,7 @@ import libraryBackground from "@/assets/library-background.png";
 export function LibraryBackground() {
   const [isLoaded, setIsLoaded] = useState(false);
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden">
+    <div className="fixed inset-0 -z-[5] overflow-hidden">
       <img
         src={libraryBackground}
         alt=""

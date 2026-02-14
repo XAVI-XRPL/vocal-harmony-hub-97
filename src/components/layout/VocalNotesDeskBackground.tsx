@@ -5,7 +5,7 @@ export const VocalNotesDeskBackground = React.forwardRef<HTMLDivElement>(
   function VocalNotesDeskBackground(_props, ref) {
     const [isLoaded, setIsLoaded] = useState(false);
     return (
-      <div ref={ref} className="fixed inset-0 -z-10 overflow-hidden">
+      <div ref={ref} className="fixed inset-0 -z-[5] overflow-hidden">
         {/* Desk image with slow zoom animation */}
         <img
           src={vocalNotesDeskBg}
