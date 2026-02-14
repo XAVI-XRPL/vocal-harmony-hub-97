@@ -76,7 +76,7 @@ export function AppShell({ children }: AppShellProps) {
         {!hideNav && <DesktopSidebar />}
 
         {/* Main Content */}
-        <SidebarInset className="flex-1 relative z-10">
+        <SidebarInset className="flex-1 relative">
           {/* Demo Mode Banner */}
           {isDemoMode && !hideNav && <DemoModeBanner />}
           
