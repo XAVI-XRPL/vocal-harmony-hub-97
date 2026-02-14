@@ -82,7 +82,7 @@ export function AppShell({ children }: AppShellProps) {
           
           <main
             className={cn(
-              "min-h-screen",
+              "min-h-screen w-full",
               showMiniPlayer && "pb-24"
             )}
           >
@@ -93,6 +93,7 @@ export function AppShell({ children }: AppShellProps) {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
                 transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+                className="w-full"
               >
                 {children}
               </motion.div>

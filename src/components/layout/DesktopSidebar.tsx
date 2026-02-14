@@ -54,7 +54,7 @@ export function DesktopSidebar() {
     <Sidebar
       collapsible="icon"
       className={cn(
-        "border-r-0 hidden md:flex",
+        "border-r-0",
         "sidebar-glass"
       )}
     >
