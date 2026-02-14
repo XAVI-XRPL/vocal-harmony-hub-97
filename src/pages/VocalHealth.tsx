@@ -70,7 +70,7 @@ export default function VocalHealth() {
   }, [searchQuery]);
 
   return (
-    <div className="relative min-h-screen">
+    <>
       <VocalHealthBackground />
 
       {/* Content */}
@@ -193,6 +193,6 @@ export default function VocalHealth() {
           <DoctorList doctors={filteredDoctors} />
         </section>
       </div>
-    </div>
+    </>
   );
 }

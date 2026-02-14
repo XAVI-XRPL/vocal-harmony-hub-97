@@ -73,7 +73,7 @@ export default function Library() {
   const hasActiveFilters = activeFilters.genre || activeFilters.difficulty;
   const isFiltered = !!hasActiveFilters || !!searchQuery;
   return (
-    <div className="min-h-screen">
+    <>
       <LibraryBackground />
       <Header title="Library" showSearch={false} />
 
@@ -254,6 +254,6 @@ export default function Library() {
           )
         )}
       </div>
-    </div>
+    </>
   );
 }

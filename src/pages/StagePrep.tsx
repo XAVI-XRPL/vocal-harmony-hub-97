@@ -25,7 +25,7 @@ export default function StagePrep() {
   const featuredGear = (allGear || []).filter((g) => g.isFeatured);
 
   return (
-    <div className="relative min-h-screen">
+    <>
       <StagePrepBackground />
 
       {/* Content */}
@@ -151,6 +151,6 @@ export default function StagePrep() {
           )}
         </section>
       </div>
-    </div>
+    </>
   );
 }

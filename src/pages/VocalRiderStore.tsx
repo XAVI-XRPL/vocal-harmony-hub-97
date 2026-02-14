@@ -20,7 +20,7 @@ export default function VocalRiderStore() {
   const featuredProducts = (allProducts || []).filter((p) => p.isFeatured);
 
   return (
-    <div className="relative min-h-screen">
+    <>
       {/* Vocal Notes Desk Background */}
       <VocalNotesDeskBackground />
 
@@ -74,6 +74,6 @@ export default function VocalRiderStore() {
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }
