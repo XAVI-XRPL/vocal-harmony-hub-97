@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import splashImage from "@/assets/RVMT.png";
+import splashImage from "@/assets/rmvt-logo.png";
 
 interface SplashProps {
   onComplete: () => void;
