@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Flame, Clock, Music, Trophy, TrendingUp, Calendar } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { GlassCard } from "@/components/ui/glass-card";
+import { StadiumBackground } from "@/components/layout/StadiumBackground";
 import { useUserStore } from "@/stores/userStore";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -65,12 +66,13 @@ export default function Progress() {
 
   return (
     <div className="min-h-screen">
+      <StadiumBackground />
       <Header title="Progress" showSearch={false} />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="px-4 pb-32 space-y-4"
+        className="px-4 md:px-8 lg:px-12 xl:px-16 pb-32 space-y-4 md:space-y-6 lg:space-y-8 max-w-[1200px] mx-auto"
       >
         {/* Streak Card */}
         <GlassCard className="p-5">

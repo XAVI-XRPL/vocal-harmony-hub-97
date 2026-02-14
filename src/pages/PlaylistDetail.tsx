@@ -5,6 +5,7 @@ import { ArrowLeft, Play, Edit, Trash2, Plus, Music, Loader2, GripVertical, X } 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GlassCard } from "@/components/ui/glass-card";
+import { RecordsWallBackground } from "@/components/layout/RecordsWallBackground";
 import { usePlaylist, usePlaylists } from "@/hooks/usePlaylists";
 import { useAudioStore } from "@/stores/audioStore";
 import { mockSongs } from "@/data/mockSongs";
@@ -93,27 +94,35 @@ export default function PlaylistDetail() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <>
+        <RecordsWallBackground />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </>
     );
   }
 
   if (!playlist) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <p className="text-muted-foreground">Playlist not found</p>
-        <Button variant="ghost" onClick={() => navigate("/playlists")} className="mt-4">
-          Back to Playlists
-        </Button>
-      </div>
+      <>
+        <RecordsWallBackground />
+        <div className="flex flex-col items-center justify-center min-h-[60vh]">
+          <p className="text-muted-foreground">Playlist not found</p>
+          <Button variant="ghost" onClick={() => navigate("/playlists")} className="mt-4">
+            Back to Playlists
+          </Button>
+        </div>
+      </>
     );
   }
 
   const coverImages = playlist.songs?.slice(0, 4).map(ps => ps.song?.coverArt).filter(Boolean) || [];
 
   return (
-    <motion.div
+    <>
+      <RecordsWallBackground />
+      <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className="p-4 md:p-6 space-y-6"
@@ -340,5 +349,6 @@ export default function PlaylistDetail() {
         </AlertDialogContent>
       </AlertDialog>
     </motion.div>
+    </>
   );
 }

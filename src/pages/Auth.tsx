@@ -5,6 +5,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowLeft, Loader2, Music2 } from "lucide-reac
 import { z } from "zod";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
+import { StadiumBackground } from "@/components/layout/StadiumBackground";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
@@ -112,6 +113,7 @@ export default function Auth() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
+        <StadiumBackground />
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -119,6 +121,7 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background relative overflow-hidden">
+      <StadiumBackground />
       {/* Animated background blobs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <motion.div

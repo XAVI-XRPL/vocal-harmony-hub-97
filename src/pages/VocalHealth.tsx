@@ -99,7 +99,7 @@ export default function VocalHealth() {
         </motion.header>
 
         {/* Search Bar */}
-        <section className="px-4 py-3">
+        <section className="px-4 md:px-8 lg:px-12 xl:px-16 py-3 max-w-[1400px] mx-auto">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -131,7 +131,7 @@ export default function VocalHealth() {
         </section>
 
         {/* Map Section */}
-        <section className="px-4 py-2">
+        <section className="px-4 md:px-8 lg:px-12 xl:px-16 py-2 max-w-[1400px] mx-auto">
           <div className="medical-card rounded-2xl p-4 overflow-hidden">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-semibold text-foreground">Select a State</h2>
@@ -162,7 +162,7 @@ export default function VocalHealth() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="px-4 pb-4"
+              className="px-4 md:px-8 lg:px-12 xl:px-16 pb-4 max-w-[1400px] mx-auto"
             >
               <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-accent-medical/10 border border-accent-medical/20">
                 <MapPin className="w-4 h-4 text-accent-medical" />
@@ -178,15 +178,15 @@ export default function VocalHealth() {
         </AnimatePresence>
 
         {/* Venues Section */}
-        <section className="px-4 py-4">
-          <h2 className="text-lg font-semibold text-foreground mb-3">
+        <section className="px-4 md:px-8 lg:px-12 xl:px-16 py-4 max-w-[1400px] mx-auto">
+          <h2 className="text-lg md:text-xl font-semibold text-foreground mb-3">
             {selectedState ? `Venues in ${selectedState.name}` : "Major Venues"}
           </h2>
           <VenueList venues={filteredVenues} />
         </section>
 
         {/* Doctors Section */}
-        <section className="px-4 py-4 pb-32">
+        <section className="px-4 md:px-8 lg:px-12 xl:px-16 py-4 pb-32 max-w-[1400px] mx-auto">
           <h2 className="text-lg font-semibold text-foreground mb-3">
             {selectedState ? `Specialists in ${selectedState.name}` : "Top Vocal Health Specialists"}
           </h2>

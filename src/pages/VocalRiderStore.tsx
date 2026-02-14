@@ -50,7 +50,7 @@ export default function VocalRiderStore() {
         <DressingRoomHero featuredCount={featuredProducts.length} />
 
         {/* Category Filter */}
-        <div className="px-4 py-4">
+        <div className="px-4 md:px-8 lg:px-12 xl:px-16 py-4 max-w-[1600px] mx-auto">
           <CategoryFilter
             selectedCategory={selectedCategory}
             onSelectCategory={setSelectedCategory}
@@ -58,7 +58,7 @@ export default function VocalRiderStore() {
         </div>
 
         {/* Product Grid */}
-        <div className="px-4 pb-32">
+        <div className="px-4 md:px-8 lg:px-12 xl:px-16 pb-32 max-w-[1600px] mx-auto">
           {isLoading ? (
             <div className="grid grid-cols-2 gap-4">
               {[1, 2, 3, 4, 5, 6].map((i) => (

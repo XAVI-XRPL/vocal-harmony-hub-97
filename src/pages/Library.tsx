@@ -77,9 +77,9 @@ export default function Library() {
       <LibraryBackground />
       <Header title="Library" showSearch={false} />
 
-      <div className="px-4 pb-8">
+      <div className="px-4 md:px-8 lg:px-12 xl:px-16 pb-8 max-w-[1600px] mx-auto">
         {/* Search Bar */}
-        <div className="sticky top-14 z-30 py-3 -mx-4 px-4 glass-card rounded-none border-x-0 backdrop-blur-xl">
+        <div className="sticky top-14 z-30 py-3 -mx-4 md:-mx-8 lg:-mx-12 xl:-mx-16 px-4 md:px-8 lg:px-12 xl:px-16 glass-card rounded-none border-x-0 backdrop-blur-xl">
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -241,7 +241,7 @@ export default function Library() {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 lg:gap-6"
             >
               {filteredSongs.map((song) => (
                 <motion.div key={song.id} variants={itemVariants}>

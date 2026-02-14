@@ -4,6 +4,7 @@ import { ArrowLeft, Check, Crown, Zap, Music2, Sliders, Repeat } from "lucide-re
 import { IconButton } from "@/components/ui/icon-button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
+import { StadiumBackground } from "@/components/layout/StadiumBackground";
 import { useUserStore } from "@/stores/userStore";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +55,7 @@ export default function Subscription() {
 
   return (
     <div className="min-h-screen">
+      <StadiumBackground />
       {/* Header */}
       <div className="sticky top-0 z-40 glass-card rounded-none border-x-0 border-t-0">
         <div className="flex items-center gap-3 h-14 px-4 safe-top">

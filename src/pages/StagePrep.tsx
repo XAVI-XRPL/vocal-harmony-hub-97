@@ -73,12 +73,12 @@ export default function StagePrep() {
         </section>
 
         {/* Featured IEMs Hero */}
-        <section className="px-4 py-4">
+        <section className="px-4 md:px-8 lg:px-12 xl:px-16 py-4 max-w-[1400px] mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="backstage-card rounded-2xl p-6 overflow-hidden relative"
+            className="backstage-card rounded-2xl p-6 md:p-8 overflow-hidden relative"
           >
             {/* Background Glow */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-accent-stage/20 rounded-full blur-3xl" />
@@ -107,7 +107,7 @@ export default function StagePrep() {
         </section>
 
         {/* Gear Category Filter */}
-        <div className="px-4 py-4">
+        <div className="px-4 md:px-8 lg:px-12 xl:px-16 py-4 max-w-[1400px] mx-auto">
           <GearCategoryFilter
             selectedCategory={selectedCategory}
             onSelectCategory={setSelectedCategory}
@@ -115,7 +115,7 @@ export default function StagePrep() {
         </div>
 
         {/* Gear Grid */}
-        <section className="px-4 py-2">
+        <section className="px-4 md:px-8 lg:px-12 xl:px-16 py-2 max-w-[1400px] mx-auto">
           <h2 className="text-lg font-semibold text-foreground mb-3">
             {selectedCategory === "all" ? "All Gear" : selectedCategory.replace("-", " ").replace(/\b\w/g, l => l.toUpperCase())}
           </h2>
@@ -135,7 +135,7 @@ export default function StagePrep() {
         </section>
 
         {/* Pre-Show Checklist Section */}
-        <section className="px-4 py-6 pb-32">
+        <section className="px-4 md:px-8 lg:px-12 xl:px-16 py-6 pb-32 max-w-[1400px] mx-auto">
           <div className="flex items-center gap-2 mb-4">
             <CheckCircle2 className="w-5 h-5 text-accent-stage" />
             <h2 className="text-lg font-semibold text-foreground">Pre-Show Checklist</h2>

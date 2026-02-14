@@ -96,6 +96,11 @@
     --glass-border: 200 60% 70% / 0.1;
     --glass-border-hover: 200 60% 70% / 0.2;
 
+    /* Desktop Layout Tokens */
+    --desktop-max-width: 1400px;
+    --desktop-content-padding: 3rem;
+    --desktop-section-gap: 4rem;
+
     /* Gradient Tokens - Stadium Blues */
     --gradient-start: 195 85% 50%;
     --gradient-mid: 210 80% 60%;

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Home, ArrowLeft, Music4 } from "lucide-react";
 import { GlassButton } from "@/components/ui/glass-button";
+import { StadiumBackground } from "@/components/layout/StadiumBackground";
 
 const NotFound = () => {
   const location = useLocation();
@@ -14,6 +15,7 @@ const NotFound = () => {
 
   return (
     <div className="fixed inset-0 flex flex-col items-center justify-center bg-background overflow-hidden">
+      <StadiumBackground />
       {/* Animated background blobs */}
       <div className="absolute inset-0 pointer-events-none">
         <motion.div

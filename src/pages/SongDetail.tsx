@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Play, Pause, Clock, Music2, Zap, Share2 } from "lucide-react";
 import { Header } from "@/components/layout/Header";
+import { LibraryBackground } from "@/components/layout/LibraryBackground";
 import { GlassButton } from "@/components/ui/glass-button";
 import { GlassCard } from "@/components/ui/glass-card";
 import { IconButton } from "@/components/ui/icon-button";
@@ -69,6 +70,7 @@ export default function SongDetail() {
 
   return (
     <div className="min-h-screen">
+      <LibraryBackground />
       {/* Header */}
       <div className="sticky top-0 z-40 glass-card rounded-none border-x-0 border-t-0">
         <div className="flex items-center gap-3 h-14 px-4 safe-top">

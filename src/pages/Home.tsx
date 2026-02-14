@@ -71,14 +71,17 @@ export default function Home() {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="px-4 pb-8"
+          className="px-4 md:px-8 lg:px-12 xl:px-16 pb-8 max-w-[1400px] mx-auto"
         >
           {/* Hero Section with prominent CTA */}
-          <motion.section variants={itemVariants} className="pt-6 pb-8 text-center">
-            <h1 className="text-3xl sm:text-4xl font-bold mb-2 tracking-tight">
+          <motion.section 
+            variants={itemVariants} 
+            className="pt-6 pb-8 md:pt-12 md:pb-12 text-center"
+          >
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-2 md:mb-4 tracking-tight">
               Master Your <span className="gradient-text">Voice</span>
             </h1>
-            <p className="text-muted-foreground text-sm max-w-xs mx-auto mb-6 leading-relaxed">
+            <p className="text-muted-foreground text-sm md:text-base lg:text-lg max-w-xs md:max-w-2xl mx-auto mb-6 md:mb-8 leading-relaxed">
               Train with isolated stems. Control every element of the mix.
             </p>
             
@@ -92,9 +95,9 @@ export default function Home() {
               <motion.button
                 onClick={() => navigate("/library")}
                 className="
-                  w-full max-w-sm mx-auto
+                  w-full max-w-sm md:max-w-md lg:max-w-lg mx-auto
                   flex items-center justify-center gap-3
-                  text-lg font-semibold py-6 px-8
+                  text-lg md:text-xl font-semibold py-6 md:py-7 px-8 md:px-10
                   rounded-2xl
                   bg-gradient-to-b from-primary via-primary to-primary/80
                   text-primary-foreground
@@ -139,25 +142,28 @@ export default function Home() {
                   }}
                 />
                 
-                <Play className="w-6 h-6 fill-current relative z-10" />
+                <Play className="w-6 h-6 md:w-7 md:h-7 fill-current relative z-10" />
                 <span className="relative z-10">Start Training</span>
               </motion.button>
             </motion.div>
           </motion.section>
 
-          {/* Hub Module Cards */}
-          <motion.section variants={itemVariants} className="mb-8">
-            <HomeHubCards />
-          </motion.section>
+          {/* Desktop: Two-column layout | Mobile: Single column */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 mb-8">
+            {/* Hub Module Cards */}
+            <motion.section variants={itemVariants}>
+              <HomeHubCards />
+            </motion.section>
 
-          {/* Continue Practice */}
-          <motion.section variants={itemVariants} className="mb-8">
-            <ContinuePractice />
-          </motion.section>
+            {/* Continue Practice */}
+            <motion.section variants={itemVariants}>
+              <ContinuePractice />
+            </motion.section>
+          </div>
 
           {/* CTA for non-authenticated users */}
           {!isAuthenticated && (
-            <motion.section variants={itemVariants}>
+            <motion.section variants={itemVariants} className="max-w-2xl mx-auto">
               <GlassCard
                 padding="lg"
                 className="text-center border-primary/30"
@@ -169,10 +175,10 @@ export default function Home() {
                   animate={{ y: [0, -4, 0] }}
                   transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
                 >
-                  <Sparkles className="w-7 h-7 text-primary mx-auto mb-2" />
+                  <Sparkles className="w-7 h-7 md:w-8 md:h-8 text-primary mx-auto mb-2" />
                 </motion.div>
-                <h3 className="text-base font-semibold mb-1">Unlock All Exercises</h3>
-                <p className="text-sm text-muted-foreground mb-4">
+                <h3 className="text-base md:text-lg font-semibold mb-1">Unlock All Exercises</h3>
+                <p className="text-sm md:text-base text-muted-foreground mb-4">
                   Get access to more premium tracks and exercises.
                 </p>
                 <GlassButton onClick={() => navigate("/subscription")} size="sm">

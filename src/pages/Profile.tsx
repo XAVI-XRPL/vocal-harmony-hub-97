@@ -5,6 +5,7 @@ import { User, Settings, LogOut, Crown, ChevronRight, Music2, Clock, Loader2 } f
 import { Header } from "@/components/layout/Header";
 import { GlassCard } from "@/components/ui/glass-card";
 import { GlassButton } from "@/components/ui/glass-button";
+import { StadiumBackground } from "@/components/layout/StadiumBackground";
 import { useUserStore } from "@/stores/userStore";
 import { useAuth } from "@/hooks/useAuth";
 import { usePracticeStats } from "@/hooks/usePracticeSession";
@@ -59,6 +60,7 @@ export default function Profile() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen">
+        <StadiumBackground />
         <Header title="Profile" showSearch={false} />
         
         <div className="px-4 py-12 flex flex-col items-center justify-center">
@@ -95,13 +97,14 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen">
+      <StadiumBackground />
       <Header title="Profile" showSearch={false} />
 
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="px-4 pb-8"
+        className="px-4 md:px-8 lg:px-12 xl:px-16 pb-8 max-w-[1000px] mx-auto"
       >
         {/* Profile Header */}
         <motion.div

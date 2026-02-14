@@ -96,7 +96,7 @@ export default function Playlists() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="p-4 md:p-6 space-y-6"
+        className="p-4 md:p-8 lg:p-12 xl:p-16 space-y-6 md:space-y-8 max-w-[1600px] mx-auto"
       >
       {/* Header */}
       <GlassCard className="p-4 md:p-6" depth="floating">
@@ -140,7 +140,7 @@ export default function Playlists() {
           </GlassCard>
         </motion.div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-5 lg:gap-6">
           {playlists.map((playlist, index) => (
             <motion.div
               key={playlist.id}
